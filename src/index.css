@@ -1,13 +1,13 @@
 @import 'tailwindcss';
 
 @font-face {
-  font-family: 'Pencil Child';
-  src: url('/portfolio/fonts/PencilChild.woff2') format('woff2');
+  font-family: 'Surfing Capital';
+  src: url('/portfolio/fonts/SurfingCapital.woff2') format('woff2');
   font-display: swap;
 }
 
 @theme {
-  --font-display: 'Pencil Child', 'Comic Sans MS', cursive;
+  --font-display: 'Surfing Capital', 'Comic Sans MS', cursive;
   --font-serif: 'Newsreader', ui-serif, Georgia, serif;
 
   --color-paper: #e3d7bf;
@@ -43,7 +43,7 @@ body {
   color: var(--color-bone);
 }
 
-/* Pencil Child display type for the big headings. The font has one weight,
+/* Surfing Capital display type for the big headings. The font has one weight,
    so turn off the browser's fake bold to keep the pen strokes clean. */
 .display {
   font-family: var(--font-display);
@@ -52,7 +52,7 @@ body {
   line-height: 1;
 }
 
-/* Everything set in Pencil Child is written in lowercase. */
+/* Everything in the display font is written in lowercase. */
 .display,
 .font-display {
   text-transform: lowercase;
