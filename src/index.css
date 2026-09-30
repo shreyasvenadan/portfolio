@@ -1,13 +1,13 @@
 @import 'tailwindcss';
 
 @font-face {
-  font-family: 'Surfing Capital';
-  src: url('/portfolio/fonts/SurfingCapital.woff2') format('woff2');
+  font-family: 'Yung Jakes New Handwriting';
+  src: url('/portfolio/fonts/YungJakesNewHandwriting-Regular.woff2') format('woff2');
   font-display: swap;
 }
 
 @theme {
-  --font-display: 'Surfing Capital', 'Comic Sans MS', cursive;
+  --font-display: 'Yung Jakes New Handwriting', 'Comic Sans MS', cursive;
   --font-serif: 'Newsreader', ui-serif, Georgia, serif;
 
   --color-paper: #e3d7bf;
@@ -43,7 +43,7 @@ body {
   color: var(--color-bone);
 }
 
-/* Surfing Capital display type for the big headings. The font has one weight,
+/* Handwritten display type for the big headings. The font has one weight,
    so turn off the browser's fake bold to keep the pen strokes clean. */
 .display {
   font-family: var(--font-display);
