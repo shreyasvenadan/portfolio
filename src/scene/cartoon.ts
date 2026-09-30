@@ -1,25 +1,19 @@
 import {
   BackSide,
   CanvasTexture,
-  DataTexture,
   Material,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
   MeshToonMaterial,
-  NearestFilter,
   Object3D,
-  RedFormat,
   SkinnedMesh,
   SRGBColorSpace,
   Texture,
 } from 'three'
 import { findBone } from './rig'
+import { tones } from './toon'
 
-// Three flat bands of light (shadow, mid, lit) for cel shading.
-const tones = new DataTexture(new Uint8Array([120, 195, 255]), 3, 1, RedFormat)
-tones.minFilter = tones.magFilter = NearestFilter
-tones.needsUpdate = true
 
 // Kuwahara filter: each pixel takes the mean of whichever neighbouring quadrant
 // is flattest. Edges stay sharp while skin and fabric detail collapse into

@@ -17,39 +17,43 @@ import SceneLoader from '../components/SceneLoader'
 import Avatar from './Avatar'
 import Effects from './Effects'
 import Flow from './Flow'
+import { focusPoint } from './focus'
 
 // Backdrop colour at each section: pale sage at the top, deepening to olive.
 const WATER = ['#a6ae90', '#9ba587', '#8f9a7c', '#848f72', '#7a8569'].map((c) => new Color(c))
 
-type Shot = { pos: Vector3; look: Vector3 }
-const shot = (pos: [number, number, number], look: [number, number, number]): Shot => ({
+type Shot = { pos: Vector3; look: Vector3; focus: Vector3 }
+const shot = (pos: Vec3, look: Vec3, focus: Vec3): Shot => ({
   pos: new Vector3(...pos),
   look: new Vector3(...look),
+  focus: new Vector3(...focus),
 })
+type Vec3 = [number, number, number]
 
-// One camera position per section. On wide screens the look target sits left of
-// the avatar, which pushes the avatar to the right and leaves room for the text.
+// One camera position per section, all centred on the character. The hero and
+// contact frame the whole character in focus; in between, the camera drifts in
+// close and focuses near the lens so the character becomes a blurred backdrop.
 const WIDE_SHOTS = [
-  shot([-0.55, 1.5, 2.3], [-0.6, 1.3, 0]),
-  shot([-0.9, 1.25, 3.6], [-0.95, 1.0, 0]),
-  shot([-1.3, 2.3, 4.2], [-1.1, 0.95, 0]),
-  shot([-0.7, 0.55, 3.1], [-0.8, 1.2, 0]),
-  shot([-0.45, 1.5, 2.7], [-0.5, 1.35, 0]),
+  shot([0, 1.2, 3.4], [0, 0.95, 0], [0, 1.2, 0.1]),
+  shot([-0.35, 1.55, 1.25], [0, 1.45, 0], [-0.3, 1.55, 1.05]),
+  shot([0.45, 1.05, 1.5], [0, 1.15, 0], [0.4, 1.05, 1.3]),
+  shot([0, 2.3, 2.0], [0, 1.2, 0], [0, 2.15, 1.75]),
+  shot([0, 1.3, 3.6], [0, 0.85, 0], [0, 1.25, 0.1]),
 ]
 const NARROW_SHOTS = [
-  shot([0, 1.35, 3.4], [0, 1.15, 0]),
-  shot([0.2, 1.3, 4.4], [0, 1.0, 0]),
-  shot([0.1, 2.3, 4.8], [0, 0.9, 0]),
-  shot([-0.2, 0.6, 4.0], [0, 1.1, 0]),
-  shot([0, 1.55, 2.6], [0, 1.4, 0]),
+  shot([0, 1.15, 4.4], [0, 0.95, 0], [0, 1.2, 0.1]),
+  shot([-0.2, 1.5, 1.6], [0, 1.4, 0], [-0.18, 1.5, 1.4]),
+  shot([0.3, 1.0, 1.9], [0, 1.1, 0], [0.27, 1.0, 1.7]),
+  shot([0, 2.4, 2.6], [0, 1.1, 0], [0, 2.25, 2.35]),
+  shot([0, 1.2, 4.6], [0, 0.85, 0], [0, 1.25, 0.1]),
 ]
 
 const ease = (x: number) => x * x * (3 - 2 * x)
 
 function CameraRig() {
   const { camera, size, scene } = useThree()
-  const look = useRef(new Vector3(-0.6, 1.3, 0))
-  const tmp = useMemo(() => ({ pos: new Vector3(), look: new Vector3(), color: new Color() }), [])
+  const look = useRef(new Vector3(0, 1.2, 0))
+  const tmp = useMemo(() => ({ pos: new Vector3(), look: new Vector3(), focus: new Vector3(), color: new Color() }), [])
 
   useFrame((state, dt) => {
     const shots = size.width < 768 ? NARROW_SHOTS : WIDE_SHOTS
@@ -65,6 +69,7 @@ function CameraRig() {
     const k = 1 - Math.exp(-dt * 3)
     camera.position.lerp(tmp.pos, k)
     look.current.lerp(tmp.look, k)
+    focusPoint.lerp(tmp.focus.lerpVectors(shots[i].focus, shots[i + 1].focus, f), k)
     camera.lookAt(look.current)
 
     tmp.color.lerpColors(WATER[i], WATER[i + 1], f)
@@ -135,7 +140,7 @@ export default function Scene() {
       <div aria-hidden className="fixed inset-0">
         <Canvas
           dpr={0.5}
-          camera={{ fov: 32, near: 0.1, far: 40, position: [-0.55, 1.5, 2.3] }}
+          camera={{ fov: 32, near: 0.1, far: 40, position: [0, 1.25, 3.1] }}
           eventSource={document.getElementById('root')!}
           eventPrefix="client"
           gl={{ antialias: false }}

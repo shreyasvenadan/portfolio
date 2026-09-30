@@ -21,11 +21,6 @@ export default function App() {
       <Suspense fallback={null}>
         <Scene />
       </Suspense>
-      {/* Wash out the text side of the screen so copy stays readable over the scene. */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 bg-paper/45 md:bg-transparent md:bg-linear-to-r md:from-paper/75 md:via-paper/35 md:to-transparent"
-      />
 
       {/* Roughens heading edges like ink bleeding into cheap paper. */}
       <svg aria-hidden width="0" height="0" className="absolute">
@@ -39,16 +34,18 @@ export default function App() {
       <Header />
       <DepthGauge />
 
-      <main className="relative z-10 px-5 md:px-10 lg:pl-60">
-        <div className="max-w-[40rem]">
+      <main className="halo relative z-10 px-5 md:px-10">
+        <div className="text-center">
           <Hero />
+        </div>
+        <div className="mx-auto max-w-[42rem] text-center">
           <About />
           <Projects />
           <Experience />
           <Contact />
         </div>
       </main>
-      <footer className="relative z-10 px-5 pb-10 text-sm text-muted md:px-10 lg:pl-60">
+      <footer className="halo relative z-10 px-5 pb-10 text-center text-sm text-muted md:px-10">
         © {year} {profile.name}
       </footer>
     </>

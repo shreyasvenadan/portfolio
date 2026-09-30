@@ -47,6 +47,14 @@ body {
   filter: url(#rough);
 }
 
+/* A soft sage glow behind text keeps it readable over the character and scene. */
+.halo {
+  text-shadow:
+    0 0 2px rgb(166 174 144 / 0.9),
+    0 0 14px rgb(166 174 144 / 0.95),
+    0 0 32px rgb(166 174 144 / 0.7);
+}
+
 /* Full-screen grain; holds still, then jumps to a new offset every 2 seconds
    (8 positions over 16s), in step with the grain in the 3D scene. */
 .grain {

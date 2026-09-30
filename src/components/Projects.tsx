@@ -13,7 +13,7 @@ export default function Projects() {
             <p className="mt-4 text-lg leading-[1.7] text-ink/85">{project.description}</p>
             <p className="mt-4 text-muted">{project.tech.join(', ')}</p>
             {(project.demo || project.repo) && (
-              <div className="mt-5 flex flex-wrap gap-6 font-display">
+              <div className="mt-5 flex flex-wrap justify-center gap-6 font-display">
                 {project.demo && (
                   <a href={project.demo} target="_blank" rel="noreferrer" className="text-accent underline-offset-4 hover:underline">
                     Visit {hostname(project.demo)}

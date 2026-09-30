@@ -13,13 +13,14 @@ import {
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { prefersReducedMotion } from '../lib/sections'
 import { cartoonify } from './cartoon'
+import CartoonMe from './CartoonMe'
 import { blinkAmount, updateLook, type Look } from './look'
 import { findBone, relaxPose, rotateInModelSpace } from './rig'
 
 const AVATAR_URL = `${import.meta.env.BASE_URL}models/avatar.glb`
 const AVATAR_HEIGHT = 1.75
 
-// Shows public/models/avatar.glb when it exists, otherwise a stylised stand-in.
+// Shows public/models/avatar.glb when it exists, otherwise the built-in cartoon character.
 export default function Avatar() {
   const [status, setStatus] = useState<'checking' | 'found' | 'missing'>('checking')
 
@@ -37,7 +38,7 @@ export default function Avatar() {
   }, [])
 
   if (status === 'checking') return null
-  return <Drift>{status === 'found' ? <GltfAvatar url={AVATAR_URL} /> : <StandIn />}</Drift>
+  return <Drift>{status === 'found' ? <GltfAvatar url={AVATAR_URL} /> : <CartoonMe />}</Drift>
 }
 
 // Gentle up-and-down bob, like floating in water.
@@ -125,75 +126,4 @@ function GltfAvatar({ url }: { url: string }) {
   })
 
   return <primitive object={rig.model} />
-}
-
-// ---------------------------------------------------------------------------
-// Stand-in figure, used until public/models/avatar.glb exists.
-
-const SKIN = '#b7866a'
-const HAIR = '#171210'
-const HOODIE = '#233447'
-const TROUSERS = '#131c28'
-
-function StandIn() {
-  const head = useRef<Group>(null)
-  const eyes = useRef<Group>(null)
-  const look = useRef<Look>({ yaw: 0, pitch: 0 })
-  const headPos = useMemo(() => new Vector3(), [])
-
-  useFrame((state, dt) => {
-    if (!head.current || !eyes.current) return
-    head.current.getWorldPosition(headPos)
-    updateLook(state, headPos, look.current, dt)
-    head.current.rotation.set(look.current.pitch, look.current.yaw, 0, 'YXZ')
-    eyes.current.scale.y = 1 - blinkAmount(state.clock.elapsedTime) * 0.9
-  })
-
-  return (
-    <group>
-      {/* legs */}
-      {[-0.1, 0.1].map((x) => (
-        <mesh key={x} position={[x, 0.45, 0]}>
-          <capsuleGeometry args={[0.075, 0.75, 8, 16]} />
-          <meshStandardMaterial color={TROUSERS} roughness={0.85} />
-        </mesh>
-      ))}
-      {/* torso */}
-      <mesh position={[0, 1.13, 0]}>
-        <capsuleGeometry args={[0.22, 0.42, 12, 24]} />
-        <meshStandardMaterial color={HOODIE} roughness={0.9} />
-      </mesh>
-      {/* arms */}
-      {[-1, 1].map((side) => (
-        <mesh key={side} position={[side * 0.3, 1.08, 0]} rotation={[0, 0, side * 0.12]}>
-          <capsuleGeometry args={[0.065, 0.55, 8, 16]} />
-          <meshStandardMaterial color={HOODIE} roughness={0.9} />
-        </mesh>
-      ))}
-      {/* neck */}
-      <mesh position={[0, 1.44, 0]}>
-        <cylinderGeometry args={[0.055, 0.065, 0.12, 16]} />
-        <meshStandardMaterial color={SKIN} roughness={0.7} />
-      </mesh>
-      {/* head, pivoting at the neck */}
-      <group ref={head} position={[0, 1.5, 0]}>
-        <mesh position={[0, 0.12, 0]} scale={[0.92, 1.05, 0.95]}>
-          <sphereGeometry args={[0.14, 32, 32]} />
-          <meshStandardMaterial color={SKIN} roughness={0.65} />
-        </mesh>
-        <mesh position={[0, 0.16, -0.012]} scale={[0.97, 0.95, 1]}>
-          <sphereGeometry args={[0.142, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
-          <meshStandardMaterial color={HAIR} roughness={0.95} />
-        </mesh>
-        <group ref={eyes} position={[0, 0.13, 0.122]}>
-          {[-0.045, 0.045].map((x) => (
-            <mesh key={x} position={[x, 0, 0]}>
-              <sphereGeometry args={[0.014, 16, 16]} />
-              <meshStandardMaterial color="#0b0d10" roughness={0.3} />
-            </mesh>
-          ))}
-        </group>
-      </group>
-    </group>
-  )
 }

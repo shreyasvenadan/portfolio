@@ -1,7 +1,9 @@
 import { Bloom, ChromaticAberration, DepthOfField, EffectComposer, Vignette } from '@react-three/postprocessing'
-import { Effect } from 'postprocessing'
-import { useMemo } from 'react'
+import { DepthOfFieldEffect, Effect } from 'postprocessing'
+import { useFrame } from '@react-three/fiber'
+import { useMemo, useRef } from 'react'
 import { Uniform, Vector2 } from 'three'
+import { focusPoint } from './focus'
 
 // Ordered (Bayer) dithering into a limited palette, plus salt-and-pepper grain.
 // Rendered at low resolution and upscaled with hard pixels, this gives the scene
@@ -59,9 +61,12 @@ function Grit() {
 
 export default function Effects() {
   const aberration = useMemo(() => new Vector2(0.0018, 0.0012), [])
+  const dof = useRef<DepthOfFieldEffect>(null)
+  // Follow the camera rig's focus point so focus changes with the scroll position.
+  useFrame(() => void dof.current?.target?.copy(focusPoint))
   return (
     <EffectComposer multisampling={0}>
-      <DepthOfField target={[0, 1.35, 0]} worldFocusRange={1.4} bokehScale={6} />
+      <DepthOfField ref={dof} target={focusPoint} worldFocusRange={0.45} bokehScale={8} />
       <Bloom intensity={0.7} luminanceThreshold={0.55} luminanceSmoothing={0.3} mipmapBlur />
       <ChromaticAberration offset={aberration} radialModulation modulationOffset={0.25} />
       <Vignette offset={0.25} darkness={0.45} />
