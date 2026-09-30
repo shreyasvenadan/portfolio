@@ -187,7 +187,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       <rect className="night-only" width={1600} height={600} fill="url(#night-sky)" />
       <g className="day-only sun-set">
         <circle cx={1270} cy={540} r={160} fill={SUN} opacity={0.35} />
-        <circle cx={1270} cy={540} r={105} fill={SUN} {...line} />
+        <circle data-sky="sun" cx={1270} cy={540} r={105} fill={SUN} {...line} />
       </g>
       <Cloud x={0} y={110} s={1.1} dur={140} delay={30} animate={animate} />
       <Cloud x={0} y={210} s={0.75} dur={110} delay={80} animate={animate} />
@@ -284,7 +284,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       </g>
       <g className="night-only moon-rise">
         <circle cx={1270} cy={250} r={130} fill="#f4f1d8" opacity={0.18} />
-        <circle cx={1270} cy={250} r={80} fill="#f4f1d8" {...line} />
+        <circle data-sky="moon" cx={1270} cy={250} r={80} fill="#f4f1d8" {...line} />
         <circle cx={1245} cy={232} r={14} fill="#dcd6b4" />
         <circle cx={1296} cy={270} r={10} fill="#dcd6b4" />
         <circle cx={1285} cy={218} r={7} fill="#dcd6b4" />

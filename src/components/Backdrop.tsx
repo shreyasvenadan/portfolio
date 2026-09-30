@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { isNight } from '../lib/night'
+import { isNight, toggleNight } from '../lib/night'
 import { prefersReducedMotion, sectionProgress } from '../lib/sections'
 import Surface from '../world/Surface'
 import Underwater from '../world/Underwater'
@@ -41,6 +41,24 @@ export default function Backdrop() {
     size()
     window.addEventListener('resize', size)
 
+    // The sun and moon sit behind the page content, so clicks are hit-tested by
+    // position: clicking whichever one is up switches between day and night.
+    const overSky = (x: number, y: number) => {
+      const body = surface.current?.querySelector(`[data-sky="${isNight() ? 'moon' : 'sun'}"]`)
+      if (!body) return false
+      const r = body.getBoundingClientRect()
+      return Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) < r.width / 2 + 12
+    }
+    const click = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('a, button') && overSky(e.clientX, e.clientY)) toggleNight()
+    }
+    const hover = (e: PointerEvent) => {
+      if ((e.target as Element).closest('a, button')) return
+      document.body.style.cursor = overSky(e.clientX, e.clientY) ? 'pointer' : ''
+    }
+    window.addEventListener('click', click)
+    window.addEventListener('pointermove', hover)
+
     let frame = 0
     let paused = false
     let tone = -1
@@ -71,6 +89,8 @@ export default function Backdrop() {
     return () => {
       cancelAnimationFrame(frame)
       window.removeEventListener('resize', size)
+      window.removeEventListener('click', click)
+      window.removeEventListener('pointermove', hover)
     }
   }, [])
 

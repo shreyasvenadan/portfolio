@@ -1,8 +1,17 @@
 // Night mode: the same world after dark. Stored on <html data-night="true"> so
-// CSS can restyle the scene, and remembered between visits.
+// CSS can restyle the scene, remembered between visits, and shared with React
+// through a tiny subscribe/get store (it can be toggled from several places).
 const KEY = 'night'
+const listeners = new Set<() => void>()
 
 export const isNight = () => document.documentElement.dataset.night === 'true'
+
+export function subscribeNight(listener: () => void) {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
 
 export function setNight(on: boolean) {
   document.documentElement.dataset.night = String(on)
@@ -11,7 +20,10 @@ export function setNight(on: boolean) {
   } catch {
     // Storage can be unavailable (private mode); night mode just won't persist.
   }
+  listeners.forEach((listener) => listener())
 }
+
+export const toggleNight = () => setNight(!isNight())
 
 export function restoreNight() {
   try {
