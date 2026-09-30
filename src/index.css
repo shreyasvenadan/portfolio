@@ -52,6 +52,12 @@ body {
   line-height: 1;
 }
 
+/* Everything set in Pencil Child is written in lowercase. */
+.display,
+.font-display {
+  text-transform: lowercase;
+}
+
 /* A soft beige glow behind text keeps it readable over the character and scene. */
 .halo {
   text-shadow:

@@ -204,17 +204,17 @@ export default function StokedMe() {
 
             {/* left arm, hanging relaxed */}
             <g transform="translate(-12 4)">
-            <path d="M136 356 C114 372 106 430 108 480 C109 518 112 546 116 572 L144 572 C139 536 139 496 143 458 C147 420 156 386 158 368 Z" fill={TOP} {...line} />
-            <path d="M115 570 Q104 602 120 618 Q138 626 148 606 Q150 586 144 570 Z" fill={SKIN} {...line} />
-            <path d="M124 586 Q120 598 126 606" {...line} strokeWidth={3} fill="none" />
+              <path d="M136 356 C114 372 106 430 108 480 C109 518 112 546 116 572 L144 572 C139 536 139 496 143 458 C147 420 156 386 158 368 Z" fill={TOP} {...line} />
+              <path d="M115 570 Q104 602 120 618 Q138 626 148 606 Q150 586 144 570 Z" fill={SKIN} {...line} />
+              <path d="M124 586 Q120 598 126 606" {...line} strokeWidth={3} fill="none" />
             </g>
             {/* right arm: hangs loose, then lifts into a shaka */}
             <g ref={arm}>
               <g transform="translate(12 4)">
-              <path d="M264 356 C286 372 294 430 292 480 C291 518 288 546 284 572 L256 572 C261 536 261 496 257 458 C253 420 244 386 242 368 Z" fill={TOP} {...line} />
-              <path d="M256 570 Q252 598 268 604 Q286 604 286 574 Z" fill={SKIN} {...line} />
-              <path d="M258 576 L240 564 Q234 560 238 555 Q242 552 248 556 L262 566" fill={SKIN} {...line} />
-              <path d="M282 594 L298 612 Q302 618 297 621 Q293 623 289 618 L276 602" fill={SKIN} {...line} />
+                <path d="M264 356 C286 372 294 430 292 480 C291 518 288 546 284 572 L256 572 C261 536 261 496 257 458 C253 420 244 386 242 368 Z" fill={TOP} {...line} />
+                <path d="M256 570 Q252 598 268 604 Q286 604 286 574 Z" fill={SKIN} {...line} />
+                <path d="M258 576 L240 564 Q234 560 238 555 Q242 552 248 556 L262 566" fill={SKIN} {...line} />
+                <path d="M282 594 L298 612 Q302 618 297 621 Q293 623 289 618 L276 602" fill={SKIN} {...line} />
               </g>
             </g>
 
