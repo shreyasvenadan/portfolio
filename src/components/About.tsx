@@ -9,17 +9,23 @@ export default function About() {
           <p key={paragraph}>{paragraph}</p>
         ))}
       </div>
-      <h3 className="mt-10 mb-4 text-sm font-medium tracking-wide text-zinc-500 uppercase">Tech I work with</h3>
-      <ul className="flex flex-wrap gap-2">
-        {profile.skills.map((skill) => (
-          <li
-            key={skill}
-            className="rounded-md bg-zinc-100 px-3 py-1 font-mono text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-          >
-            {skill}
-          </li>
+      <div className="mt-10 space-y-6">
+        {Object.entries(profile.skills).map(([group, skills]) => (
+          <div key={group}>
+            <h3 className="mb-3 text-sm font-medium tracking-wide text-zinc-500 uppercase">{group}</h3>
+            <ul className="flex flex-wrap gap-2">
+              {skills.map((skill) => (
+                <li
+                  key={skill}
+                  className="rounded-md bg-zinc-100 px-3 py-1 font-mono text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                >
+                  {skill}
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
     </Section>
   )
 }

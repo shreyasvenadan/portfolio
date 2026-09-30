@@ -12,13 +12,17 @@ export default function Experience() {
               <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
                 {item.role} <span className="text-accent">@ {item.org}</span>
               </h3>
-              <span className="font-mono text-sm text-zinc-500">{item.period}</span>
+              <span className="font-mono text-sm text-zinc-500">
+                {item.location ? `${item.location} · ${item.period}` : item.period}
+              </span>
             </div>
-            <ul className="mt-3 list-disc space-y-1 pl-5 text-zinc-600 marker:text-zinc-400 dark:text-zinc-400">
-              {item.points.map((point) => (
-                <li key={point}>{point}</li>
-              ))}
-            </ul>
+            {item.points.length > 0 && (
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-zinc-600 marker:text-zinc-400 dark:text-zinc-400">
+                {item.points.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            )}
           </li>
         ))}
       </ol>
