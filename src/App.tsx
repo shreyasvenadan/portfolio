@@ -7,6 +7,7 @@ import Grain from './components/Grain'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import Projects from './components/Projects'
+import StokedMe from './components/StokedMe'
 import { profile } from './data/content'
 import { watchSections } from './lib/sections'
 
@@ -29,6 +30,7 @@ export default function App() {
           <feDisplacementMap in="SourceGraphic" scale="4" />
         </filter>
       </svg>
+      <StokedMe />
       <Grain />
 
       <Header />

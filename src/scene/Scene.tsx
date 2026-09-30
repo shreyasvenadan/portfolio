@@ -1,6 +1,6 @@
 import { Environment, Lightformer } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Suspense, useMemo, useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import {
   AdditiveBlending,
   CanvasTexture,
@@ -14,7 +14,6 @@ import {
 } from 'three'
 import { sectionProgress } from '../lib/sections'
 import SceneLoader from '../components/SceneLoader'
-import Avatar from './Avatar'
 import Effects from './Effects'
 import Flow from './Flow'
 import { focusPoint } from './focus'
@@ -184,9 +183,6 @@ export default function Scene() {
           <CameraRig />
           <LightShafts />
           <Flow />
-          <Suspense fallback={null}>
-            <Avatar />
-          </Suspense>
           <Effects />
         </Canvas>
       </div>

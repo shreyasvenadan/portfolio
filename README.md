@@ -16,17 +16,11 @@ npm run preview  # serve the production build locally
 All text, projects, and experience live in [`src/data/content.ts`](src/data/content.ts).
 Put a résumé at `public/resume.pdf`.
 
-## 3D avatar
+## Character and scene
 
-The background is a React Three Fiber scene (`src/scene/`). Until an avatar file exists it shows a simple stand-in figure.
+The character is a hand-drawn SVG in the style of the cartoon *Stoked* (`src/components/StokedMe.tsx`). Its pupils follow the cursor, it blinks and waves, and it zooms and blurs behind the text as you scroll. Colours are constants at the top of the file.
 
-To use your own avatar, export it from [Avaturn](https://avaturn.me) as **GLB** (include ARKit blendshapes if offered, which enables blinking), then run:
-
-```sh
-npm run avatar -- ~/Downloads/your-avaturn-export.glb
-```
-
-This compresses the model and saves it to `public/models/avatar.glb`, which the site loads automatically. The avatar's arms are lowered from the T-pose, its head follows the cursor, and it floats gently. If the GLB contains an animation (e.g. an idle from Mixamo), that plays instead.
+Behind it, a React Three Fiber scene (`src/scene/`) adds drifting particles, blobs and kelp, with grain, dithering and depth of field.
 
 ## Deployment
 

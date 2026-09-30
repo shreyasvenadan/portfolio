@@ -215,18 +215,6 @@ const speckFragment = /* glsl */ `
     gl_FragColor = vec4(color, smoothstep(0.5, 0.0, d) * vFade * 0.75);
   }
 `
-const bubbleFragment = /* glsl */ `
-  uniform vec3 color;
-  varying float vFade;
-  void main() {
-    vec2 p = gl_PointCoord - 0.5;
-    float d = length(p);
-    if (d > 0.5) discard;
-    float ring = smoothstep(0.5, 0.42, d) * smoothstep(0.28, 0.42, d);
-    float glint = smoothstep(0.12, 0.0, length(p - vec2(-0.15, -0.15)));
-    gl_FragColor = vec4(color, (ring * 0.8 + glint) * vFade);
-  }
-`
 
 function usePointsMaterial(fragmentShader: string, color: string, additive = false) {
   const pixelRatio = useThree((s) => s.viewport.dpr)
@@ -292,53 +280,12 @@ function Current({ count = 550 }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Bubbles: a thin stream rising from in front of the avatar's mouth, drifting
-// sideways with the current as they go up.
-
-function Bubbles({ count = 26 }) {
-  const ref = useRef<Points>(null)
-  const still = useStill()
-  const material = usePointsMaterial(bubbleFragment, '#e8f6ef')
-  const { positions, sizes, offsets } = useMemo(() => {
-    const rand = seeded(3)
-    return {
-      positions: new Float32Array(count * 3),
-      sizes: Float32Array.from({ length: count }, () => 0.8 + rand() * 1.4),
-      offsets: Float32Array.from({ length: count }, () => rand()),
-    }
-  }, [count])
-
-  useFrame(({ clock }) => {
-    if (!ref.current || still) return
-    const t = clock.elapsedTime
-    const a = ref.current.geometry.attributes.position.array as Float32Array
-    for (let i = 0; i < count; i++) {
-      const life = (t * 0.12 + offsets[i]) % 1
-      a[i * 3] = 0.08 + life * 0.9 + Math.sin(life * 14 + offsets[i] * 30) * 0.05 * (1 + life * 3)
-      a[i * 3 + 1] = 1.56 + life * 3
-      a[i * 3 + 2] = 0.3 + life * 0.3
-    }
-    ref.current.geometry.attributes.position.needsUpdate = true
-  })
-
-  return (
-    <points ref={ref} material={material} frustumCulled={false}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-size" args={[sizes, 1]} />
-      </bufferGeometry>
-    </points>
-  )
-}
-
 export default function Flow() {
   return (
     <>
       <Kelp />
       <Drifters />
       <Current />
-      <Bubbles />
     </>
   )
 }
