@@ -303,11 +303,12 @@ export default function Underwater() {
       ))}
 
       {/* the island's rocky base, lined up under the island at the surface */}
-      <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '99.6vh', width: 'calc(var(--s, 1) * 1200px)' }}>
+      <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '100vh', width: 'calc(var(--s, 1) * 1200px)' }}>
         <svg viewBox="0 0 1200 460" className="w-full overflow-visible">
-          <path d="M140 0 L1060 0 Q1150 180 1200 460 L0 460 Q60 180 140 0 Z" fill="#5f7e74" {...line} />
+          {/* Only the sides are outlined, so there's no seam at the surface. */}
+          <path d="M140 0 L1060 0 Q1150 180 1200 460 L0 460 Q60 180 140 0 Z" fill="#5f7e74" />
           <path d="M860 0 L1060 0 Q1150 180 1200 460 L980 460 Q960 200 860 0 Z" fill="#50695f" />
-          <path d="M140 0 L1060 0" stroke="#2b93a6" strokeWidth={8} />
+          <path d="M140 0 Q60 180 0 460 M1060 0 Q1150 180 1200 460" fill="none" {...line} />
         </svg>
       </div>
 

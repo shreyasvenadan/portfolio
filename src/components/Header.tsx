@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { links, profile } from '../data/content'
+import { isNight, setNight } from '../lib/night'
 
 const GithubIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 fill-current">
@@ -17,11 +19,23 @@ const YoutubeIcon = () => (
 )
 
 export default function Header() {
+  const [night, setNightState] = useState(isNight)
+  const toggle = () => {
+    setNight(!night)
+    setNightState(!night)
+  }
   return (
     <header className="fixed inset-x-0 top-0 z-20 flex items-center justify-between px-5 py-4 md:px-10 md:py-6">
-      <a href="#top" className="font-display text-lg font-bold tracking-tight whitespace-nowrap md:text-xl">
+      {/* Clicking the name switches between day and night. */}
+      <button
+        type="button"
+        onClick={toggle}
+        aria-pressed={night}
+        title={night ? 'Switch to day' : 'Switch to night'}
+        className="cursor-pointer font-display text-lg font-bold tracking-tight whitespace-nowrap md:text-xl"
+      >
         {profile.name}
-      </a>
+      </button>
       <nav aria-label="Profiles" className="flex shrink-0 gap-2">
         <a
           href={links.github}

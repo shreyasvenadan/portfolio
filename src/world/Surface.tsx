@@ -1,5 +1,17 @@
 import { forwardRef } from 'react'
 
+// Deterministic pseudo-random numbers so the stars land in the same spots every load.
+function seeded(seed: number) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+const rand = seeded(5)
+const STARS = Array.from({ length: 70 }, () => ({ x: rand() * 1600, y: rand() * 500, r: 1.5 + rand() * 2.5, delay: rand() * 4 }))
+
 // The surface: a small island off Bali at golden hour, with the sea in front.
 // Props nod to Shreyas's story: a SeaLens surfboard, fish jumping out of the
 // reef, a camera on a tripod (photography and video), a football, and a
@@ -160,6 +172,10 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
           <stop offset="0" stopColor={SKY_TOP} />
           <stop offset="1" stopColor={SKY_LOW} />
         </linearGradient>
+        <linearGradient id="night-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#4a5fb0" />
+          <stop offset="1" stopColor="#9aa6dd" />
+        </linearGradient>
         <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={SEA} />
           <stop offset="1" stopColor={SEA_FRONT} />
@@ -168,8 +184,11 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
 
       {/* sky, sun, clouds, gulls */}
       <rect width={1600} height={600} fill="url(#sky)" />
-      <circle cx={1270} cy={540} r={160} fill={SUN} opacity={0.35} />
-      <circle cx={1270} cy={540} r={105} fill={SUN} {...line} />
+      <rect className="night-only" width={1600} height={600} fill="url(#night-sky)" />
+      <g className="day-only sun-set">
+        <circle cx={1270} cy={540} r={160} fill={SUN} opacity={0.35} />
+        <circle cx={1270} cy={540} r={105} fill={SUN} {...line} />
+      </g>
       <Cloud x={0} y={110} s={1.1} dur={140} delay={30} animate={animate} />
       <Cloud x={0} y={210} s={0.75} dur={110} delay={80} animate={animate} />
       <Cloud x={0} y={60} s={0.6} dur={170} delay={130} animate={animate} />
@@ -187,7 +206,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       <rect y={570} width={1600} height={330} fill="url(#sea)" />
       <rect y={570} width={1600} height={22} fill={SEA_DEEP} />
       <path d="M0 572 L1600 572" {...line} />
-      <path d="M1130 606 L1410 606 M1180 626 L1360 626" stroke="#ffe9a8" strokeWidth={5} strokeLinecap="round" opacity={0.8} />
+      <path className="day-only" d="M1130 606 L1410 606 M1180 626 L1360 626" stroke="#ffe9a8" strokeWidth={5} strokeLinecap="round" opacity={0.8} />
       <Waves y={630} color="#7fd0d8" dur={5} animate={animate} />
       <Waves y={680} color="#9fdde2" dur={3.6} animate={animate} />
       <JumpingFish x={1400} y={660} dur={7} delay={1.2} animate={animate} />
@@ -253,6 +272,23 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       <Waves y={840} color="#6cc3cf" dur={4.2} animate={animate} />
       <Waves y={880} color="#5ab4c3" dur={3} animate={animate} />
       <rect y={895} width={1600} height={10} fill={SEA_FRONT} />
+
+      {/* --- night: a blue moonlit tint, then the moon, stars and reflection on top */}
+      <rect className="night-tint" width={1600} height={900} fill="#27346e" />
+      <g className="night-only">
+        {STARS.map((s, i) => (
+          <circle key={i} className="twinkle" style={{ animationDelay: `-${s.delay}s` }} cx={s.x} cy={s.y} r={s.r} fill="#fff8dc" />
+        ))}
+        <path className="shooting-star" d="M0 0 L-140 50" stroke="#fff8dc" strokeWidth={3} strokeLinecap="round" />
+        <path d="M1150 610 L1390 610 M1200 634 L1340 634 M1240 656 L1300 656" stroke="#e8f1ff" strokeWidth={5} strokeLinecap="round" opacity={0.7} />
+      </g>
+      <g className="night-only moon-rise">
+        <circle cx={1270} cy={250} r={130} fill="#f4f1d8" opacity={0.18} />
+        <circle cx={1270} cy={250} r={80} fill="#f4f1d8" {...line} />
+        <circle cx={1245} cy={232} r={14} fill="#dcd6b4" />
+        <circle cx={1296} cy={270} r={10} fill="#dcd6b4" />
+        <circle cx={1285} cy={218} r={7} fill="#dcd6b4" />
+      </g>
     </svg>
   )
 })

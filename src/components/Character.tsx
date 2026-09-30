@@ -267,7 +267,7 @@ export default function Character() {
   )
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-[5] overflow-hidden">
+    <div aria-hidden className="character pointer-events-none fixed inset-0 z-[5] overflow-hidden">
       {/* Feet land on the island in the backdrop, 22% up from the bottom. */}
       <div ref={wrapper} className="flex h-full items-end justify-center pb-[22vh] will-change-transform">
         <div className="h-[72vh]">

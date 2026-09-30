@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
+import { isNight } from '../lib/night'
 import { prefersReducedMotion, sectionProgress } from '../lib/sections'
 import Surface from '../world/Surface'
 import Underwater from '../world/Underwater'
@@ -43,6 +44,7 @@ export default function Backdrop() {
     let frame = 0
     let paused = false
     let tone = -1
+    let night = isNight() ? 1 : 0
     const tick = () => {
       const p = sectionProgress()
       if (world.current) world.current.style.transform = `translate3d(0, ${-p * window.innerHeight}px, 0)`
@@ -55,7 +57,10 @@ export default function Backdrop() {
         paused = offscreen
       }
 
-      const next = Math.round(Math.min(1, Math.max(0, (p - 0.4) / 0.5)) * 40) / 40
+      // Light text once underwater, or all the way up at night (eased when toggled).
+      night += ((isNight() ? 1 : 0) - night) * 0.08
+      const depth = Math.min(1, Math.max(0, (p - 0.4) / 0.5))
+      const next = Math.round(Math.max(depth, night) * 40) / 40
       if (next !== tone) {
         tone = next
         applyTone(tone)
@@ -74,6 +79,11 @@ export default function Backdrop() {
       <div ref={world} className="absolute inset-x-0 top-0 h-[500vh] will-change-transform" style={{ background: WATER }}>
         <Surface ref={surface} animate={animate} />
         <Underwater />
+        {/* At night the shallow water darkens too; the deep is dark already. */}
+        <div
+          className="night-tint absolute inset-x-0"
+          style={{ top: '100vh', height: '250vh', background: 'linear-gradient(to bottom, #27346e, transparent)' }}
+        />
       </div>
     </div>
   )

@@ -184,3 +184,81 @@ body {
     animation: none;
   }
 }
+
+/* --- Night mode (click the name in the header) ------------------------- */
+.night-tint {
+  mix-blend-mode: multiply;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.4s ease;
+}
+:root[data-night='true'] .night-tint {
+  opacity: 0.78;
+}
+
+.night-only,
+.day-only {
+  transition:
+    opacity 1.4s ease,
+    translate 1.6s ease;
+}
+.night-only {
+  opacity: 0;
+}
+:root[data-night='true'] .night-only {
+  opacity: 1;
+}
+:root[data-night='true'] .day-only {
+  opacity: 0;
+}
+/* The sun sinks below the horizon as the moon rises. */
+:root[data-night='true'] .sun-set {
+  translate: 0 260px;
+}
+.moon-rise {
+  translate: 0 180px;
+}
+:root[data-night='true'] .moon-rise {
+  translate: 0 0;
+}
+
+.character svg {
+  transition: filter 1.4s ease;
+}
+:root[data-night='true'] .character svg {
+  filter: brightness(0.72) saturate(0.8) hue-rotate(-8deg);
+}
+
+.twinkle {
+  animation: twinkle 3.2s ease-in-out infinite alternate;
+}
+@keyframes twinkle {
+  from { opacity: 0.25; }
+  to { opacity: 1; }
+}
+
+.shooting-star {
+  opacity: 0;
+  animation: shooting-star 9s linear infinite 3s;
+}
+@keyframes shooting-star {
+  0% { translate: 1300px 60px; opacity: 0; }
+  2% { opacity: 1; }
+  8% { translate: 900px 210px; opacity: 0; }
+  100% { translate: 900px 210px; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .twinkle, .shooting-star {
+    animation: none;
+  }
+  .night-tint, .night-only, .day-only, .character svg {
+    transition: none;
+  }
+}
+
+/* Sunlight shafts are faint moonbeams at night. */
+:root[data-night='true'] .rays {
+  animation: none;
+  opacity: 0.18;
+}
