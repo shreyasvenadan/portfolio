@@ -10,15 +10,16 @@ import {
   MathUtils,
   Mesh,
   MeshBasicMaterial,
-  Points,
   Vector3,
 } from 'three'
-import { prefersReducedMotion, sectionProgress } from '../lib/sections'
+import { sectionProgress } from '../lib/sections'
 import SceneLoader from '../components/SceneLoader'
 import Avatar from './Avatar'
+import Effects from './Effects'
+import Flow from './Flow'
 
-// Water colour at each section, from sunlit shallows to the abyss.
-const WATER = ['#12505f', '#0e3f55', '#0a2f47', '#061c33', '#030d1c'].map((c) => new Color(c))
+// Murky water colour at each section, from hazy shallows to the abyss.
+const WATER = ['#4b6a5c', '#39584c', '#26433c', '#15292a', '#081214'].map((c) => new Color(c))
 
 type Shot = { pos: Vector3; look: Vector3 }
 const shot = (pos: [number, number, number], look: [number, number, number]): Shot => ({
@@ -74,54 +75,6 @@ function CameraRig() {
   return null
 }
 
-// Deterministic pseudo-random numbers so the particle field is the same every load.
-function seeded(seed: number) {
-  return () => {
-    seed = (seed + 0x6d2b79f5) | 0
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-// Drifting specks in the water ("marine snow").
-function MarineSnow({ count = 700 }) {
-  const ref = useRef<Points>(null)
-  const still = useMemo(() => prefersReducedMotion(), [])
-  const positions = useMemo(() => {
-    const rand = seeded(7)
-    const a = new Float32Array(count * 3)
-    for (let i = 0; i < count; i++) {
-      a[i * 3] = (rand() - 0.5) * 9
-      a[i * 3 + 1] = rand() * 5.5 - 1
-      a[i * 3 + 2] = (rand() - 0.5) * 7 - 1
-    }
-    return a
-  }, [count])
-
-  useFrame(({ clock }, dt) => {
-    if (!ref.current || still) return
-    const attr = ref.current.geometry.attributes.position
-    const a = attr.array as Float32Array
-    const t = clock.elapsedTime
-    for (let i = 0; i < count; i++) {
-      a[i * 3 + 1] += dt * (0.03 + (i % 5) * 0.012)
-      a[i * 3] += Math.sin(t * 0.3 + i) * dt * 0.02
-      if (a[i * 3 + 1] > 4.5) a[i * 3 + 1] = -1
-    }
-    attr.needsUpdate = true
-  })
-
-  return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <pointsMaterial size={0.02} color="#d5f3f1" transparent opacity={0.5} depthWrite={false} sizeAttenuation />
-    </points>
-  )
-}
-
 // Sunlight shafts from the surface; they fade out as the page gets deeper.
 const SHAFTS = [
   { x: -2.2, z: -2.5, tilt: 0.28, width: 0.7 },
@@ -163,7 +116,7 @@ function LightShafts() {
           <planeGeometry args={[s.width, 7]} />
           <meshBasicMaterial
             map={texture}
-            color="#a6ece4"
+            color="#e3edc6"
             transparent
             opacity={0.16}
             blending={AdditiveBlending}
@@ -181,14 +134,15 @@ export default function Scene() {
     <>
       <div aria-hidden className="fixed inset-0">
         <Canvas
-          dpr={[1, 1.75]}
+          dpr={0.5}
           camera={{ fov: 32, near: 0.1, far: 40, position: [-0.55, 1.5, 2.3] }}
           eventSource={document.getElementById('root')!}
           eventPrefix="client"
-          gl={{ antialias: true }}
+          gl={{ antialias: false }}
+          style={{ imageRendering: 'pixelated' }}
         >
-          <color attach="background" args={['#12505f']} />
-          <fog attach="fog" args={['#12505f', 3, 12]} />
+          <color attach="background" args={['#4b6a5c']} />
+          <fog attach="fog" args={['#4b6a5c', 2.5, 10]} />
 
           <hemisphereLight args={['#c4f0ee', '#021426', 0.9]} />
           <directionalLight position={[1.5, 6, 2.5]} intensity={2.4} color="#e2f7f4" />
@@ -222,10 +176,11 @@ export default function Scene() {
 
           <CameraRig />
           <LightShafts />
-          <MarineSnow />
+          <Flow />
           <Suspense fallback={null}>
             <Avatar />
           </Suspense>
+          <Effects />
         </Canvas>
       </div>
       <SceneLoader />

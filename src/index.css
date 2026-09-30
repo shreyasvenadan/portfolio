@@ -4,13 +4,11 @@
   --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'Newsreader', ui-serif, Georgia, serif;
 
-  --color-shallows: #12505f;
-  --color-midwater: #0a2f47;
-  --color-deep: #061c33;
-  --color-abyss: #030d1c;
-  --color-foam: #e4f1f2;
-  --color-silt: #8fb0bb;
-  --color-glow: #7ee8d8;
+  --color-murk: #4b6a5c;
+  --color-abyss: #081214;
+  --color-foam: #e6eee0;
+  --color-silt: #a3b5a6;
+  --color-glow: #8fe8cf;
 }
 
 html {
@@ -46,4 +44,31 @@ body {
   font-optical-sizing: auto;
   letter-spacing: -0.02em;
   line-height: 0.92;
+  filter: url(#rough);
+}
+
+/* Full-screen grain; jumps between offsets like film grain rather than sliding. */
+.grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 40;
+  pointer-events: none;
+  animation: grain 0.9s steps(1) infinite;
+}
+
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  12% { transform: translate(-7%, 4%); }
+  25% { transform: translate(5%, -9%); }
+  37% { transform: translate(-11%, -3%); }
+  50% { transform: translate(9%, 7%); }
+  62% { transform: translate(-3%, 11%); }
+  75% { transform: translate(12%, -5%); }
+  87% { transform: translate(-6%, -11%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grain {
+    animation: none;
+  }
 }

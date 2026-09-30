@@ -3,6 +3,7 @@ import About from './components/About'
 import Contact from './components/Contact'
 import DepthGauge from './components/DepthGauge'
 import Experience from './components/Experience'
+import Grain from './components/Grain'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import Projects from './components/Projects'
@@ -23,8 +24,17 @@ export default function App() {
       {/* Darken the text side of the screen so copy stays readable over the scene. */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 bg-abyss/55 md:bg-transparent md:bg-linear-to-r md:from-abyss/85 md:via-abyss/45 md:to-transparent"
+        className="pointer-events-none fixed inset-0 bg-abyss/55 md:bg-transparent md:bg-linear-to-r md:from-abyss/90 md:via-abyss/60 md:to-transparent"
       />
+
+      {/* Roughens heading edges like ink bleeding into cheap paper. */}
+      <svg aria-hidden width="0" height="0" className="absolute">
+        <filter id="rough">
+          <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="4" />
+          <feDisplacementMap in="SourceGraphic" scale="4" />
+        </filter>
+      </svg>
+      <Grain />
 
       <Header />
       <DepthGauge />
