@@ -1,7 +1,13 @@
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'Yung Jakes New Handwriting';
+  src: url('/portfolio/fonts/YungJakesNewHandwriting-Regular.woff2') format('woff2');
+  font-display: swap;
+}
+
 @theme {
-  --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Yung Jakes New Handwriting', 'Comic Sans MS', cursive;
   --font-serif: 'Newsreader', ui-serif, Georgia, serif;
 
   --color-paper: #e3d7bf;
@@ -37,14 +43,13 @@ body {
   color: var(--color-bone);
 }
 
-/* Condensed, heavy display cut of Bricolage for the big headings. */
+/* Handwritten display type for the big headings. The font has one weight,
+   so turn off the browser's fake bold to keep the pen strokes clean. */
 .display {
   font-family: var(--font-display);
-  font-variation-settings: 'wdth' 78;
-  font-optical-sizing: auto;
-  letter-spacing: -0.02em;
-  line-height: 0.92;
-  filter: url(#rough);
+  font-weight: 400;
+  font-synthesis: none;
+  line-height: 1;
 }
 
 /* A soft beige glow behind text keeps it readable over the character and scene. */
