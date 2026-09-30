@@ -1,16 +1,49 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --color-accent: oklch(0.62 0.17 255);
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Newsreader', ui-serif, Georgia, serif;
+
+  --color-shallows: #12505f;
+  --color-midwater: #0a2f47;
+  --color-deep: #061c33;
+  --color-abyss: #030d1c;
+  --color-foam: #e4f1f2;
+  --color-silt: #8fb0bb;
+  --color-glow: #7ee8d8;
 }
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 5rem;
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 body {
-  @apply bg-white font-sans text-zinc-800 antialiased dark:bg-zinc-950 dark:text-zinc-200;
+  @apply bg-abyss font-serif text-foam antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-glow);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: var(--color-glow);
+  color: var(--color-abyss);
+}
+
+/* Condensed, heavy display cut of Bricolage for the big headings. */
+.display {
+  font-family: var(--font-display);
+  font-variation-settings: 'wdth' 78;
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+  line-height: 0.92;
 }

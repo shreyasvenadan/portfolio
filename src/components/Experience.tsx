@@ -4,25 +4,22 @@ import Section from './Section'
 export default function Experience() {
   return (
     <Section id="experience" title="Experience">
-      <ol className="space-y-10 border-l border-zinc-200 dark:border-zinc-800">
+      <ol className="space-y-14">
         {experience.map((item) => (
-          <li key={`${item.role}-${item.org}`} className="relative pl-8">
-            <span className="absolute top-2 -left-[5px] h-2.5 w-2.5 rounded-full bg-accent" />
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                {item.role} <span className="text-accent">@ {item.org}</span>
-              </h3>
-              <span className="font-mono text-sm text-zinc-500">
-                {item.location ? `${item.location} · ${item.period}` : item.period}
-              </span>
+          <li key={`${item.role}-${item.org}`} className="grid gap-2 md:grid-cols-[9rem_1fr] md:gap-8">
+            <p className="font-display text-silt tabular-nums">{item.period}</p>
+            <div>
+              <h3 className="font-display text-2xl font-bold tracking-tight">{item.org}</h3>
+              <p className="mt-1 text-lg text-foam/85">{item.role}</p>
+              {item.location && <p className="text-silt">{item.location}</p>}
+              {item.points.length > 0 && (
+                <ul className="mt-4 list-disc space-y-2 pl-5 text-lg leading-relaxed text-foam/85 marker:text-glow">
+                  {item.points.map((point) => (
+                    <li key={point}>{point}</li>
+                  ))}
+                </ul>
+              )}
             </div>
-            {item.points.length > 0 && (
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-zinc-600 marker:text-zinc-400 dark:text-zinc-400">
-                {item.points.map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-              </ul>
-            )}
           </li>
         ))}
       </ol>

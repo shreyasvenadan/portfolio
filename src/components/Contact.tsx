@@ -1,26 +1,26 @@
 import { links } from '../data/content'
-import Section from './Section'
 
 export default function Contact() {
   return (
-    <Section id="contact" title="Contact">
-      <p className="max-w-xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
-        I’m open to new opportunities and always happy to chat. The best way to reach me is by email.
+    <section id="contact" className="flex min-h-[80svh] flex-col justify-center py-28">
+      <h2 className="display text-5xl font-extrabold md:text-7xl">Get in touch</h2>
+      <p className="mt-6 max-w-md text-xl leading-relaxed text-foam/85">
+        I’m graduating in November 2026 and looking for software engineering roles. Email is the fastest way to reach me.
       </p>
       <a
         href={`mailto:${links.email}`}
-        className="mt-8 inline-block rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white transition hover:opacity-90"
+        className="mt-10 font-display text-2xl font-semibold break-all text-glow underline-offset-8 hover:underline md:text-4xl"
       >
-        Say hello
+        {links.email}
       </a>
-      <div className="mt-8 flex gap-6 text-sm text-zinc-500">
-        <a href={links.github} target="_blank" rel="noreferrer" className="hover:text-accent">
+      <div className="mt-10 flex gap-8 font-display text-silt">
+        <a href={links.github} target="_blank" rel="noreferrer" className="hover:text-foam">
           GitHub
         </a>
-        <a href={links.linkedin} target="_blank" rel="noreferrer" className="hover:text-accent">
+        <a href={links.linkedin} target="_blank" rel="noreferrer" className="hover:text-foam">
           LinkedIn
         </a>
       </div>
-    </Section>
+    </section>
   )
 }
