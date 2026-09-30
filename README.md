@@ -18,7 +18,7 @@ Put a résumé at `public/resume.pdf`.
 
 ## Character and scene
 
-The character is a hand-drawn SVG in the style of the cartoon *Stoked* (`src/components/StokedMe.tsx`). Its pupils follow the cursor, it blinks and waves, and it zooms and blurs behind the text as you scroll. Colours are constants at the top of the file.
+The character is a hand-drawn SVG in the style of *Total Drama Island* (`src/components/Character.tsx`). Its eyes follow the cursor, it breathes, blinks, waves, shrugs, laughs and looks around, jumps when clicked, and it zooms and blurs behind the text as you scroll. Colours are constants at the top of the file.
 
 Behind it, a React Three Fiber scene (`src/scene/`) adds drifting particles, blobs and kelp, with grain, dithering and depth of field.
 
