@@ -37,6 +37,7 @@ export const profile = {
 export const links = {
   github: 'https://github.com/shreyasvenadan',
   linkedin: 'https://www.linkedin.com/in/shreyasvenadan',
+  youtube: 'https://www.youtube.com/@your-channel', // TODO: your channel URL
   email: 'shreyasvenadan10@gmail.com',
 }
 

@@ -1,4 +1,4 @@
-import { links, profile } from '../data/content'
+import { profile } from '../data/content'
 
 export default function Hero() {
   return (
@@ -12,14 +12,6 @@ export default function Hero() {
           className="rounded-full bg-accent px-6 py-3 font-semibold text-bone transition hover:bg-ink hover:text-bone"
         >
           See my work
-        </a>
-        <a
-          href={links.github}
-          target="_blank"
-          rel="noreferrer"
-          className="rounded-full border border-ink/30 px-6 py-3 transition hover:border-accent hover:text-accent"
-        >
-          GitHub
         </a>
         {profile.resumeUrl && (
           <a
