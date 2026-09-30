@@ -47,13 +47,14 @@ body {
   filter: url(#rough);
 }
 
-/* Full-screen grain; jumps between offsets like film grain rather than sliding. */
+/* Full-screen grain; holds still, then jumps to a new offset every 2 seconds
+   (8 positions over 16s), in step with the grain in the 3D scene. */
 .grain {
   position: fixed;
   inset: -50%;
   z-index: 40;
   pointer-events: none;
-  animation: grain 0.9s steps(1) infinite;
+  animation: grain 16s steps(1) infinite;
 }
 
 @keyframes grain {

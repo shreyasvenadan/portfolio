@@ -32,8 +32,8 @@ const gritShader = /* glsl */ `
     c += (mix(bayer4(px), hash(px + 91.7), 0.4) - 0.5) / levels;
     c = floor(c * levels + 0.5) / levels;
 
-    // Salt-and-pepper grain that re-rolls about 12 times a second.
-    float n = hash(px + floor(time * 12.0) * 17.0);
+    // Salt-and-pepper grain that holds still and re-rolls every 2 seconds.
+    float n = hash(px + floor(time * 0.5) * 17.0);
     if (n > 1.0 - speckle) c *= 0.35;
     else if (n < speckle * 0.6) c = mix(c, vec3(0.92, 0.95, 0.9), 0.55);
 
