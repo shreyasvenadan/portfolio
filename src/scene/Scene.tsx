@@ -18,8 +18,8 @@ import Avatar from './Avatar'
 import Effects from './Effects'
 import Flow from './Flow'
 
-// Murky water colour at each section, from hazy shallows to the abyss.
-const WATER = ['#4b6a5c', '#39584c', '#26433c', '#15292a', '#081214'].map((c) => new Color(c))
+// Backdrop colour at each section: pale sage at the top, deepening to olive.
+const WATER = ['#a6ae90', '#9ba587', '#8f9a7c', '#848f72', '#7a8569'].map((c) => new Color(c))
 
 type Shot = { pos: Vector3; look: Vector3 }
 const shot = (pos: [number, number, number], look: [number, number, number]): Shot => ({
@@ -141,12 +141,12 @@ export default function Scene() {
           gl={{ antialias: false }}
           style={{ imageRendering: 'pixelated' }}
         >
-          <color attach="background" args={['#4b6a5c']} />
-          <fog attach="fog" args={['#4b6a5c', 2.5, 10]} />
+          <color attach="background" args={['#a6ae90']} />
+          <fog attach="fog" args={['#a6ae90', 2.5, 10]} />
 
-          <hemisphereLight args={['#c4f0ee', '#021426', 0.9]} />
+          <hemisphereLight args={['#f3f0dc', '#3a4331', 1.0]} />
           <directionalLight position={[1.5, 6, 2.5]} intensity={2.4} color="#e2f7f4" />
-          <directionalLight position={[-2.5, 1.5, -3]} intensity={1.6} color="#7ee8d8" />
+          <directionalLight position={[-2.5, 1.5, -3]} intensity={1.4} color="#ffdcb8" />
           {/* Soft warm fill from the camera side so the face isn't lost in shadow. */}
           <directionalLight position={[-1, 1.8, 4]} intensity={1.1} color="#ffe2c4" />
           <Environment resolution={64}>
@@ -156,7 +156,7 @@ export default function Scene() {
               position={[0, 5, 0]}
               rotation-x={Math.PI / 2}
               scale={[8, 8, 1]}
-              color="#d8f4f1"
+              color="#f4f1e0"
             />
             <Lightformer
               form="rect"
@@ -164,7 +164,7 @@ export default function Scene() {
               position={[-4, 1, 2]}
               rotation-y={Math.PI / 2}
               scale={[4, 3, 1]}
-              color="#5fb8c4"
+              color="#c9d1b0"
             />
             <Lightformer
               form="rect"
@@ -172,7 +172,7 @@ export default function Scene() {
               position={[4, 1, 2]}
               rotation-y={-Math.PI / 2}
               scale={[4, 3, 1]}
-              color="#2a6f86"
+              color="#8e9a7c"
             />
           </Environment>
 

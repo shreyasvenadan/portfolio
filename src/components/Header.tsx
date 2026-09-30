@@ -6,7 +6,7 @@ export default function Header() {
       <a href="#top" className="font-display text-xl font-bold tracking-tight">
         {profile.name}
       </a>
-      <a href={`mailto:${links.email}`} className="text-silt transition-colors hover:text-glow">
+      <a href={`mailto:${links.email}`} className="text-muted transition-colors hover:text-accent">
         Email me
       </a>
     </header>

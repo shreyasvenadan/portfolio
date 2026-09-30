@@ -23,12 +23,12 @@ export default function DepthGauge() {
 
   return (
     <nav aria-label="Sections" className="fixed top-1/2 left-20 z-20 hidden h-[56vh] -translate-y-1/2 lg:block">
-      <div className="absolute inset-y-0 left-0 w-px bg-foam/20" />
+      <div className="absolute inset-y-0 left-0 w-px bg-ink/20" />
       <div ref={marker} className="absolute left-0 -translate-x-1/2 -translate-y-1/2">
-        <div className="h-2.5 w-2.5 rounded-full bg-glow shadow-[0_0_12px_var(--color-glow)]" />
+        <div className="h-2.5 w-2.5 rounded-full bg-accent shadow-[0_0_12px_var(--color-accent)]" />
         <span
           ref={readout}
-          className="absolute top-1/2 right-5 -translate-y-1/2 font-display text-sm whitespace-nowrap text-glow tabular-nums"
+          className="absolute top-1/2 right-5 -translate-y-1/2 font-display text-sm whitespace-nowrap text-accent tabular-nums"
         >
           0 m
         </span>
@@ -39,7 +39,7 @@ export default function DepthGauge() {
             <a
               href={`#${s.id}`}
               aria-current={active === i ? 'true' : undefined}
-              className={`block pl-5 text-sm transition-colors hover:text-foam ${active === i ? 'text-foam' : 'text-silt/70'}`}
+              className={`block pl-5 text-sm transition-colors hover:text-ink ${active === i ? 'text-ink' : 'text-muted/70'}`}
             >
               {s.label}
             </a>

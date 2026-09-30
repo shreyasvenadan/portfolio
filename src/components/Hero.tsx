@@ -9,11 +9,11 @@ export default function Hero() {
         <br />
         {rest.join(' ')}
       </h1>
-      <p className="mt-8 max-w-md text-xl leading-relaxed text-foam/85 md:text-2xl">{profile.tagline}</p>
+      <p className="mt-8 max-w-md text-xl leading-relaxed text-ink/85 md:text-2xl">{profile.tagline}</p>
       <div className="mt-10 flex flex-wrap gap-3 font-display">
         <a
           href="#work"
-          className="rounded-full bg-glow px-6 py-3 font-semibold text-abyss transition hover:bg-foam"
+          className="rounded-full bg-accent px-6 py-3 font-semibold text-bone transition hover:bg-ink hover:text-bone"
         >
           See my work
         </a>
@@ -21,7 +21,7 @@ export default function Hero() {
           href={links.github}
           target="_blank"
           rel="noreferrer"
-          className="rounded-full border border-foam/30 px-6 py-3 transition hover:border-glow hover:text-glow"
+          className="rounded-full border border-ink/30 px-6 py-3 transition hover:border-accent hover:text-accent"
         >
           GitHub
         </a>
@@ -30,7 +30,7 @@ export default function Hero() {
             href={profile.resumeUrl}
             target="_blank"
             rel="noreferrer"
-            className="rounded-full border border-foam/30 px-6 py-3 transition hover:border-glow hover:text-glow"
+            className="rounded-full border border-ink/30 px-6 py-3 transition hover:border-accent hover:text-accent"
           >
             Résumé
           </a>

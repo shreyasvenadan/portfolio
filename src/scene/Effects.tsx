@@ -35,7 +35,7 @@ const gritShader = /* glsl */ `
     // Salt-and-pepper grain that holds still and re-rolls every 2 seconds.
     float n = hash(px + floor(time * 0.5) * 17.0);
     if (n > 1.0 - speckle) c *= 0.35;
-    else if (n < speckle * 0.6) c = mix(c, vec3(0.92, 0.95, 0.9), 0.55);
+    else if (n < speckle * 0.6) c = mix(c, vec3(0.97, 0.95, 0.88), 0.55);
 
     outputColor = vec4(clamp(c, 0.0, 1.0), inputColor.a);
   }
@@ -64,7 +64,7 @@ export default function Effects() {
       <DepthOfField target={[0, 1.35, 0]} worldFocusRange={1.4} bokehScale={6} />
       <Bloom intensity={0.7} luminanceThreshold={0.55} luminanceSmoothing={0.3} mipmapBlur />
       <ChromaticAberration offset={aberration} radialModulation modulationOffset={0.25} />
-      <Vignette offset={0.2} darkness={0.85} />
+      <Vignette offset={0.25} darkness={0.45} />
       <Grit />
     </EffectComposer>
   )

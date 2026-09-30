@@ -21,10 +21,10 @@ export default function App() {
       <Suspense fallback={null}>
         <Scene />
       </Suspense>
-      {/* Darken the text side of the screen so copy stays readable over the scene. */}
+      {/* Wash out the text side of the screen so copy stays readable over the scene. */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 bg-abyss/55 md:bg-transparent md:bg-linear-to-r md:from-abyss/90 md:via-abyss/60 md:to-transparent"
+        className="pointer-events-none fixed inset-0 bg-paper/45 md:bg-transparent md:bg-linear-to-r md:from-paper/75 md:via-paper/35 md:to-transparent"
       />
 
       {/* Roughens heading edges like ink bleeding into cheap paper. */}
@@ -48,7 +48,7 @@ export default function App() {
           <Contact />
         </div>
       </main>
-      <footer className="relative z-10 px-5 pb-10 text-sm text-silt md:px-10 lg:pl-60">
+      <footer className="relative z-10 px-5 pb-10 text-sm text-muted md:px-10 lg:pl-60">
         © {year} {profile.name}
       </footer>
     </>

@@ -65,7 +65,7 @@ function Kelp() {
   }, [])
 
   const material = useMemo(() => {
-    const m = new MeshStandardMaterial({ color: '#1c3326', roughness: 1, side: DoubleSide })
+    const m = new MeshStandardMaterial({ color: '#4a5640', roughness: 1, side: DoubleSide })
     m.onBeforeCompile = (shader) => {
       shader.uniforms.time = time.current
       shader.vertexShader = `uniform float time;\n${shader.vertexShader}`.replace(
@@ -125,7 +125,7 @@ const drifterFragment = /* glsl */ `
   }
 `
 
-const DRIFTER_COLORS = ['#7ee8d8', '#f2b872', '#b7a4f5', '#9fe0a0']
+const DRIFTER_COLORS = ['#fff1d6', '#ffcfa3', '#e3ecc8', '#d6c7f0']
 
 type Drifter = { mesh: Mesh | null; base: [number, number, number]; speed: number; size: number; seed: number }
 
@@ -249,7 +249,7 @@ function usePointsMaterial(fragmentShader: string, color: string, additive = fal
 function Current({ count = 550 }) {
   const ref = useRef<Points>(null)
   const still = useStill()
-  const material = usePointsMaterial(speckFragment, '#d9ecd2', true)
+  const material = usePointsMaterial(speckFragment, '#f6f3e4', true)
   const { positions, sizes } = useMemo(() => {
     const rand = seeded(7)
     const positions = new Float32Array(count * 3)
