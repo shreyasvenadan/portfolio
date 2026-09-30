@@ -7,14 +7,14 @@ import {
   Euler,
   Group,
   Mesh,
-  Object3D,
   Quaternion,
   Vector3,
-  type Bone,
 } from 'three'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { prefersReducedMotion } from '../lib/sections'
+import { cartoonify } from './cartoon'
 import { blinkAmount, updateLook, type Look } from './look'
+import { findBone, relaxPose, rotateInModelSpace } from './rig'
 
 const AVATAR_URL = `${import.meta.env.BASE_URL}models/avatar.glb`
 const AVATAR_HEIGHT = 1.75
@@ -59,44 +59,7 @@ function Drift({ children }: { children: ReactNode }) {
 // ---------------------------------------------------------------------------
 // Avaturn (or any humanoid) GLB
 
-const boneKey = (name: string) =>
-  name
-    .toLowerCase()
-    .replace(/^mixamorig[:_]?/, '')
-    .replace(/[^a-z0-9]/g, '')
-
-function findBone(root: Object3D, ...names: string[]) {
-  let found: Bone | undefined
-  root.traverse((o) => {
-    if (!found && (o as Bone).isBone && names.includes(boneKey(o.name))) found = o as Bone
-  })
-  return found
-}
-
-const parentQuat = new Quaternion()
-const delta = new Quaternion()
 const euler = new Euler(0, 0, 0, 'YXZ')
-
-// Rotate a bone by a rotation expressed in model space, whatever its local axes are.
-function rotateInModelSpace(bone: Object3D, rotation: Quaternion) {
-  bone.parent!.getWorldQuaternion(parentQuat)
-  delta.copy(parentQuat).invert().multiply(rotation).multiply(parentQuat)
-  bone.quaternion.premultiply(delta)
-}
-
-// Avaturn exports in a T-pose; swing the upper arms down to rest at the sides.
-function relaxArms(model: Object3D) {
-  for (const side of ['left', 'right']) {
-    const arm = findBone(model, `${side}arm`, `${side}upperarm`)
-    const forearm = findBone(model, `${side}forearm`, `${side}lowerarm`)
-    if (!arm || !forearm) continue
-    const current = forearm.getWorldPosition(new Vector3()).sub(arm.getWorldPosition(new Vector3())).normalize()
-    if (current.y < -0.6) continue // already hanging down
-    const target = new Vector3(Math.sign(current.x) * 0.3, -1, 0.1).normalize()
-    rotateInModelSpace(arm, new Quaternion().setFromUnitVectors(current, target))
-    model.updateMatrixWorld(true)
-  }
-}
 
 type Blink = { mesh: Mesh; index: number }
 
@@ -115,6 +78,10 @@ function GltfAvatar({ url }: { url: string }) {
       }
     })
 
+    const clip = animations.find((a) => /idle/i.test(a.name)) ?? animations[0]
+    if (!clip) relaxPose(model)
+    cartoonify(model)
+
     // Normalise size and stand the feet on y = 0.
     const box = new Box3().setFromObject(model)
     model.scale.setScalar(AVATAR_HEIGHT / (box.max.y - box.min.y))
@@ -123,13 +90,8 @@ function GltfAvatar({ url }: { url: string }) {
     model.position.set(-center.x, -box.min.y, -center.z)
     model.updateMatrixWorld(true)
 
-    const mixer = animations.length > 0 ? new AnimationMixer(model) : null
-    if (mixer) {
-      const clip = animations.find((a) => /idle/i.test(a.name)) ?? animations[0]
-      mixer.clipAction(clip).play()
-    } else {
-      relaxArms(model)
-    }
+    const mixer = clip ? new AnimationMixer(model) : null
+    if (mixer) mixer.clipAction(clip).play()
 
     const head = findBone(model, 'head')
     const neck = findBone(model, 'neck')

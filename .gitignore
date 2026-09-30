@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Raw avatar exports (the compressed copy lives in public/models)
+avatar-source/

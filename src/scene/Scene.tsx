@@ -147,6 +147,8 @@ export default function Scene() {
           <hemisphereLight args={['#c4f0ee', '#021426', 0.9]} />
           <directionalLight position={[1.5, 6, 2.5]} intensity={2.4} color="#e2f7f4" />
           <directionalLight position={[-2.5, 1.5, -3]} intensity={1.6} color="#7ee8d8" />
+          {/* Soft warm fill from the camera side so the face isn't lost in shadow. */}
+          <directionalLight position={[-1, 1.8, 4]} intensity={1.1} color="#ffe2c4" />
           <Environment resolution={64}>
             <Lightformer
               form="rect"
