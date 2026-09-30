@@ -1,13 +1,11 @@
 import { links, profile } from '../data/content'
 
 export default function Hero() {
-  const [first, ...rest] = profile.name.split(' ')
   return (
     <section id="top" className="flex min-h-svh flex-col justify-end pt-28 pb-10 md:pb-14">
-      <h1 className="display text-[clamp(2.5rem,9vw,7.5rem)] font-extrabold whitespace-nowrap">
-        {first} {rest.join(' ')}
-      </h1>
-      <p className="mx-auto mt-5 max-w-lg text-lg leading-relaxed text-ink/85 md:text-xl">{profile.tagline}</p>
+      {/* Kept for screen readers and search engines; the name shows in the header. */}
+      <h1 className="sr-only">{profile.name}</h1>
+      <p className="mx-auto max-w-lg text-lg leading-relaxed text-ink/85 md:text-xl">{profile.tagline}</p>
       <div className="mt-7 flex flex-wrap justify-center gap-3 font-display [text-shadow:none]">
         <a
           href="#work"
