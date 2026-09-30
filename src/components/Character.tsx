@@ -87,17 +87,6 @@ function Hand() {
 // Upper arm, elbow and forearm, all hanging from the shoulder at (0, 0).
 type Part = 'shoulderL' | 'shoulderR' | 'elbowL' | 'elbowR'
 
-type Frame = { scale: number; y: number; blur: number }
-// Per section: hero full body, then zoomed in and blurred behind the text,
-// then back to a smaller, sharp full body for contact.
-const FRAMES: Frame[] = [
-  { scale: 1, y: 0, blur: 0 },
-  { scale: 2.6, y: 34, blur: 10 },
-  { scale: 2.0, y: 14, blur: 9 },
-  { scale: 1.55, y: -4, blur: 8 },
-  { scale: 0.82, y: -14, blur: 0 },
-]
-
 type Action = 'wave' | 'look' | 'shrug' | 'laugh'
 const ACTIONS: Action[] = ['wave', 'look', 'shrug', 'laugh']
 const DURATION: Record<Action | 'jump', number> = { wave: 2.8, look: 3, shrug: 2, laugh: 2.2, jump: 0.95 }
@@ -129,7 +118,7 @@ export default function Character() {
     const p = parts.current
     const pointer = { x: window.innerWidth / 2, y: window.innerHeight / 3 }
     const look = { x: 0, y: 0 }
-    const state = { lean: 0, lastProgress: sectionProgress(), blur: 0, jumpAt: -10 }
+    const state = { lean: 0, lastProgress: sectionProgress(), onIsland: true, jumpAt: -10 }
     let start = -1 // set on the first animation frame
 
     const move = (e: PointerEvent) => {
@@ -138,7 +127,7 @@ export default function Character() {
     }
     // Clicking the character (anywhere that isn't a link or button) makes him jump.
     const click = (e: PointerEvent) => {
-      if ((e.target as Element).closest('a, button') || state.blur > 1 || !p.body) return
+      if ((e.target as Element).closest('a, button') || !state.onIsland || !p.body) return
       const box = p.body.getBoundingClientRect()
       if (e.clientX >= box.left && e.clientX <= box.right && e.clientY >= box.top && e.clientY <= box.bottom) {
         state.jumpAt = (e.timeStamp - start) / 1000
@@ -158,17 +147,11 @@ export default function Character() {
       const dt = Math.min(0.05, t - last)
       last = t
 
-      // --- Scroll: zoom toward the face and blur between sections. -----------
+      // --- Scroll: he stays on the island, which rises out of view as the
+      // backdrop descends into the ocean (one screen height per section).
       const progress = sectionProgress()
-      const i = Math.min(Math.floor(progress), FRAMES.length - 2)
-      const f = smooth(progress - i)
-      const a = FRAMES[i]
-      const b = FRAMES[i + 1]
-      state.blur = a.blur + (b.blur - a.blur) * f
-      if (wrapper.current) {
-        wrapper.current.style.transform = `translateY(${a.y + (b.y - a.y) * f}%) scale(${a.scale + (b.scale - a.scale) * f})`
-        wrapper.current.style.filter = state.blur > 0.2 ? `blur(${state.blur}px)` : 'none'
-      }
+      state.onIsland = progress < 0.6
+      if (wrapper.current) wrapper.current.style.transform = `translate3d(0, ${-progress * window.innerHeight}px, 0)`
       // Lean into fast scrolling, then settle back.
       const velocity = dt > 0 ? (progress - state.lastProgress) / dt : 0
       state.lastProgress = progress
@@ -284,8 +267,10 @@ export default function Character() {
   )
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-[5] flex items-end justify-center overflow-hidden">
-      <div ref={wrapper} className="h-[92svh] origin-[50%_18%] will-change-transform">
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-[5] overflow-hidden">
+      {/* Feet land on the island in the backdrop, 22% up from the bottom. */}
+      <div ref={wrapper} className="flex h-full items-end justify-center pb-[22vh] will-change-transform">
+        <div className="h-[72vh]">
         <svg ref={svg} viewBox="0 0 400 920" className="h-full w-auto overflow-visible">
           <g ref={set('body')}>
             {/* legs */}
@@ -378,6 +363,7 @@ export default function Character() {
             </g>
           </g>
         </svg>
+        </div>
       </div>
     </div>
   )

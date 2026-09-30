@@ -58,16 +58,21 @@ body {
   text-transform: lowercase;
 }
 
-/* A soft beige glow behind text keeps it readable over the character and scene. */
+/* A soft glow behind text keeps it readable over the scene. Its colour
+   (--halo, an "r g b" triplet) shifts from beige to deep navy with depth. */
+:root {
+  --halo: 227 215 191;
+}
+
 .halo {
   text-shadow:
-    0 0 2px rgb(227 215 191 / 0.9),
-    0 0 14px rgb(227 215 191 / 0.95),
-    0 0 32px rgb(227 215 191 / 0.7);
+    0 0 2px rgb(var(--halo) / 0.9),
+    0 0 14px rgb(var(--halo) / 0.95),
+    0 0 32px rgb(var(--halo) / 0.7);
 }
 
 /* Full-screen grain; holds still, then jumps to a new offset every 2 seconds
-   (8 positions over 16s), in step with the grain in the 3D scene. */
+   (8 positions over 16s). */
 .grain {
   position: fixed;
   inset: -50%;
@@ -89,6 +94,93 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .grain {
+    animation: none;
+  }
+}
+
+/* --- Underwater world animations (src/world) --------------------------- */
+.swim {
+  animation: swim linear infinite;
+}
+@keyframes swim {
+  from { translate: -40vw 0; }
+  to { translate: 130vw 0; }
+}
+
+.bob {
+  animation: bob 4.5s ease-in-out infinite alternate;
+}
+@keyframes bob {
+  from { translate: 0 -10px; }
+  to { translate: 0 12px; }
+}
+
+.sway {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: sway 5s ease-in-out infinite alternate;
+}
+@keyframes sway {
+  from { rotate: -5deg; }
+  to { rotate: 5deg; }
+}
+
+.tentacle {
+  animation: tentacle 2.4s ease-in-out infinite alternate;
+}
+@keyframes tentacle {
+  from { translate: -3px 0; }
+  to { translate: 3px 0; }
+}
+
+.glow {
+  filter: drop-shadow(0 0 10px var(--glow)) drop-shadow(0 0 22px var(--glow));
+}
+.pulse {
+  animation: pulse 2.2s ease-in-out infinite alternate;
+}
+@keyframes pulse {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+
+.blink {
+  animation: blink 1.4s steps(1) infinite;
+}
+@keyframes blink {
+  50% { opacity: 0.15; }
+}
+
+.rays {
+  animation: rays 7s ease-in-out infinite alternate;
+}
+@keyframes rays {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+
+.bubble {
+  animation: bubble 8s linear infinite;
+}
+@keyframes bubble {
+  from { translate: 0 0; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  to { translate: 12px -60vh; opacity: 0; }
+}
+
+.snow {
+  animation: snow 12s linear infinite;
+}
+@keyframes snow {
+  from { translate: 0 -20px; opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  to { translate: 10px 40px; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swim, .bob, .sway, .tentacle, .pulse, .blink, .rays, .bubble, .snow {
     animation: none;
   }
 }
