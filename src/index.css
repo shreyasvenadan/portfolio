@@ -4,7 +4,7 @@
   --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'Newsreader', ui-serif, Georgia, serif;
 
-  --color-paper: #a6ae90;
+  --color-paper: #e3d7bf;
   --color-ink: #141911;
   --color-muted: #2f382a;
   --color-accent: #5a1f2e;
@@ -47,12 +47,12 @@ body {
   filter: url(#rough);
 }
 
-/* A soft sage glow behind text keeps it readable over the character and scene. */
+/* A soft beige glow behind text keeps it readable over the character and scene. */
 .halo {
   text-shadow:
-    0 0 2px rgb(166 174 144 / 0.9),
-    0 0 14px rgb(166 174 144 / 0.95),
-    0 0 32px rgb(166 174 144 / 0.7);
+    0 0 2px rgb(227 215 191 / 0.9),
+    0 0 14px rgb(227 215 191 / 0.95),
+    0 0 32px rgb(227 215 191 / 0.7);
 }
 
 /* Full-screen grain; holds still, then jumps to a new offset every 2 seconds

@@ -18,8 +18,8 @@ import Effects from './Effects'
 import Flow from './Flow'
 import { focusPoint } from './focus'
 
-// Backdrop colour at each section: pale sage at the top, deepening to olive.
-const WATER = ['#a6ae90', '#9ba587', '#8f9a7c', '#848f72', '#7a8569'].map((c) => new Color(c))
+// Backdrop colour at each section: pale beige at the top, deepening to warm sand.
+const WATER = ['#e3d7bf', '#dccfb4', '#d4c6a8', '#cbbc9c', '#c2b190'].map((c) => new Color(c))
 
 type Shot = { pos: Vector3; look: Vector3; focus: Vector3 }
 const shot = (pos: Vec3, look: Vec3, focus: Vec3): Shot => ({
@@ -145,8 +145,8 @@ export default function Scene() {
           gl={{ antialias: false }}
           style={{ imageRendering: 'pixelated' }}
         >
-          <color attach="background" args={['#a6ae90']} />
-          <fog attach="fog" args={['#a6ae90', 2.5, 10]} />
+          <color attach="background" args={['#e3d7bf']} />
+          <fog attach="fog" args={['#e3d7bf', 2.5, 10]} />
 
           <hemisphereLight args={['#f3f0dc', '#3a4331', 1.0]} />
           <directionalLight position={[1.5, 6, 2.5]} intensity={2.4} color="#e2f7f4" />

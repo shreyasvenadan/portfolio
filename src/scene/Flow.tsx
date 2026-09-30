@@ -65,7 +65,7 @@ function Kelp() {
   }, [])
 
   const material = useMemo(() => {
-    const m = new MeshStandardMaterial({ color: '#4a5640', roughness: 1, side: DoubleSide })
+    const m = new MeshStandardMaterial({ color: '#8a7a5c', roughness: 1, side: DoubleSide })
     m.onBeforeCompile = (shader) => {
       shader.uniforms.time = time.current
       shader.vertexShader = `uniform float time;\n${shader.vertexShader}`.replace(
