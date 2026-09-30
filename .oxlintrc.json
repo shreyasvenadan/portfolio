@@ -13,15 +13,5 @@
         "allowConstantExport": true
       }
     ]
-  },
-  "overrides": [
-    {
-      "files": [
-        "src/scene/**"
-      ],
-      "rules": {
-        "react/immutability": "off"
-      }
-    }
-  ]
+  }
 }

@@ -1,5 +1,6 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { useEffect } from 'react'
 import About from './components/About'
+import Backdrop from './components/Backdrop'
 import Contact from './components/Contact'
 import DepthGauge from './components/DepthGauge'
 import Experience from './components/Experience'
@@ -11,7 +12,6 @@ import Character from './components/Character'
 import { profile } from './data/content'
 import { watchSections } from './lib/sections'
 
-const Scene = lazy(() => import('./scene/Scene'))
 const year = new Date().getFullYear()
 
 export default function App() {
@@ -19,9 +19,7 @@ export default function App() {
 
   return (
     <>
-      <Suspense fallback={null}>
-        <Scene />
-      </Suspense>
+      <Backdrop />
 
       {/* Roughens heading edges like ink bleeding into cheap paper. */}
       <svg aria-hidden width="0" height="0" className="absolute">

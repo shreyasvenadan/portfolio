@@ -20,7 +20,7 @@ Put a résumé at `public/resume.pdf`.
 
 The character is a hand-drawn SVG in the style of *Total Drama Island* (`src/components/Character.tsx`). Its eyes follow the cursor, it breathes, blinks, waves, shrugs, laughs and looks around, jumps when clicked, and it zooms and blurs behind the text as you scroll. Colours are constants at the top of the file.
 
-Behind it, a React Three Fiber scene (`src/scene/`) adds drifting particles, blobs and kelp, with grain, dithering and depth of field.
+Behind it is an animated cartoon Bali beach (`src/components/Backdrop.tsx`) with props from Shreyas's story: a SeaLens surfboard, jumping fish, a camera on a tripod, a football and a Melbourne / Bali / Jakarta signpost. A grain overlay sits on top of everything.
 
 ## Deployment
 

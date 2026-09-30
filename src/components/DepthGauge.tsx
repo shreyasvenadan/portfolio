@@ -22,7 +22,7 @@ export default function DepthGauge() {
   }, [])
 
   return (
-    <nav aria-label="Sections" className="fixed top-1/2 left-20 z-20 hidden h-[56vh] -translate-y-1/2 lg:block">
+    <nav aria-label="Sections" className="halo fixed top-1/2 left-20 z-20 hidden h-[56vh] -translate-y-1/2 lg:block">
       <div className="absolute inset-y-0 left-0 w-px bg-ink/20" />
       <div ref={marker} className="absolute left-0 -translate-x-1/2 -translate-y-1/2">
         <div className="h-2.5 w-2.5 rounded-full bg-accent shadow-[0_0_12px_var(--color-accent)]" />

@@ -7,6 +7,4 @@ export default defineConfig({
   // Served from https://shreyasvenadan.github.io/portfolio/
   base: '/portfolio/',
   plugins: [react(), tailwindcss()],
-  // three.js is large; it loads in its own lazy chunk after the page renders.
-  build: { chunkSizeWarningLimit: 1200 },
 })
