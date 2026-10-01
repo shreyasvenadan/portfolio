@@ -64,9 +64,9 @@ const FRONDS: [number, 1 | -1][] = [
   [-58, 1],
 ]
 
-function Palm({ x, y, s, flip = 1, animate }: { x: number; y: number; s: number; flip?: 1 | -1; animate: boolean }) {
+function Palm({ id, x, y, s, flip = 1, animate }: { id?: string; x: number; y: number; s: number; flip?: 1 | -1; animate: boolean }) {
   return (
-    <g transform={`translate(${x} ${y}) scale(${s * flip} ${s})`}>
+    <g id={id} transform={`translate(${x} ${y}) scale(${s * flip} ${s})`}>
       <path d="M-20 0 Q-10 -210 36 -410 L58 -404 Q18 -206 18 0 Z" fill={TRUNK} {...line} />
       <path d="M4 0 Q8 -206 48 -406 L58 -404 Q18 -206 18 0 Z" fill={TRUNK_SHADE} />
       {[-60, -130, -200, -270, -340].map((h, i) => (
@@ -181,6 +181,15 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
           <stop offset="0" stopColor={SEA} />
           <stop offset="1" stopColor={SEA_FRONT} />
         </linearGradient>
+        {/* The moon's reflection is drawn above the night tint to stay bright,
+            so the palm in front of it is cut out as a black silhouette. */}
+        <filter id="silhouette">
+          <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" />
+        </filter>
+        <mask id="behind-palm" maskUnits="userSpaceOnUse" x={0} y={0} width={1600} height={900}>
+          <rect width={1600} height={900} fill="#fff" />
+          <use href="#palm-right" filter="url(#silhouette)" />
+        </mask>
       </defs>
 
       {/* sky, sun, clouds, gulls */}
@@ -225,7 +234,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       ))}
 
       <Palm x={430} y={770} s={0.78} animate={animate} />
-      <Palm x={1175} y={772} s={0.72} flip={-1} animate={animate} />
+      <Palm id="palm-right" x={1175} y={772} s={0.72} flip={-1} animate={animate} />
       <g className="fallen-nuts" />
 
       {/* signpost: Melbourne, Bali, Jakarta */}
@@ -272,7 +281,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
           <circle key={i} className="twinkle" style={{ animationDelay: `-${s.delay}s` }} cx={s.x} cy={s.y} r={s.r} fill="#fff8dc" />
         ))}
         <path className="shooting-star" d="M0 0 L-140 50" stroke="#fff8dc" strokeWidth={3} strokeLinecap="round" />
-        <path d="M1150 610 L1390 610 M1200 634 L1340 634 M1240 656 L1300 656" stroke="#e8f1ff" strokeWidth={5} strokeLinecap="round" opacity={0.7} />
+        <path mask="url(#behind-palm)" d="M1150 610 L1390 610 M1200 634 L1340 634 M1240 656 L1300 656" stroke="#e8f1ff" strokeWidth={5} strokeLinecap="round" opacity={0.7} />
       </g>
       <g className="night-only moon-rise">
         <circle cx={1270} cy={250} r={130} fill="#f4f1d8" opacity={0.18} />
