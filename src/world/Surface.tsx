@@ -164,7 +164,7 @@ function SignBoard({ y, label, dir, w }: { y: number; label: string; dir: 1 | -1
 }
 
 // Island surface height, in viewBox units (0-900 top to bottom). The
-// character's feet are placed at 78% of the screen height to match.
+// character's feet are placed at 85% of the screen height, on the sand.
 const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface({ animate }, ref) {
   return (
     <svg ref={ref} viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" className="absolute inset-x-0 top-0 h-screen w-full">
