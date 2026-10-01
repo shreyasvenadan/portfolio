@@ -40,6 +40,13 @@ export default function Header() {
       </button>
       <nav aria-label="Profiles" className="flex shrink-0 gap-2">
         <a
+          href={`${import.meta.env.BASE_URL}resume/`}
+          title="Resume"
+          className="grid h-8 place-items-center rounded-full bg-ink/85 px-3 text-xs font-semibold tracking-wide text-bone transition hover:bg-accent"
+        >
+          resume
+        </a>
+        <a
           href={links.github}
           target="_blank"
           rel="noreferrer"

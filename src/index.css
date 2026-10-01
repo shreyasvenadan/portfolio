@@ -8,7 +8,7 @@
 
 @theme {
   --font-display: 'Bristol', 'Comic Sans MS', cursive;
-  --font-serif: 'Newsreader', ui-serif, Georgia, serif;
+  --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
 
   --color-paper: #e3d7bf;
   --color-ink: #141911;
@@ -62,7 +62,7 @@ html {
 }
 
 body {
-  @apply bg-paper font-serif text-ink antialiased;
+  @apply bg-paper font-sans text-ink antialiased;
 }
 
 :focus-visible {
@@ -514,7 +514,7 @@ dialog.note::backdrop {
   border-radius: 4px;
   background: #f6ecd2;
   color: #2a2217;
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: 1.1rem;
   line-height: 1.6;
   text-align: center;

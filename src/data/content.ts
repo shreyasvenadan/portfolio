@@ -39,6 +39,7 @@ export const links = {
   linkedin: 'https://www.linkedin.com/in/shreyasvenadan/',
   youtube: 'https://www.youtube.com/@shreyasvenadan',
   email: 'shreyasvenadan10@gmail.com',
+  resume: `${import.meta.env.BASE_URL}shreyas-venadan-resume.pdf`,
 }
 
 export type Project = {

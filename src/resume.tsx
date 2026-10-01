@@ -1,15 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import App from './App.tsx'
-import { restoreNight } from './lib/night'
-import { startSmoothScroll } from './lib/smoothScroll'
-
-restoreNight()
-startSmoothScroll()
+import Resume from './components/Resume.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <Resume />
   </StrictMode>,
 )
