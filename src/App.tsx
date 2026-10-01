@@ -12,11 +12,13 @@ import Character from './components/Character'
 import { profile } from './data/content'
 import { watchFocus } from './lib/focus'
 import { watchSections } from './lib/sections'
+import { watchWorld } from './lib/world'
 
 const year = new Date().getFullYear()
 
 export default function App() {
   useEffect(watchSections, [])
+  useEffect(watchWorld, [])
   useEffect(watchFocus, [])
 
   return (

@@ -10,14 +10,16 @@ import { zap } from '../lib/zap'
 import Surface from '../world/Surface'
 import Sealife, { divers, fishing } from '../world/Sealife'
 import Underwater from '../world/Underwater'
+import { wspan, wy } from '../lib/world'
 
 // The world behind the page: an island at the surface, then the ocean below,
-// getting darker with depth. It is five screens tall and scrolls one screen
-// per page section, so each section sits in its own depth zone.
+// getting darker with depth. It sits on the page itself and scrolls with the
+// text, each section in its own depth zone stretched to fit it
+// (src/lib/world.ts).
 const WATER = `linear-gradient(to bottom,
-  transparent 0, transparent 100vh,
-  #2b93a6 100vh, #1f7497 170vh, #16507c 250vh,
-  #0d2d52 340vh, #07162c 420vh, #040a16 500vh)`
+  transparent 0, transparent ${wy(100)},
+  #2b93a6 ${wy(100)}, #1f7497 ${wy(170)}, #16507c ${wy(250)},
+  #0d2d52 ${wy(340)}, #07162c ${wy(420)}, #040a16 ${wy(500)})`
 
 // Text colours at the surface and in the deep; the page fades from one to the
 // other as it goes underwater so copy stays readable.
@@ -38,7 +40,6 @@ function applyTone(t: number) {
 
 export default function Backdrop() {
   const world = useRef<HTMLDivElement>(null)
-  const front = useRef<HTMLDivElement>(null)
   const [behind, setBehind] = useState<HTMLDivElement | null>(null)
   const surface = useRef<SVGSVGElement>(null)
   const animate = useMemo(() => !prefersReducedMotion(), [])
@@ -137,12 +138,6 @@ export default function Backdrop() {
     let night = isNight() ? 1 : 0
     const tick = () => {
       const p = sectionProgress()
-      // Snapped to whole device pixels so the surface and underwater layers meet
-      // exactly; a fractional offset leaves a hairline between their night tints.
-      const dpr = window.devicePixelRatio || 1
-      const shift = `translate3d(0, ${Math.round(-p * window.innerHeight * dpr) / dpr}px, 0)`
-      if (world.current) world.current.style.transform = shift
-      if (front.current) front.current.style.transform = shift
 
       // Stop the surface animations once the island has scrolled out of view.
       const offscreen = p > 1.1
@@ -173,8 +168,8 @@ export default function Backdrop() {
 
   return (
     <>
-      <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div ref={world} className="absolute inset-x-0 top-0 h-[500vh] will-change-transform" style={{ background: WATER }}>
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden" style={{ height: wy(500) }}>
+        <div ref={world} className="absolute inset-0" style={{ background: WATER }}>
           <Surface ref={surface} animate={animate} />
           <Underwater />
           {/* Sea creatures that swim behind the page text (the rest are in front). */}
@@ -182,13 +177,13 @@ export default function Backdrop() {
           {/* At night the shallow water darkens too; the deep is dark already. */}
           <div
             className="night-tint absolute inset-x-0"
-            style={{ top: '100vh', height: '250vh', background: 'linear-gradient(to bottom, #27346e, transparent)' }}
+            style={{ top: wy(100), height: wspan(100, 350), background: 'linear-gradient(to bottom, #27346e, transparent)' }}
           />
         </div>
       </div>
       {/* The creatures that swim above the page text, scrolling with the world. */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-[15] overflow-hidden">
-        <div ref={front} className="swimmers absolute inset-x-0 top-0 h-[500vh] will-change-transform">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[15] overflow-hidden" style={{ height: wy(500) }}>
+        <div className="swimmers absolute inset-0">
           <Sealife back={behind} />
         </div>
       </div>

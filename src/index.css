@@ -434,10 +434,10 @@ body {
 }
 
 /* The shipwreck sinks to the sea floor the first time it's seen
-   (src/lib/wreck.ts): from 352vh down to the floor at ~474vh, less its own
-   height (its width × 280/440), sitting a touch into the sand. */
+   (src/lib/wreck.ts): from depth 352 down to the floor at ~474, less its own
+   height (its width × 280/440), sitting a touch into the sand. --wreck-depth
+   is set on it in Underwater.tsx, since the depths depend on the page. */
 .wreck {
-  --wreck-depth: calc(122vh - min(34vw, 420px) * 0.6);
   transition: transform 25s cubic-bezier(0.45, 0, 0.75, 0.9);
 }
 .wreck.sinking {

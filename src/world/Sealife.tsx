@@ -1,6 +1,7 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { prefersReducedMotion } from '../lib/sections'
+import { depthPx, pxDepth, worldBounds } from '../lib/world'
 import { oof } from '../lib/sound'
 
 // Everything that swims. Each creature wanders freely inside its depth zone:
@@ -342,9 +343,8 @@ function Anglerfish() {
 
 // --- who lives where -------------------------------------------------------
 
-// size: width in px on a wide screen. zone: depth band in screen heights from
-// the top of the world (the reef is 100-200, open blue 200-300, twilight
-// 300-400, abyss 400-500). speed: cruising px per frame. school: how many swim
+// size: width in px on a wide screen. zone: depth band (src/lib/world.ts;
+// the reef is 100-200, open blue 200-300, twilight 300-400, abyss 400-500). speed: cruising px per frame. school: how many swim
 // together (one leader plus followers). bank: turn by tilting, not flipping.
 // calm: isn't startled by the cursor (divers, sharks, whales). diver: says "oof" when clicked.
 type Kind = { art: ReactNode; size: number; zone: [number, number]; speed: number; count?: number; school?: number; bank?: boolean; calm?: boolean; diver?: boolean }
@@ -479,7 +479,7 @@ function swim(layer: HTMLElement, back: HTMLElement) {
       el: els[i],
       spec,
       x: Math.random() * W,
-      y: ((top + Math.random() * (bottom - top)) * H) / 100,
+      y: depthPx(top + Math.random() * (bottom - top)),
       vx: Math.cos(heading) * spec.speed,
       vy: 0,
       heading,
@@ -512,17 +512,23 @@ function swim(layer: HTMLElement, back: HTMLElement) {
     b.el.style.transform = `translate3d(${b.x.toFixed(1)}px, ${b.y.toFixed(1)}px, 0) translate(-50%, -50%) ${tilt}`
   }
 
+  // Each creature keeps its depth when the page's zones move or stretch.
+  let edges = worldBounds().slice()
   const resize = () => {
     const sx = window.innerWidth / W
-    const sy = window.innerHeight / H
     W = window.innerWidth
     H = window.innerHeight
-    for (const b of bodies) {
-      b.x *= sx
-      b.y *= sy
-      b.w = b.el.offsetWidth
-      b.h = b.el.offsetHeight
-    }
+    const depths = bodies.map((b) => pxDepth(b.y, edges))
+    // Wait a frame for the zones to be re-measured (src/lib/world.ts).
+    requestAnimationFrame(() => {
+      edges = worldBounds().slice()
+      bodies.forEach((b, i) => {
+        b.x *= sx
+        b.y = depthPx(depths[i], edges)
+        b.w = b.el.offsetWidth
+        b.h = b.el.offsetHeight
+      })
+    })
   }
   window.addEventListener('resize', resize)
 
@@ -600,7 +606,7 @@ function swim(layer: HTMLElement, back: HTMLElement) {
     const scale = Math.max(0.5, Math.min(1, W / 1400))
     const offset = layer.getBoundingClientRect().top
     // Nothing swims up into the island scene, which fills the first screen.
-    const ceiling = H
+    const ceiling = worldBounds()[1]
     const card = document.querySelector('.reading-card.shown')?.getBoundingClientRect()
 
     for (const b of bodies) {
@@ -638,8 +644,8 @@ function swim(layer: HTMLElement, back: HTMLElement) {
         continue
       }
       const { spec } = b
-      const top = (spec.zone[0] * H) / 100
-      const bottom = (spec.zone[1] * H) / 100
+      const top = depthPx(spec.zone[0])
+      const bottom = depthPx(spec.zone[1])
       let max = spec.speed * scale * (b.panic > 0 ? 3.2 : 1)
       let ax = 0
       let ay = 0

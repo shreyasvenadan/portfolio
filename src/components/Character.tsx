@@ -147,11 +147,11 @@ export default function Character() {
       const dt = Math.min(0.05, t - last)
       last = t
 
-      // --- Scroll: he stays on the island, which rises out of view as the
-      // backdrop descends into the ocean (one screen height per section).
+      // --- Scroll: he stays on the island, which scrolls up out of view with
+      // the page as it heads into the ocean.
       const progress = sectionProgress()
       state.onIsland = progress < 0.6
-      if (wrapper.current) wrapper.current.style.transform = `translate3d(0, ${-progress * window.innerHeight}px, 0)`
+      if (wrapper.current) wrapper.current.style.transform = `translate3d(0, ${-Math.min(window.scrollY, window.innerHeight * 2)}px, 0)`
       // Lean into fast scrolling, then settle back.
       const velocity = dt > 0 ? (progress - state.lastProgress) / dt : 0
       state.lastProgress = progress

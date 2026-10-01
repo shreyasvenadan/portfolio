@@ -1,13 +1,14 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { watchWreck } from '../lib/wreck'
+import { wspan, wy } from '../lib/world'
 
-// Everything below the surface. Positions are in screen heights from the top
-// of the world (the surface scene is 0-100vh), so each page section lines up
-// with one depth zone:
-//   100-200vh  about       island base, reef (coral, rocks, anemones), light rays
-//   200-300vh  work        open blue: jellyfish, bubbles
-//   300-400vh  experience  twilight: glowing jellyfish, shipwreck (which sinks to the floor)
-//   400-500vh  contact     abyss: sea floor, message in a bottle
+// Everything below the surface. Positions are depths (src/lib/world.ts), where
+// the surface scene is 0-100 and each page section has its own 100-unit zone,
+// stretched to the section's height so the world scrolls with the text:
+//   100-200  about       island base, reef (coral, rocks, anemones), light rays
+//   200-300  work        open blue: jellyfish, bubbles
+//   300-400  experience  twilight: glowing jellyfish, shipwreck (which sinks to the floor)
+//   400-500  contact     abyss: sea floor, message in a bottle
 // Everything that swims lives in Sealife.tsx, some above the page text and some behind it.
 
 const INK = '#120d0a'
@@ -248,13 +249,13 @@ const rand = seeded(11)
 // Marine snow: pale specks in the deeper zones, drifting slowly downward.
 const SNOW = Array.from({ length: 70 }, () => ({
   left: `${(rand() * 100).toFixed(1)}%`,
-  top: `${(220 + rand() * 270).toFixed(1)}vh`,
+  top: wy(220 + rand() * 270),
   size: 2 + rand() * 3,
   delay: rand() * 12,
 }))
 const BUBBLES = Array.from({ length: 18 }, (_, i) => ({
   left: `${[12, 16, 84, 88, 50][i % 5] + (rand() - 0.5) * 4}%`,
-  top: `${(130 + rand() * 180).toFixed(1)}vh`,
+  top: wy(130 + rand() * 180),
   size: 6 + rand() * 12,
   delay: rand() * 8,
 }))
@@ -276,9 +277,9 @@ export default function Underwater() {
           className="rays absolute origin-top"
           style={{
             left: `${left}%`,
-            top: '100vh',
+            top: wy(100),
             width: `${w}vw`,
-            height: '150vh',
+            height: wspan(100, 250),
             rotate: `${angle}deg`,
             background: 'linear-gradient(to bottom, rgb(255 250 220 / 0), rgb(255 250 220 / 0.35) 12%, rgb(255 250 220 / 0))',
           }}
@@ -288,7 +289,7 @@ export default function Underwater() {
       {/* The island's rocky base and the reef growing on it. Both fill the band
           just below the waterline (as tall as the base drawing, so it scales
           with the island) and fade out together as they go deeper. */}
-      <div className="absolute inset-x-0" style={{ top: '100vh', height: 'calc(var(--s, 1) * 460px)' }}>
+      <div className="absolute inset-x-0" style={{ top: wy(100), height: 'calc(var(--s, 1) * 460px)' }}>
         {/* Drawn 1360 wide (x -80 to 1280), centred under the 1600-wide surface
             scene so the top edge (x 90-1110) meets the island's sand (x 290-1310)
             and the sides carry on its slope. It starts as see-through as the
@@ -378,16 +379,16 @@ export default function Underwater() {
       </div>
 
       {/* open blue (work) */}
-      <At top="250vh" left="86%" width="min(8vw, 100px)" className="bob">
+      <At top={wy(250)} left="86%" width="min(8vw, 100px)" className="bob">
         <Jelly color="#ffb3c7" />
       </At>
-      <At top="284vh" left="12%" width="min(6vw, 80px)" className="bob" style={{ animationDelay: '-2s' }}>
+      <At top={wy(284)} left="12%" width="min(6vw, 80px)" className="bob" style={{ animationDelay: '-2s' }}>
         <Jelly color="#c9b3ff" />
       </At>
 
       {/* twilight zone (experience) */}
       {/* ref'd directly rather than through At, so it can be watched */}
-      <div ref={wreck} className="wreck absolute -translate-x-1/2" style={{ top: '352vh', left: '16%', width: 'min(34vw, 420px)' }}>
+      <div ref={wreck} className="wreck absolute -translate-x-1/2" style={{ top: wy(352), left: '16%', width: 'min(34vw, 420px)', '--wreck-depth': `calc(${wspan(352, 474)} - min(34vw, 420px) * 0.6)` } as CSSProperties}>
         <div className="wreck-roll">
           <Shipwreck />
         </div>
@@ -398,24 +399,24 @@ export default function Underwater() {
         </div>
         <div className="wreck-silt" />
       </div>
-      <At top="318vh" left="86%" width="min(9vw, 110px)" className="bob">
+      <At top={wy(318)} left="86%" width="min(9vw, 110px)" className="bob">
         <Jelly color="#ff7ad9" glow />
       </At>
-      <At top="366vh" left="80%" width="min(6vw, 80px)" className="bob" style={{ animationDelay: '-3s' }}>
+      <At top={wy(366)} left="80%" width="min(6vw, 80px)" className="bob" style={{ animationDelay: '-3s' }}>
         <Jelly color="#7af0ff" glow />
       </At>
-      <At top="330vh" left="8%" width="min(5vw, 64px)" className="bob" style={{ animationDelay: '-1s' }}>
+      <At top={wy(330)} left="8%" width="min(5vw, 64px)" className="bob" style={{ animationDelay: '-1s' }}>
         <Jelly color="#a98bff" glow />
       </At>
 
       {/* the abyss and the sea floor (contact) */}
-      <div className="absolute inset-x-0" style={{ top: '462vh', height: '38vh' }}>
+      <div className="absolute inset-x-0" style={{ top: wy(462), height: wspan(462, 500) }}>
         <SeaFloor />
       </div>
-      <At top="478vh" left="24%" width="min(12vw, 150px)">
+      <At top={wy(478)} left="24%" width="min(12vw, 150px)">
         <Bottle />
       </At>
-      <At top="470vh" left="78%" width="min(12vw, 150px)">
+      <At top={wy(470)} left="78%" width="min(12vw, 150px)">
         <Chest />
       </At>
 
