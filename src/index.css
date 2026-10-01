@@ -99,12 +99,13 @@ body {
 }
 
 /* --- Underwater world animations (src/world) --------------------------- */
-.swim {
-  animation: swim linear infinite;
+/* A gentle wriggle while swimming. */
+.wiggle {
+  animation: wiggle 0.8s ease-in-out infinite alternate;
 }
-@keyframes swim {
-  from { translate: -40vw 0; }
-  to { translate: 130vw 0; }
+@keyframes wiggle {
+  from { rotate: -2.5deg; }
+  to { rotate: 2.5deg; }
 }
 
 .bob {
@@ -180,7 +181,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .swim, .bob, .sway, .tentacle, .pulse, .blink, .rays, .bubble, .snow {
+  .wiggle, .bob, .sway, .tentacle, .pulse, .blink, .rays, .bubble, .snow {
     animation: none;
   }
 }
@@ -194,6 +195,14 @@ body {
 }
 :root[data-night='true'] .night-tint {
   opacity: 0.78;
+}
+
+/* The swimmers sit above the night tint, so they're dimmed separately. */
+.swimmers {
+  transition: filter 1.4s ease;
+}
+:root[data-night='true'] .swimmers {
+  filter: brightness(0.6) saturate(0.85);
 }
 
 .night-only,
@@ -252,7 +261,7 @@ body {
   .twinkle, .shooting-star {
     animation: none;
   }
-  .night-tint, .night-only, .day-only, .character svg {
+  .night-tint, .swimmers, .night-only, .day-only, .character svg {
     transition: none;
   }
 }
@@ -261,4 +270,91 @@ body {
 :root[data-night='true'] .rays {
   animation: none;
   opacity: 0.18;
+}
+
+/* --- Jellyfish sting (src/lib/zap.ts) ---------------------------------- */
+.zap {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  animation: zap-flash 0.7s ease-out forwards;
+}
+.zap-glow,
+.zap-core {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.zap-glow {
+  stroke: var(--zap);
+  stroke-width: 12;
+  opacity: 0.7;
+  filter: blur(4px);
+}
+.zap-core {
+  stroke: #fff;
+  stroke-width: 3;
+}
+/* A white flash that fades, with the bolts lingering on top. */
+@keyframes zap-flash {
+  0% { background: rgb(255 255 255 / 0.85); }
+  25% { background: rgb(255 255 255 / 0); opacity: 1; }
+  100% { background: rgb(255 255 255 / 0); opacity: 0; }
+}
+
+/* The screen inverts for a beat, as if seeing your own x-ray, and shakes. */
+:root.zapped {
+  animation: zap-invert 0.7s steps(1) forwards;
+}
+@keyframes zap-invert {
+  0% { filter: none; }
+  18% { filter: invert(1) hue-rotate(180deg) contrast(1.3); }
+  40% { filter: saturate(1.8) contrast(1.2); }
+  60% { filter: none; }
+}
+:root.zapped :is(main, footer, header, .character) {
+  animation: zap-shake 0.5s linear;
+}
+@keyframes zap-shake {
+  0%, 100% { translate: 0 0; }
+  10% { translate: -8px 4px; }
+  20% { translate: 7px -6px; }
+  30% { translate: -6px -3px; }
+  40% { translate: 6px 5px; }
+  50% { translate: -4px 2px; }
+  60% { translate: 4px -3px; }
+  70% { translate: -2px 2px; }
+  80% { translate: 2px -1px; }
+}
+
+.zapping {
+  filter: brightness(1.8) drop-shadow(0 0 14px #fff);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zap {
+    animation: zap-fade 0.7s ease-out forwards;
+  }
+  @keyframes zap-fade {
+    to { opacity: 0; }
+  }
+}
+
+/* The shipwreck rocks and groans when its horn sounds. */
+.honk {
+  transform-origin: 50% 90%;
+  animation: honk 2.6s ease-in-out;
+}
+@keyframes honk {
+  0%, 100% { rotate: 0deg; }
+  15% { rotate: -2.5deg; }
+  35% { rotate: 2deg; }
+  55% { rotate: -1.5deg; }
+  75% { rotate: 1deg; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .honk {
+    animation: none;
+  }
 }

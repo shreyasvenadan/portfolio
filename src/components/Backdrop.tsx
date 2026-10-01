@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { isNight, toggleNight } from '../lib/night'
 import { prefersReducedMotion, sectionProgress } from '../lib/sections'
+import { dropCoconut } from '../lib/coconut'
+import { shipHorn } from '../lib/sound'
+import { zap } from '../lib/zap'
 import Surface from '../world/Surface'
+import Sealife from '../world/Sealife'
 import Underwater from '../world/Underwater'
 
 // The world behind the page: an island at the surface, then the ocean below,
@@ -31,6 +35,7 @@ function applyTone(t: number) {
 
 export default function Backdrop() {
   const world = useRef<HTMLDivElement>(null)
+  const front = useRef<HTMLDivElement>(null)
   const surface = useRef<SVGSVGElement>(null)
   const animate = useMemo(() => !prefersReducedMotion(), [])
 
@@ -49,12 +54,44 @@ export default function Backdrop() {
       const r = body.getBoundingClientRect()
       return Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) < r.width / 2 + 12
     }
+    // Jellyfish are hit-tested the same way; touching one (tentacles too) stings.
+    const overJelly = (x: number, y: number) => {
+      for (const jelly of world.current?.querySelectorAll('[data-jelly]') ?? []) {
+        const r = jelly.getBoundingClientRect()
+        if (x > r.left - 4 && x < r.right + 4 && y > r.top - 4 && y < r.bottom + 4) return jelly
+      }
+    }
+    // ...as are the coconuts on the palms and the shipwreck.
+    const overCoconut = (x: number, y: number) => {
+      for (const nut of surface.current?.querySelectorAll<SVGCircleElement>('[data-coconut]:not([data-fallen])') ?? []) {
+        const r = nut.getBoundingClientRect()
+        if (Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) < r.width / 2 + 6) return nut
+      }
+    }
+    const overShip = (x: number, y: number) => {
+      const ship = world.current?.querySelector('[data-ship]')
+      const r = ship?.getBoundingClientRect()
+      return r && x > r.left && x < r.right && y > r.top + r.height * 0.15 && y < r.bottom ? ship : undefined
+    }
     const click = (e: MouseEvent) => {
-      if (!(e.target as Element).closest('a, button') && overSky(e.clientX, e.clientY)) toggleNight()
+      if ((e.target as Element).closest('a, button')) return
+      const [x, y] = [e.clientX, e.clientY]
+      const jelly = overJelly(x, y)
+      const nut = overCoconut(x, y)
+      const ship = overShip(x, y)
+      if (jelly) zap(x, y, jelly.getAttribute('data-jelly')!, jelly)
+      else if (nut) dropCoconut(nut)
+      else if (ship) {
+        shipHorn()
+        ship.classList.remove('honk')
+        void ship.getBoundingClientRect()
+        ship.classList.add('honk')
+      } else if (overSky(x, y)) toggleNight()
     }
     const hover = (e: PointerEvent) => {
       if ((e.target as Element).closest('a, button')) return
-      document.body.style.cursor = overSky(e.clientX, e.clientY) ? 'pointer' : ''
+      const [x, y] = [e.clientX, e.clientY]
+      document.body.style.cursor = overJelly(x, y) || overCoconut(x, y) || overShip(x, y) || overSky(x, y) ? 'pointer' : ''
     }
     window.addEventListener('click', click)
     window.addEventListener('pointermove', hover)
@@ -65,7 +102,9 @@ export default function Backdrop() {
     let night = isNight() ? 1 : 0
     const tick = () => {
       const p = sectionProgress()
-      if (world.current) world.current.style.transform = `translate3d(0, ${-p * window.innerHeight}px, 0)`
+      const shift = `translate3d(0, ${-p * window.innerHeight}px, 0)`
+      if (world.current) world.current.style.transform = shift
+      if (front.current) front.current.style.transform = shift
 
       // Stop the surface animations once the island has scrolled out of view.
       const offscreen = p > 1.1
@@ -95,16 +134,24 @@ export default function Backdrop() {
   }, [])
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
-      <div ref={world} className="absolute inset-x-0 top-0 h-[500vh] will-change-transform" style={{ background: WATER }}>
-        <Surface ref={surface} animate={animate} />
-        <Underwater />
-        {/* At night the shallow water darkens too; the deep is dark already. */}
-        <div
-          className="night-tint absolute inset-x-0"
-          style={{ top: '100vh', height: '250vh', background: 'linear-gradient(to bottom, #27346e, transparent)' }}
-        />
+    <>
+      <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div ref={world} className="absolute inset-x-0 top-0 h-[500vh] will-change-transform" style={{ background: WATER }}>
+          <Surface ref={surface} animate={animate} />
+          <Underwater />
+          {/* At night the shallow water darkens too; the deep is dark already. */}
+          <div
+            className="night-tint absolute inset-x-0"
+            style={{ top: '100vh', height: '250vh', background: 'linear-gradient(to bottom, #27346e, transparent)' }}
+          />
+        </div>
       </div>
-    </div>
+      {/* Everything that swims sits above the page text and scrolls with the world. */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-[15] overflow-hidden">
+        <div ref={front} className="swimmers absolute inset-x-0 top-0 h-[500vh] will-change-transform">
+          <Sealife />
+        </div>
+      </div>
+    </>
   )
 }

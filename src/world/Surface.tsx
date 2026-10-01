@@ -13,9 +13,9 @@ const rand = seeded(5)
 const STARS = Array.from({ length: 70 }, () => ({ x: rand() * 1600, y: rand() * 500, r: 1.5 + rand() * 2.5, delay: rand() * 4 }))
 
 // The surface: a small island off Bali at golden hour, with the sea in front.
-// Props nod to Shreyas's story: a SeaLens surfboard, fish jumping out of the
-// reef, a camera on a tripod (photography and video), a football, and a
-// signpost for Melbourne, Bali and Jakarta. Its bottom edge is water in
+// Props nod to Shreyas's story: fish jumping out of the reef, a camera on a
+// tripod (photography and video), a football, and a signpost for Melbourne,
+// Bali and Jakarta. Its bottom edge is water in
 // SEA_FRONT, which the underwater world below continues from.
 
 const INK = '#120d0a'
@@ -85,9 +85,10 @@ function Palm({ x, y, s, flip = 1, animate }: { x: number; y: number; s: number;
             />
           </g>
         ))}
-        <circle cx={-10} cy={14} r={13} fill="#6b4a2b" {...thin} />
-        <circle cx={12} cy={18} r={13} fill="#6b4a2b" {...thin} />
-        <circle cx={0} cy={0} r={12} fill="#6b4a2b" {...thin} />
+        {/* Coconuts can be knocked down (src/lib/coconut.ts); they land at the palm's foot. */}
+        <circle data-coconut data-ground={y} cx={-10} cy={14} r={13} fill="#6b4a2b" {...thin} />
+        <circle data-coconut data-ground={y} cx={12} cy={18} r={13} fill="#6b4a2b" {...thin} />
+        <circle data-coconut data-ground={y} cx={0} cy={0} r={12} fill="#6b4a2b" {...thin} />
       </g>
     </g>
   )
@@ -225,6 +226,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
 
       <Palm x={430} y={770} s={0.78} animate={animate} />
       <Palm x={1175} y={772} s={0.72} flip={-1} animate={animate} />
+      <g className="fallen-nuts" />
 
       {/* signpost: Melbourne, Bali, Jakarta */}
       <g transform="translate(548 738) scale(0.72)">
@@ -232,16 +234,6 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
         <SignBoard y={-222} label="melbourne" dir={-1} w={150} />
         <SignBoard y={-172} label="bali" dir={1} w={96} />
         <SignBoard y={-122} label="jakarta" dir={1} w={124} />
-      </g>
-
-      {/* SeaLens surfboard stuck in the sand */}
-      <g transform="translate(650 716) rotate(-12) scale(0.72)">
-        <path d="M0 0 Q-44 -170 0 -340 Q44 -170 0 0 Z" fill="#fdf7e6" {...line} />
-        <path d="M-6 -12 Q-24 -170 -6 -326 L6 -326 Q24 -170 6 -12 Z" fill="#e2553d" />
-        <text transform="translate(-12 -110) rotate(-90)" fontSize={30} fill="#fdf7e6" className="font-display">
-          sealens
-        </text>
-        <path d="M-40 4 Q0 -18 40 4 Z" fill={SAND_SHADE} {...thin} />
       </g>
 
       {/* football */}
