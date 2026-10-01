@@ -147,3 +147,14 @@ export const experience: Experience[] = [
     points: [],
   },
 ]
+
+// The note inside the message in a bottle on the sea floor (click the bottle
+// to break it open). Placeholder for now: write whatever you like here.
+export const bottleNote = {
+  title: 'you found it!',
+  body: [
+    'You swam all the way down to the sea floor and cracked open my message in a bottle. Thanks for exploring.',
+    "This note is still being written, so check back soon to see what washes up.",
+  ],
+  signoff: '— shreyas',
+}

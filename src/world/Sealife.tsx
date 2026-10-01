@@ -1,4 +1,5 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { prefersReducedMotion } from '../lib/sections'
 import { oof } from '../lib/sound'
 
@@ -243,6 +244,53 @@ function Diver({ suit = '#23262e', stripe = '#e2553d', gear }: { suit?: string; 
   )
 }
 
+function Shark({ body = '#6f8796' }: { body?: string }) {
+  return (
+    <svg viewBox="-154 -82 300 142" className="w-full overflow-visible">
+      <path d="M-104 -4 L-152 -60 Q-136 -4 -150 46 Z" fill={body} {...line} />
+      <path d="M18 -31 L-4 -80 Q34 -62 54 -32 Z" fill={body} {...line} />
+      <path d="M40 16 L6 58 L66 22 Z" fill={body} {...line} />
+      <path d="M142 4 Q122 -30 40 -34 Q-40 -36 -110 -6 L-112 8 Q-40 30 40 28 Q118 28 142 4 Z" fill={body} {...line} />
+      <path d="M140 6 Q112 24 40 25 Q-30 26 -100 8 Q-30 15 40 13 Q102 12 140 6 Z" fill="#eef3f5" />
+      <path d="M74 -12 q-6 10 0 20 M85 -12 q-6 10 0 20 M96 -11 q-5 9 0 18" {...thin} strokeWidth={3} fill="none" />
+      {/* closed mouth under the snout */}
+      <path d="M138 8 Q120 18 98 15" {...thin} strokeWidth={3} fill="none" />
+      <circle cx={112} cy={-10} r={4.5} fill={INK} />
+    </svg>
+  )
+}
+
+// A big whale with grooved throat, long flipper and broad flukes.
+function Whale({ body = '#3f6b8f', belly = '#a9c4d6' }: { body?: string; belly?: string }) {
+  return (
+    <svg viewBox="-270 -84 524 186" className="w-full overflow-visible">
+      <path d="M-212 0 L-266 -50 Q-252 -8 -238 0 Q-252 8 -266 50 Z" fill={body} {...line} />
+      <path d="M250 12 Q250 -68 140 -76 Q0 -82 -130 -40 Q-190 -22 -222 -6 L-224 8 Q-180 16 -120 32 Q0 72 140 68 Q250 62 250 12 Z" fill={body} {...line} />
+      <path d="M246 26 Q214 62 140 64 Q20 66 -110 30 Q20 48 140 46 Q210 44 246 26 Z" fill={belly} />
+      <path d="M232 34 Q170 52 80 50 M224 42 Q160 58 70 56" stroke={body} strokeWidth={3} fill="none" opacity={0.7} />
+      <path d="M-10 -66 Q-2 -88 22 -76" {...thin} fill={body} />
+      <path d="M80 42 Q46 104 -14 98 Q30 72 40 40 Z" fill={body} {...line} />
+      <path d="M250 22 Q206 32 160 26" {...thin} fill="none" />
+      <circle cx={186} cy={10} r={5.5} fill={INK} />
+      <circle cx={188} cy={8} r={1.8} fill="#fff" />
+    </svg>
+  )
+}
+
+function Dolphin() {
+  return (
+    <svg viewBox="-112 -64 220 112" className="w-full overflow-visible">
+      <path d="M-88 0 L-110 -26 Q-102 0 -110 24 Z" fill="#7aa6c2" {...line} />
+      <path d="M0 -26 Q-6 -58 -30 -62 Q-14 -40 -28 -22 Z" fill="#7aa6c2" {...line} />
+      <path d="M28 16 L12 42 L46 18 Z" fill="#7aa6c2" {...line} />
+      <path d="M106 6 L84 2 Q70 -28 10 -28 Q-50 -28 -84 -4 L-92 0 L-84 6 Q-40 24 20 22 Q72 20 86 10 Z" fill="#7aa6c2" {...line} />
+      <path d="M84 10 Q60 21 20 20 Q-30 20 -62 8 Q-20 14 20 12 Q60 10 84 10 Z" fill="#dbe9f1" />
+      <path d="M106 6 Q94 11 80 9" {...thin} fill="none" />
+      <circle cx={64} cy={-7} r={3.8} fill={INK} />
+    </svg>
+  )
+}
+
 // Drawn from above, gliding: it banks rather than turning round.
 function Manta() {
   return (
@@ -298,7 +346,7 @@ function Anglerfish() {
 // the top of the world (the reef is 100-200, open blue 200-300, twilight
 // 300-400, abyss 400-500). speed: cruising px per frame. school: how many swim
 // together (one leader plus followers). bank: turn by tilting, not flipping.
-// calm: isn't startled by the cursor. diver: says "oof" when clicked.
+// calm: isn't startled by the cursor (divers, sharks, whales). diver: says "oof" when clicked.
 type Kind = { art: ReactNode; size: number; zone: [number, number]; speed: number; count?: number; school?: number; bank?: boolean; calm?: boolean; diver?: boolean }
 
 const KINDS: Kind[] = [
@@ -314,6 +362,7 @@ const KINDS: Kind[] = [
   { art: <Angelfish />, size: 56, zone: [125, 180], speed: 0.5, count: 2 },
   { art: <Diver gear="camera" />, size: 190, zone: [130, 180], speed: 0.4, calm: true, diver: true },
   { art: <Fish color="#c77dff" />, size: 40, zone: [118, 190], speed: 0.9, count: 2 },
+  { art: <Dolphin />, size: 170, zone: [120, 175], speed: 1.6, school: 3 },
   // open blue
   { art: <Manta />, size: 380, zone: [212, 240], speed: 0.7, bank: true },
   { art: <Fish color="#7fd6e8" />, size: 50, zone: [245, 285], speed: 1.1, school: 8 },
@@ -323,6 +372,9 @@ const KINDS: Kind[] = [
   { art: <Diver suit="#1f3b57" stripe="#f2c230" />, size: 180, zone: [225, 285], speed: 0.45, calm: true, diver: true },
   { art: <Tang body="#3fb57a" tail="#1d6e47" />, size: 62, zone: [205, 250], speed: 0.9, count: 2 },
   { art: <Fish color="#f25f5c" stripe="#ffe1a8" />, size: 46, zone: [210, 290], speed: 1, count: 3 },
+  { art: <Whale />, size: 560, zone: [222, 262], speed: 0.3, calm: true },
+  { art: <Shark />, size: 230, zone: [218, 290], speed: 0.9, count: 2, calm: true },
+  { art: <Dolphin />, size: 160, zone: [205, 250], speed: 1.7, school: 4 },
   // twilight
   { art: <Lanternfish />, size: 36, zone: [305, 395], speed: 0.6, count: 6 },
   { art: <Lanternfish glow="#ffb8f2" />, size: 30, zone: [310, 395], speed: 0.6, count: 4 },
@@ -330,24 +382,30 @@ const KINDS: Kind[] = [
   { art: <Eel />, size: 220, zone: [360, 390], speed: 0.35 },
   { art: <Diver suit="#2a2d36" stripe="#5ad1e6" gear="torch" />, size: 180, zone: [325, 385], speed: 0.35, calm: true, diver: true },
   { art: <Puffer />, size: 50, zone: [320, 380], speed: 0.3 },
+  { art: <Whale body="#2c3e57" belly="#7d93ab" />, size: 620, zone: [318, 350], speed: 0.25, calm: true },
+  { art: <Shark body="#4d5d6b" />, size: 250, zone: [330, 392], speed: 0.6, calm: true },
   // abyss
   { art: <Anglerfish />, size: 300, zone: [412, 450], speed: 0.3 },
   { art: <Lanternfish glow="#d8ff9f" />, size: 30, zone: [405, 455], speed: 0.5, count: 5 },
   { art: <Eel color="#4b4560" />, size: 200, zone: [430, 458], speed: 0.3 },
 ]
 
-type Spec = Kind & { leader?: number; ox: number; oy: number }
+type Spec = Kind & { leader?: number; ox: number; oy: number; behind: boolean }
 
 // Flatten into one entry per creature; school members remember their leader
-// and their place in formation (in leader widths, ox behind, oy below).
+// and their place in formation (in leader widths, ox behind, oy below). Each
+// creature (or whole school) is picked at random, per visit, to swim either
+// in front of the page text or behind it.
 const CREATURES: Spec[] = []
+const coin = () => Math.random() < 0.5
 for (const kind of KINDS) {
   if (kind.school) {
     const leader = CREATURES.length
+    const behind = coin()
     for (let i = 0; i < kind.school; i++)
-      CREATURES.push({ ...kind, leader: i ? leader : undefined, ox: 0.4 + Math.random() * 1.6, oy: (Math.random() - 0.5) * 2.4 })
+      CREATURES.push({ ...kind, leader: i ? leader : undefined, ox: 0.4 + Math.random() * 1.6, oy: (Math.random() - 0.5) * 2.4, behind })
   } else {
-    for (let i = 0; i < (kind.count ?? 1); i++) CREATURES.push({ ...kind, ox: 0, oy: 0 })
+    for (let i = 0; i < (kind.count ?? 1); i++) CREATURES.push({ ...kind, ox: 0, oy: 0, behind: coin() })
   }
 }
 
@@ -355,7 +413,8 @@ for (const kind of KINDS) {
 
 // The cursor is a fishing hook: click near a small fish to hook it, and it
 // hangs by its mouth from the bend of the hook, thrashing, until the next
-// click lets it go. Anything wider than CATCHABLE is too big to land.
+// click lets it go. Anything wider than CATCHABLE is too big to land. Fish
+// can't be pulled up into the island scene: one wriggles off the hook there.
 const CATCHABLE = 70
 // The bend of the hook cursor, relative to its point (the hotspot).
 const BEND = { x: 6.5, y: 20 }
@@ -399,8 +458,11 @@ type Body = {
   nerve: number
 }
 
-function swim(layer: HTMLElement) {
-  const els = [...layer.children] as HTMLElement[]
+// `layer` holds the creatures in front of the page text and `back` those
+// behind it; both scroll together, so positions in one hold for the other.
+function swim(layer: HTMLElement, back: HTMLElement) {
+  const els: HTMLElement[] = []
+  for (const el of [...layer.children, ...back.children] as HTMLElement[]) els[Number(el.dataset.creature)] = el
   let W = window.innerWidth
   let H = window.innerHeight
   const bodies: Body[] = CREATURES.map((spec, i) => {
@@ -527,8 +589,19 @@ function swim(layer: HTMLElement) {
     // Smaller screens get slower, smaller fish.
     const scale = Math.max(0.5, Math.min(1, W / 1400))
     const offset = layer.getBoundingClientRect().top
+    // Nothing swims up into the island scene, which fills the first screen.
+    const ceiling = H
 
     for (const b of bodies) {
+      if (b === caught && b.y - b.w / 2 < ceiling) {
+        // Pulled up to the island: it wriggles off the hook and dives.
+        caught = null
+        b.heading = Math.PI / 2 + (Math.random() - 0.5) * 1.2
+        b.vx = Math.cos(b.heading) * 2
+        b.vy = 3
+        b.face = Math.cos(b.heading) > 0 ? 1 : -1
+        b.panic = 120
+      }
       if (b === caught) {
         // Hung by the mouth from the bend of the hook, nose up, swinging and
         // thrashing about it. The nose is ~0.44 of the width from the centre.
@@ -589,6 +662,23 @@ function swim(layer: HTMLElement) {
           b.panic = 50 + Math.random() * 40
         }
       }
+      // The calm ones (divers, sharks, whales) aren't startled, but still ease
+      // out of the cursor's way so they don't park over text being read. They
+      // are long and low, so "near" is an ellipse around the body.
+      if (pointer && spec.calm) {
+        const dx = b.x - pointer.x
+        const dy = b.y + offset - pointer.y
+        const near = 1 - Math.hypot(dx / (b.w / 2 + 100), dy / (b.w / 4 + 100))
+        if (near > 0) {
+          const dist = Math.hypot(dx, dy) || 1
+          ax += (dx / dist) * 0.12 * near
+          ay += (dy / dist) * 0.12 * near
+          // Turn gradually to swim away, rather than backing off.
+          const away = Math.atan2(dy * 0.5, dx)
+          b.heading += Math.atan2(Math.sin(away - b.heading), Math.cos(away - b.heading)) * 0.03 * dt
+          max *= 1 + near * 1.5
+        }
+      }
       b.panic -= dt
 
       b.vx += ax * dt
@@ -601,6 +691,12 @@ function swim(layer: HTMLElement) {
       }
       b.x += b.vx * dt
       b.y += b.vy * dt
+      // Bump into the ceiling and turn back down.
+      if (b.y - b.w / 2 < ceiling) {
+        b.y = ceiling + b.w / 2
+        b.vy = Math.max(0, b.vy)
+        if (Math.sin(b.heading) < 0) b.heading = -b.heading
+      }
 
       // Turn round to face the way it's swimming.
       const want = b.vx > 0.12 ? 1 : b.vx < -0.12 ? -1 : Math.sign(b.face) || 1
@@ -621,22 +717,27 @@ function swim(layer: HTMLElement) {
   }
 }
 
-export default function Sealife() {
+// `back` is a layer behind the page text (inside the world, under the night
+// tint) for the creatures that swim there.
+export default function Sealife({ back }: { back: HTMLElement | null }) {
   const layer = useRef<HTMLDivElement>(null)
-  useEffect(() => swim(layer.current!), [])
+  useEffect(() => (back ? swim(layer.current!, back) : undefined), [back])
+  const creature = (c: Spec, i: number) => (
+    <div
+      key={i}
+      data-creature={i}
+      className="absolute top-0 left-0"
+      style={{ width: `clamp(${c.size * 0.45}px, ${(c.size / 12).toFixed(2)}vw, ${c.size}px)`, transform: 'translate3d(-9999px, 0, 0)' }}
+    >
+      <div className="wiggle" style={{ animationDuration: `${(0.6 + (i % 7) * 0.12).toFixed(2)}s` }}>
+        {c.art}
+      </div>
+    </div>
+  )
   return (
     <div ref={layer}>
-      {CREATURES.map((c, i) => (
-        <div
-          key={i}
-          className="absolute top-0 left-0"
-          style={{ width: `clamp(${c.size * 0.45}px, ${(c.size / 12).toFixed(2)}vw, ${c.size}px)`, transform: 'translate3d(-9999px, 0, 0)' }}
-        >
-          <div className="wiggle" style={{ animationDuration: `${(0.6 + (i % 7) * 0.12).toFixed(2)}s` }}>
-            {c.art}
-          </div>
-        </div>
-      ))}
+      {CREATURES.map((c, i) => !c.behind && creature(c, i))}
+      {back && createPortal(CREATURES.map((c, i) => c.behind && creature(c, i)), back)}
     </div>
   )
 }

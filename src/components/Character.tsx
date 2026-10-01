@@ -127,7 +127,7 @@ export default function Character() {
     }
     // Clicking the character (anywhere that isn't a link or button) makes him jump.
     const click = (e: PointerEvent) => {
-      if ((e.target as Element).closest('a, button') || !state.onIsland || !p.body) return
+      if ((e.target as Element).closest('a, button, dialog') || !state.onIsland || !p.body) return
       const box = p.body.getBoundingClientRect()
       if (e.clientX >= box.left && e.clientX <= box.right && e.clientY >= box.top && e.clientY <= box.bottom) {
         state.jumpAt = (e.timeStamp - start) / 1000

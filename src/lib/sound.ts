@@ -185,3 +185,31 @@ export function sinkingShip(seconds: number) {
     osc.stop(t + seconds)
   }
 }
+
+// Glass smashing: a bright crash of noise, then a scatter of tinkling shards.
+export function glassBreak() {
+  const a = audio()
+  const t = a.currentTime
+  const crash = a.createBufferSource()
+  crash.buffer = a.createBuffer(1, a.sampleRate * 0.35, a.sampleRate)
+  const data = crash.buffer.getChannelData(0)
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length) ** 3
+  const highpass = a.createBiquadFilter()
+  highpass.type = 'highpass'
+  highpass.frequency.value = 2500
+  const crashGain = a.createGain()
+  crashGain.gain.value = 0.5
+  crash.connect(highpass).connect(crashGain).connect(a.destination)
+  crash.start(t)
+  for (let i = 0; i < 7; i++) {
+    const at = t + 0.03 + Math.random() * 0.3
+    const ring = a.createOscillator()
+    ring.frequency.value = 2500 + Math.random() * 3500
+    const env = a.createGain()
+    env.gain.setValueAtTime(0.1, at)
+    env.gain.exponentialRampToValueAtTime(0.001, at + 0.12 + Math.random() * 0.2)
+    ring.connect(env).connect(a.destination)
+    ring.start(at)
+    ring.stop(at + 0.4)
+  }
+}

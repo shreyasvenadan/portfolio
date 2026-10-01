@@ -1,13 +1,14 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { watchWreck } from '../lib/wreck'
 
 // Everything below the surface. Positions are in screen heights from the top
 // of the world (the surface scene is 0-100vh), so each page section lines up
 // with one depth zone:
 //   100-200vh  about       island base, reef (coral, rocks, anemones), light rays, SeaLens camera
 //   200-300vh  work        open blue: jellyfish, bubbles
-//   300-400vh  experience  twilight: glowing jellyfish, shipwreck
+//   300-400vh  experience  twilight: glowing jellyfish, shipwreck (which sinks to the floor)
 //   400-500vh  contact     abyss: sea floor, message in a bottle
-// Everything that swims lives in Sealife.tsx, in a layer above the page text.
+// Everything that swims lives in Sealife.tsx, some above the page text and some behind it.
 
 const INK = '#120d0a'
 const line = { stroke: INK, strokeWidth: 5, strokeLinejoin: 'round', strokeLinecap: 'round' } as const
@@ -239,7 +240,7 @@ function SeaFloor() {
 
 function Bottle() {
   return (
-    <svg viewBox="-80 -40 160 80" className="glow w-full overflow-visible" style={{ '--glow': '#bfe9ff' } as CSSProperties}>
+    <svg viewBox="-80 -40 160 80" data-bottle className="glow w-full overflow-visible" style={{ '--glow': '#bfe9ff' } as CSSProperties}>
       <path d="M-60 -22 Q-70 0 -60 22 L30 22 Q44 22 50 8 L70 6 L70 -6 L50 -8 Q44 -22 30 -22 Z" fill="#bfe3ef" fillOpacity={0.55} {...line} />
       <rect x={70} y={-9} width={10} height={18} rx={3} fill="#a0703f" {...thin} />
       <rect x={-40} y={-10} width={60} height={20} rx={10} fill="#f6ecd2" {...thin} />
@@ -275,6 +276,8 @@ const BUBBLES = Array.from({ length: 18 }, (_, i) => ({
 }))
 
 export default function Underwater() {
+  const wreck = useRef<HTMLDivElement>(null)
+  useEffect(() => watchWreck(wreck.current!), [])
   return (
     <>
       {/* sunlight shafts reaching down from the surface */}
@@ -402,9 +405,18 @@ export default function Underwater() {
       </At>
 
       {/* twilight zone (experience) */}
-      <At top="352vh" left="16%" width="min(34vw, 420px)">
-        <Shipwreck />
-      </At>
+      {/* ref'd directly rather than through At, so it can be watched */}
+      <div ref={wreck} className="wreck absolute -translate-x-1/2" style={{ top: '352vh', left: '16%', width: 'min(34vw, 420px)' }}>
+        <div className="wreck-roll">
+          <Shipwreck />
+        </div>
+        <div className="wreck-bubbles">
+          {[22, 38, 51, 64, 77].map((x, i) => (
+            <span key={x} style={{ left: `${x}%`, animationDelay: `-${i * 0.45}s` }} />
+          ))}
+        </div>
+        <div className="wreck-silt" />
+      </div>
       <At top="318vh" left="86%" width="min(9vw, 110px)" className="bob">
         <Jelly color="#ff7ad9" glow />
       </At>

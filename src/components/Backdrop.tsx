@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { isNight, toggleNight } from '../lib/night'
 import { prefersReducedMotion, sectionProgress } from '../lib/sections'
+import { breakBottle } from '../lib/bottle'
 import { dropCoconut } from '../lib/coconut'
 import { crashPlane } from '../lib/crash'
 import { hitShip } from '../lib/pirate'
@@ -38,6 +39,7 @@ function applyTone(t: number) {
 export default function Backdrop() {
   const world = useRef<HTMLDivElement>(null)
   const front = useRef<HTMLDivElement>(null)
+  const [behind, setBehind] = useState<HTMLDivElement | null>(null)
   const surface = useRef<SVGSVGElement>(null)
   const animate = useMemo(() => !prefersReducedMotion(), [])
 
@@ -75,6 +77,12 @@ export default function Backdrop() {
       const r = ship?.getBoundingClientRect()
       return r && x > r.left && x < r.right && y > r.top + r.height * 0.15 && y < r.bottom ? ship : undefined
     }
+    // ...the message in a bottle on the sea floor (not while it's broken)...
+    const overBottle = (x: number, y: number) => {
+      const bottle = world.current?.querySelector<SVGSVGElement>('[data-bottle]')
+      const r = bottle?.getBoundingClientRect()
+      return r && bottle?.style.opacity !== '0' && x > r.left - 6 && x < r.right + 6 && y > r.top - 6 && y < r.bottom + 6 ? bottle : undefined
+    }
     // ...and the plane, while it's flying.
     const overPlane = (x: number, y: number) => {
       const plane = surface.current?.querySelector<SVGGElement>('#plane:not([data-crashed]) [data-plane-body]')
@@ -88,7 +96,7 @@ export default function Backdrop() {
       return r && x > r.left && x < r.right && y > r.top && y < r.bottom ? hull : undefined
     }
     const click = (e: MouseEvent) => {
-      if ((e.target as Element).closest('a, button')) return
+      if ((e.target as Element).closest('a, button, dialog')) return
       const [x, y] = [e.clientX, e.clientY]
       // Poking a diver (unless there's a fish on the hook to let go) beats
       // hooking a fish swimming past them; otherwise the hook takes the click.
@@ -102,8 +110,10 @@ export default function Backdrop() {
       const ship = overShip(x, y)
       const plane = overPlane(x, y)
       const pirate = overPirate(x, y)
+      const bottle = overBottle(x, y)
       if (plane) crashPlane(plane)
       else if (pirate) hitShip(pirate, x, y)
+      else if (bottle) breakBottle(bottle)
       else if (jelly) zap(x, y, jelly.getAttribute('data-jelly')!, jelly)
       else if (nut) dropCoconut(nut)
       else if (ship) {
@@ -114,9 +124,9 @@ export default function Backdrop() {
       } else if (overSky(x, y)) toggleNight()
     }
     const hover = (e: PointerEvent) => {
-      if ((e.target as Element).closest('a, button')) return
+      if ((e.target as Element).closest('a, button, dialog')) return
       const [x, y] = [e.clientX, e.clientY]
-      document.body.style.cursor = fishing.over(x, y) || divers.over(x, y) || overPlane(x, y) || overPirate(x, y) || overJelly(x, y) || overCoconut(x, y) || overShip(x, y) || overSky(x, y) ? 'var(--cursor-pointer)' : ''
+      document.body.style.cursor = fishing.over(x, y) || divers.over(x, y) || overPlane(x, y) || overPirate(x, y) || overJelly(x, y) || overCoconut(x, y) || overShip(x, y) || overBottle(x, y) || overSky(x, y) ? 'var(--cursor-pointer)' : ''
     }
     window.addEventListener('click', click)
     window.addEventListener('pointermove', hover)
@@ -167,6 +177,8 @@ export default function Backdrop() {
         <div ref={world} className="absolute inset-x-0 top-0 h-[500vh] will-change-transform" style={{ background: WATER }}>
           <Surface ref={surface} animate={animate} />
           <Underwater />
+          {/* Sea creatures that swim behind the page text (the rest are in front). */}
+          <div ref={setBehind} className="absolute inset-x-0 top-0" />
           {/* At night the shallow water darkens too; the deep is dark already. */}
           <div
             className="night-tint absolute inset-x-0"
@@ -174,10 +186,10 @@ export default function Backdrop() {
           />
         </div>
       </div>
-      {/* Everything that swims sits above the page text and scrolls with the world. */}
+      {/* The creatures that swim above the page text, scrolling with the world. */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-[15] overflow-hidden">
         <div ref={front} className="swimmers absolute inset-x-0 top-0 h-[500vh] will-change-transform">
-          <Sealife />
+          <Sealife back={behind} />
         </div>
       </div>
     </>

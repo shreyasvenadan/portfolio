@@ -33,6 +33,28 @@ html {
   cursor: var(--cursor-pointer);
 }
 
+/* A slim sea-foam scrollbar on deep navy, instead of the browser's default.
+   Chrome and Firefox use the standard properties; Safari the ::-webkit ones. */
+html {
+  --scroll-track: #0a1626;
+  --scroll-thumb: rgb(159 221 226 / 0.55);
+  --scroll-thumb-hover: rgb(159 221 226 / 0.85);
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+  scrollbar-width: thin;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  background: var(--scroll-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border: 2px solid var(--scroll-track);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -219,7 +241,8 @@ body {
   opacity: 0.78;
 }
 
-/* The swimmers sit above the night tint, so they're dimmed separately. */
+/* The swimmers in front of the text sit above the night tint, so they're
+   dimmed separately. */
 .swimmers {
   transition: filter 1.4s ease;
 }
@@ -367,6 +390,72 @@ body {
   }
 }
 
+/* The shipwreck sinks to the sea floor the first time it's seen
+   (src/lib/wreck.ts): from 352vh down to the floor at ~474vh, less its own
+   height (its width × 280/440), sitting a touch into the sand. */
+.wreck {
+  --wreck-depth: calc(122vh - min(34vw, 420px) * 0.6);
+  transition: transform 25s cubic-bezier(0.45, 0, 0.75, 0.9);
+}
+.wreck.sinking {
+  transform: translateY(var(--wreck-depth));
+}
+.wreck.sinking:not(.landed) .wreck-roll {
+  animation: wreck-sway 5s ease-in-out infinite alternate;
+}
+@keyframes wreck-sway {
+  from { rotate: -3deg; }
+  to { rotate: 3deg; }
+}
+.wreck.landed .wreck-roll {
+  rotate: 4deg;
+  transition: rotate 1.2s ease-out;
+}
+/* bubbles streaming up off it on the way down */
+.wreck-bubbles span {
+  position: absolute;
+  top: 40%;
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgb(255 255 255 / 0.7);
+  border-radius: 50%;
+  opacity: 0;
+}
+.wreck.sinking:not(.landed) .wreck-bubbles span {
+  animation: wreck-bubble 2.2s ease-in infinite;
+}
+@keyframes wreck-bubble {
+  from { translate: 0 0; opacity: 0; }
+  15% { opacity: 1; }
+  to { translate: 8px -160px; opacity: 0; }
+}
+/* a cloud of silt kicked up on landing */
+.wreck-silt {
+  position: absolute;
+  inset: auto 0 0;
+  height: 45%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(120 128 140 / 0.75), rgb(120 128 140 / 0));
+  opacity: 0;
+  pointer-events: none;
+}
+.wreck.landed .wreck-silt {
+  animation: wreck-silt 3.5s ease-out;
+}
+@keyframes wreck-silt {
+  from { opacity: 0.9; scale: 0.4 0.3; }
+  to { opacity: 0; scale: 1.5 1.1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wreck,
+  .wreck.landed .wreck-roll {
+    transition: none;
+  }
+  .wreck.landed .wreck-silt {
+    animation: none;
+  }
+}
+
 /* The shipwreck rocks and groans when its horn sounds. */
 .honk {
   transform-origin: 50% 90%;
@@ -381,6 +470,111 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .honk {
+    animation: none;
+  }
+}
+
+/* --- Message in a bottle (src/lib/bottle.ts) --------------------------- */
+.shatter {
+  position: fixed;
+  z-index: 30;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.shatter-piece {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.shatter-piece svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+dialog.note {
+  width: min(30rem, calc(100vw - 32px));
+  max-width: none;
+  margin: auto;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+dialog.note::backdrop {
+  background: rgb(4 10 22 / 0.6);
+  backdrop-filter: blur(2px);
+}
+/* Parchment with a wooden roller at each end, unrolling from the middle. */
+.note-paper {
+  position: relative;
+  padding: 2.75rem 2rem 2.25rem;
+  border: 3px solid #120d0a;
+  border-radius: 4px;
+  background: #f6ecd2;
+  color: #2a2217;
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  text-align: center;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.5);
+  animation: unroll 0.75s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.note-paper::before,
+.note-paper::after {
+  content: '';
+  position: absolute;
+  left: -12px;
+  right: -12px;
+  height: 22px;
+  border: 3px solid #120d0a;
+  border-radius: 11px;
+  background: #d9c08f;
+}
+.note-paper::before { top: -13px; }
+.note-paper::after { bottom: -13px; }
+@keyframes unroll {
+  from { clip-path: inset(calc(50% - 16px) -16px calc(50% - 16px) -16px); }
+  to { clip-path: inset(-16px -16px -16px -16px); }
+}
+.note-title {
+  margin-bottom: 1rem;
+  color: #5a1f2e;
+  font-size: 2.4rem;
+  line-height: 1.1;
+}
+.note-line + .note-line {
+  margin-top: 0.75rem;
+}
+.note-signoff {
+  margin-top: 1.25rem;
+  color: #5a1f2e;
+  font-size: 1.5rem;
+}
+.note-toss {
+  margin-top: 1.5rem;
+  padding: 0.4rem 1.4rem;
+  border-radius: 999px;
+  background: #5a1f2e;
+  color: #f6ecd2;
+  font-size: 1.15rem;
+}
+.note-close {
+  position: absolute;
+  top: 0.9rem;
+  right: 1rem;
+  color: #5a1f2e;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+.note-toss:focus-visible,
+.note-close:focus-visible {
+  outline: 3px solid #2b93a6;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .note-paper {
     animation: none;
   }
 }
