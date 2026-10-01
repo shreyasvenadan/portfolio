@@ -6,7 +6,7 @@ export default function Experience() {
     <Section id="experience" title="Experience">
       <ol className="space-y-14">
         {experience.map((item) => (
-          <li key={`${item.role}-${item.org}`}>
+          <li key={`${item.role}-${item.org}`} data-focus>
             <p className="font-display text-muted tabular-nums">{item.period}</p>
             <div>
               <h3 className="font-display text-2xl font-bold tracking-tight">{item.org}</h3>

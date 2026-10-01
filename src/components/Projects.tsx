@@ -8,7 +8,7 @@ export default function Projects() {
     <Section id="work" title="Work">
       <ul className="space-y-16">
         {projects.map((project) => (
-          <li key={project.title} className="border-t border-ink/15 pt-8">
+          <li key={project.title} data-focus className="border-t border-ink/15 pt-8">
             <h3 className="font-display text-3xl font-bold tracking-tight">{project.title}</h3>
             <p className="mt-4 text-lg leading-[1.7] text-ink/85">{project.description}</p>
             <p className="mt-4 text-muted">{project.tech.join(', ')}</p>

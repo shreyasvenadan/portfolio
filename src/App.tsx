@@ -10,12 +10,14 @@ import Hero from './components/Hero'
 import Projects from './components/Projects'
 import Character from './components/Character'
 import { profile } from './data/content'
+import { watchFocus } from './lib/focus'
 import { watchSections } from './lib/sections'
 
 const year = new Date().getFullYear()
 
 export default function App() {
   useEffect(watchSections, [])
+  useEffect(watchFocus, [])
 
   return (
     <>
