@@ -119,6 +119,17 @@ body {
   to { rotate: 2.5deg; }
 }
 
+/* Reef pieces fade out at their base, as if half buried in the seabed. A
+   mask clips to the box, so pad the top and sides to leave room for outlines
+   and swaying tentacles that reach past the drawing's edges (the padding is
+   outside the set width, and the negative margin keeps the piece in place). */
+.grounded {
+  box-sizing: content-box;
+  padding: 30px 30px 0;
+  margin-top: -30px;
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+}
+
 .bob {
   animation: bob 4.5s ease-in-out infinite alternate;
 }

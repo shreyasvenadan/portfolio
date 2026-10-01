@@ -318,75 +318,76 @@ export default function Underwater() {
           </svg>
         </div>
 
-        {/* shallow reef (about); tops are a share of the band's height */}
+        {/* shallow reef (about); tops are a share of the band's height, and each
+            piece fades at its base so it sinks into the seabed */}
         <div className="absolute inset-0" style={fade(1)}>
-          <At top="12%" left="46%" width="min(14vw, 170px)">
+          <At className="grounded" top="12%" left="46%" width="min(14vw, 170px)">
             <SeaLensRig />
           </At>
-          <At top="16%" left="31%" width="min(5vw, 64px)">
+          <At className="grounded" top="16%" left="31%" width="min(5vw, 64px)">
             <Rock shape={2} color="#7d8a77" />
           </At>
-          <At top="18%" left="21%" width="min(12vw, 150px)">
+          <At className="grounded" top="18%" left="21%" width="min(12vw, 150px)">
             <TableCoral color="#5cc6b5" />
           </At>
-          <At top="16%" left="79%" width="min(7vw, 90px)">
+          <At className="grounded" top="16%" left="79%" width="min(7vw, 90px)">
             <Anemone color="#ffa25c" base="#c75a3a" />
           </At>
-          <At top="24%" left="57%" width="min(7vw, 90px)">
+          <At className="grounded" top="24%" left="57%" width="min(7vw, 90px)">
             <BrainCoral color="#8fcf6a" />
           </At>
-          <At top="22%" left="67%" width="min(11vw, 140px)">
+          <At className="grounded" top="22%" left="67%" width="min(11vw, 140px)">
             <SeaFan color="#9b6fd0" />
           </At>
-          <At top="28%" left="38%" width="min(7vw, 88px)">
+          <At className="grounded" top="28%" left="38%" width="min(7vw, 88px)">
             <TubeCoral color="#f2694c" rim="#7a2618" />
           </At>
-          <At top="30%" left="84%" width="min(10vw, 130px)">
+          <At className="grounded" top="30%" left="84%" width="min(10vw, 130px)">
             <Rock shape={1} />
           </At>
-          <At top="34%" left="27%" width="min(9vw, 110px)">
+          <At className="grounded" top="34%" left="27%" width="min(9vw, 110px)">
             <BranchCoral color="#f07c8c" />
           </At>
-          <At top="38%" left="70%" width="min(4vw, 50px)">
+          <At className="grounded" top="38%" left="70%" width="min(4vw, 50px)">
             <Starfish color="#ff8a5b" />
           </At>
-          <At top="40%" left="75%" width="min(8vw, 100px)">
+          <At className="grounded" top="40%" left="75%" width="min(8vw, 100px)">
             <BranchCoral color="#ffcf5c" />
           </At>
-          <At top="42%" left="35%" width="min(12vw, 150px)">
+          <At className="grounded" top="42%" left="35%" width="min(12vw, 150px)">
             <BrainCoral color="#f5a55a" />
           </At>
-          <At top="44%" left="88%" width="min(6vw, 72px)">
+          <At className="grounded" top="44%" left="88%" width="min(6vw, 72px)">
             <TubeCoral color="#b48cf0" rim="#4b2f7a" />
           </At>
-          <At top="48%" left="58%" width="min(9vw, 110px)">
+          <At className="grounded" top="48%" left="58%" width="min(9vw, 110px)">
             <Anemone color="#ff8fc8" base="#8c3d6b" />
           </At>
-          <At top="50%" left="14%" width="min(6vw, 80px)">
+          <At className="grounded" top="50%" left="14%" width="min(6vw, 80px)">
             <Seaweed color="#4aa060" />
           </At>
-          <At top="52%" left="45%" width="min(16vw, 200px)">
+          <At className="grounded" top="52%" left="45%" width="min(16vw, 200px)">
             <Rock shape={0} color="#5c6b78" />
           </At>
-          <At top="56%" left="30%" width="min(4vw, 48px)">
+          <At className="grounded" top="56%" left="30%" width="min(4vw, 48px)">
             <Starfish color="#ffd166" />
           </At>
-          <At top="58%" left="18%" width="min(7vw, 80px)">
+          <At className="grounded" top="58%" left="18%" width="min(7vw, 80px)">
             <BranchCoral color="#9fb8ff" />
           </At>
-          <At top="60%" left="9%" width="min(7vw, 90px)">
+          <At className="grounded" top="60%" left="9%" width="min(7vw, 90px)">
             <Seaweed />
           </At>
-          <At top="62%" left="64%" width="min(7vw, 90px)">
+          <At className="grounded" top="62%" left="64%" width="min(7vw, 90px)">
             <Rock shape={2} color="#6d7f86" />
           </At>
-          <At top="64%" left="37%" width="min(8vw, 100px)">
+          <At className="grounded" top="64%" left="37%" width="min(8vw, 100px)">
             <SeaFan color="#e0566b" />
           </At>
-          <At top="66%" left="80%" width="min(9vw, 110px)">
+          <At className="grounded" top="66%" left="80%" width="min(9vw, 110px)">
             <TableCoral color="#e7c35a" />
           </At>
-          <At top="70%" left="93%" width="min(7vw, 90px)">
+          <At className="grounded" top="70%" left="93%" width="min(7vw, 90px)">
             <Seaweed color="#4aa060" />
           </At>
         </div>

@@ -117,6 +117,73 @@ function Gull({ x, y, dur, delay, animate }: { x: number; y: number; dur: number
   )
 }
 
+// Now and then a pirate ship sails slowly past behind the island, bobbing on
+// the swell. It waits off-screen for the first part of each cycle.
+function PirateShip({ y, dur, delay, animate }: { y: number; dur: number; delay: number; animate: boolean }) {
+  if (!animate) return null
+  return (
+    <g id="pirate-ship">
+      <animateTransform attributeName="transform" type="translate" values="-260 0; -260 0; 1860 0" keyTimes="0; 0.45; 1" dur={`${dur}s`} begin={`-${delay}s`} repeatCount="indefinite" />
+      <g transform={`translate(0 ${y}) scale(0.55)`}>
+        <g>
+          <animateTransform attributeName="transform" type="rotate" values="-2; 2; -2" dur="4s" repeatCount="indefinite" />
+          {/* rigging, then the masts and sails */}
+          <path d="M20 -228 L160 -70 M-70 -168 L20 -150" stroke={INK} strokeWidth={2.5} />
+          <rect x={-75} y={-172} width={10} height={130} fill={WOOD} {...thin} />
+          <rect x={15} y={-232} width={10} height={190} fill={WOOD} {...thin} />
+          <path d="M-105 -160 Q-70 -150 -35 -160 Q-30 -122 -35 -85 Q-70 -93 -105 -85 Q-100 -122 -105 -160 Z" fill="#2b2b30" {...thin} />
+          <path d="M-45 -205 Q20 -190 85 -205 Q96 -142 85 -80 Q20 -95 -45 -80 Q-35 -142 -45 -205 Z" fill="#2b2b30" {...thin} />
+          {/* skull and crossbones */}
+          <path d="M2 -110 L38 -126 M2 -126 L38 -110" stroke="#f4efe6" strokeWidth={6} strokeLinecap="round" />
+          <circle cx={20} cy={-150} r={17} fill="#f4efe6" />
+          <rect x={11} y={-140} width={18} height={12} rx={3} fill="#f4efe6" />
+          <circle cx={13} cy={-151} r={4.5} fill="#2b2b30" />
+          <circle cx={27} cy={-151} r={4.5} fill="#2b2b30" />
+          {/* the flag, fluttering */}
+          <path d="M25 -230 L68 -224 L60 -214 L68 -204 L25 -208 Z" fill="#2b2b30" {...thin} strokeWidth={2.5}>
+            <animate attributeName="d" values="M25 -230 L68 -224 L60 -214 L68 -204 L25 -208 Z; M25 -230 L66 -220 L58 -212 L68 -200 L25 -208 Z; M25 -230 L68 -224 L60 -214 L68 -204 L25 -208 Z" dur="1.2s" repeatCount="indefinite" />
+          </path>
+          <circle cx={40} cy={-219} r={4} fill="#f4efe6" />
+          {/* hull: raised stern, gold stripe, gun ports, bowsprit */}
+          <path d="M110 -46 L162 -72" {...line} />
+          <path d="M-122 -76 L-70 -76 L-70 -46 L-122 -46 Z" fill="#5a361e" {...thin} />
+          <path d="M-122 -46 L122 -46 Q114 -6 82 0 L-92 0 Q-118 -10 -122 -46 Z" fill="#6b4226" {...line} />
+          <path d="M-118 -32 L118 -32" stroke="#d9a441" strokeWidth={5} />
+          {[-60, -20, 20, 60].map((x) => (
+            <circle key={x} cx={x} cy={-18} r={6} fill={INK} />
+          ))}
+          <path d="M-110 2 Q-80 -8 -50 2 T10 2 T70 2 T120 2" fill="none" stroke={FOAM} strokeWidth={6} strokeLinecap="round" />
+        </g>
+      </g>
+    </g>
+  )
+}
+
+// A little propeller plane that crosses the sky every so often.
+function Plane({ y, dur, delay, animate }: { y: number; dur: number; delay: number; animate: boolean }) {
+  if (!animate) return null
+  return (
+    <g id="plane">
+      <animateTransform attributeName="transform" type="translate" values="-200 0; -200 0; 1800 -40" keyTimes="0; 0.82; 1" dur={`${dur}s`} begin={`-${delay}s`} repeatCount="indefinite" />
+      <g transform={`translate(0 ${y})`}>
+        <g>
+          <animateTransform attributeName="transform" type="translate" values="0 0; 0 -5; 0 0" dur="2.2s" repeatCount="indefinite" />
+          <path d="M-52 -6 L-66 -32 L-50 -32 L-34 -8 Z" fill="#e5483b" {...thin} />
+          <path d="M-60 -4 Q-40 -16 20 -14 Q48 -12 54 0 Q48 12 20 12 Q-40 10 -60 4 Z" fill="#f4efe6" {...thin} />
+          <path d="M-50 0 L44 0" stroke="#e5483b" strokeWidth={5} strokeLinecap="round" />
+          <path d="M20 -12 Q34 -11 40 -4 L22 -4 Z" fill="#8fd3e8" {...thin} strokeWidth={2.5} />
+          <path d="M-6 2 L-22 28 L4 28 L18 2 Z" fill="#e5483b" {...thin} />
+          <circle cx={55} cy={0} r={5} fill={INK} />
+          {/* spinning propeller */}
+          <ellipse cx={58} cy={0} rx={3} ry={18} fill={INK} opacity={0.55}>
+            <animate attributeName="ry" values="18; 3; 18" dur="0.12s" repeatCount="indefinite" />
+          </ellipse>
+        </g>
+      </g>
+    </g>
+  )
+}
+
 function SignBoard({ y, label, dir, w }: { y: number; label: string; dir: 1 | -1; w: number }) {
   const tip = dir * (w / 2 + 22)
   return (
@@ -162,18 +229,20 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
           <stop offset="1" stopColor={SEA_FRONT} />
         </linearGradient>
         {/* The moon and its reflection are drawn above the night tint to stay
-            bright, so the clouds and palm in front of them are cut out as
-            black silhouettes. */}
+            bright, so the clouds, plane, palm and pirate ship in front of
+            them are cut out as black silhouettes. */}
         <filter id="silhouette">
           <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" />
         </filter>
         <mask id="behind-palm" maskUnits="userSpaceOnUse" x={0} y={0} width={1600} height={900}>
           <rect width={1600} height={900} fill="#fff" />
           <use href="#palm-right" filter="url(#silhouette)" />
+          <use href="#pirate-ship" filter="url(#silhouette)" />
         </mask>
         <mask id="behind-clouds" maskUnits="userSpaceOnUse" x={0} y={0} width={1600} height={900}>
           <rect width={1600} height={900} fill="#fff" />
           <use href="#clouds" filter="url(#silhouette)" />
+          <use href="#plane" filter="url(#silhouette)" />
         </mask>
       </defs>
 
@@ -189,6 +258,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
         <Cloud x={0} y={210} s={0.75} dur={110} delay={80} animate={animate} />
         <Cloud x={0} y={60} s={0.6} dur={170} delay={130} animate={animate} />
       </g>
+      <Plane y={150} dur={60} delay={36} animate={animate} />
       <Gull x={0} y={250} dur={38} delay={4} animate={animate} />
       <Gull x={40} y={225} dur={38} delay={4.6} animate={animate} />
 
@@ -206,6 +276,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       <path className="day-only" d="M1130 606 L1410 606 M1180 626 L1360 626" stroke="#ffe9a8" strokeWidth={5} strokeLinecap="round" opacity={0.8} />
       <Waves y={630} color="#7fd0d8" dur={5} animate={animate} />
       <Waves y={680} color="#9fdde2" dur={3.6} animate={animate} />
+      <PirateShip y={648} dur={100} delay={38} animate={animate} />
 
       {/* the island */}
       <path d="M290 900 L340 780 Q450 692 800 666 Q1150 692 1260 780 L1310 900 Z" fill={SAND} {...line} />
