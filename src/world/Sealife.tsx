@@ -1,5 +1,6 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { prefersReducedMotion } from '../lib/sections'
+import { oof } from '../lib/sound'
 
 // Everything that swims. Each creature wanders freely inside its depth zone:
 // it drifts and turns on its own, speeds up and dawdles, turns back near the
@@ -297,8 +298,8 @@ function Anglerfish() {
 // the top of the world (the reef is 100-200, open blue 200-300, twilight
 // 300-400, abyss 400-500). speed: cruising px per frame. school: how many swim
 // together (one leader plus followers). bank: turn by tilting, not flipping.
-// calm: isn't startled by the cursor (the divers).
-type Kind = { art: ReactNode; size: number; zone: [number, number]; speed: number; count?: number; school?: number; bank?: boolean; calm?: boolean }
+// calm: isn't startled by the cursor. diver: says "oof" when clicked.
+type Kind = { art: ReactNode; size: number; zone: [number, number]; speed: number; count?: number; school?: number; bank?: boolean; calm?: boolean; diver?: boolean }
 
 const KINDS: Kind[] = [
   // shallow reef
@@ -311,7 +312,7 @@ const KINDS: Kind[] = [
   { art: <Butterflyfish />, size: 52, zone: [120, 185], speed: 0.7, count: 3 },
   { art: <Puffer />, size: 58, zone: [135, 190], speed: 0.35, count: 2 },
   { art: <Angelfish />, size: 56, zone: [125, 180], speed: 0.5, count: 2 },
-  { art: <Diver gear="camera" />, size: 190, zone: [130, 180], speed: 0.4, calm: true },
+  { art: <Diver gear="camera" />, size: 190, zone: [130, 180], speed: 0.4, calm: true, diver: true },
   { art: <Fish color="#c77dff" />, size: 40, zone: [118, 190], speed: 0.9, count: 2 },
   // open blue
   { art: <Manta />, size: 380, zone: [212, 240], speed: 0.7, bank: true },
@@ -319,7 +320,7 @@ const KINDS: Kind[] = [
   { art: <Fish color="#d6e4ea" />, size: 22, zone: [205, 260], speed: 1.7, school: 11 },
   { art: <Barracuda />, size: 150, zone: [215, 290], speed: 1.2, count: 3 },
   { art: <Swordfish />, size: 240, zone: [230, 280], speed: 1.5 },
-  { art: <Diver suit="#1f3b57" stripe="#f2c230" />, size: 180, zone: [225, 285], speed: 0.45, calm: true },
+  { art: <Diver suit="#1f3b57" stripe="#f2c230" />, size: 180, zone: [225, 285], speed: 0.45, calm: true, diver: true },
   { art: <Tang body="#3fb57a" tail="#1d6e47" />, size: 62, zone: [205, 250], speed: 0.9, count: 2 },
   { art: <Fish color="#f25f5c" stripe="#ffe1a8" />, size: 46, zone: [210, 290], speed: 1, count: 3 },
   // twilight
@@ -327,7 +328,7 @@ const KINDS: Kind[] = [
   { art: <Lanternfish glow="#ffb8f2" />, size: 30, zone: [310, 395], speed: 0.6, count: 4 },
   { art: <Hatchetfish />, size: 40, zone: [305, 380], speed: 0.45, count: 4 },
   { art: <Eel />, size: 220, zone: [360, 390], speed: 0.35 },
-  { art: <Diver suit="#2a2d36" stripe="#5ad1e6" gear="torch" />, size: 180, zone: [325, 385], speed: 0.35, calm: true },
+  { art: <Diver suit="#2a2d36" stripe="#5ad1e6" gear="torch" />, size: 180, zone: [325, 385], speed: 0.35, calm: true, diver: true },
   { art: <Puffer />, size: 50, zone: [320, 380], speed: 0.3 },
   // abyss
   { art: <Anglerfish />, size: 300, zone: [412, 450], speed: 0.3 },
@@ -361,12 +362,22 @@ const BEND = { x: 6.5, y: 20 }
 // How far from a fish's centre a click still hooks it, beyond its half-width.
 const SLOP = 24
 
-let hooking: { near: (x: number, y: number) => boolean; click: (x: number, y: number) => boolean } | null = null
+let hooking: { near: (x: number, y: number) => boolean; click: (x: number, y: number) => boolean; holding: () => boolean } | null = null
+// Clicking a diver: they say "oof" and flinch. Set up by swim(), like the hook.
+let poking: { near: (x: number, y: number) => boolean; click: (x: number, y: number) => boolean } | null = null
+export const divers = {
+  over: (x: number, y: number) => poking?.near(x, y) ?? false,
+  // Poke the diver here, if there is one. True if the click was used.
+  click: (x: number, y: number) => poking?.click(x, y) ?? false,
+}
+
 export const fishing = {
   // Is there a fish to hook here (and nothing on the hook already)?
   over: (x: number, y: number) => hooking?.near(x, y) ?? false,
   // Hook a fish here, or let the hooked one go. True if the click was used.
   click: (x: number, y: number) => hooking?.click(x, y) ?? false,
+  // Is a fish on the hook (so the next click lets it go)?
+  holding: () => hooking?.holding() ?? false,
 }
 
 // --- swimming --------------------------------------------------------------
@@ -443,10 +454,29 @@ function swim(layer: HTMLElement) {
   }
   window.addEventListener('resize', resize)
 
+  // A diver is drawn about twice as long as it is tall, so hit-test an ellipse.
+  const diverAt = (x: number, y: number) => {
+    const offset = layer.getBoundingClientRect().top
+    return bodies.find((b) => b.spec.diver && ((b.x - x) / (b.w / 2)) ** 2 + ((b.y + offset - y) / (b.w / 4)) ** 2 < 1)
+  }
+  poking = {
+    near: (x, y) => !!diverAt(x, y),
+    click: (x, y) => {
+      const b = diverAt(x, y)
+      if (!b) return false
+      oof()
+      b.vy -= 2.5
+      return true
+    },
+  }
+
   if (prefersReducedMotion()) {
     const offset = layer.getBoundingClientRect().top
     bodies.forEach((b) => place(b, offset))
-    return () => window.removeEventListener('resize', resize)
+    return () => {
+      window.removeEventListener('resize', resize)
+      poking = null
+    }
   }
 
   let pointer: { x: number; y: number } | null = null
@@ -471,6 +501,7 @@ function swim(layer: HTMLElement) {
   }
   hooking = {
     near: (x, y) => !caught && !!nearest(x, y),
+    holding: () => !!caught,
     click: (x, y) => {
       if (caught) {
         // Let it go: it darts off downwards in a panic.
@@ -582,6 +613,7 @@ function swim(layer: HTMLElement) {
 
   return () => {
     hooking = null
+    poking = null
     cancelAnimationFrame(frame)
     window.removeEventListener('resize', resize)
     window.removeEventListener('pointermove', track)

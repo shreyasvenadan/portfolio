@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef } from 'react'
 import { isNight, toggleNight } from '../lib/night'
 import { prefersReducedMotion, sectionProgress } from '../lib/sections'
 import { dropCoconut } from '../lib/coconut'
+import { crashPlane } from '../lib/crash'
+import { hitShip } from '../lib/pirate'
 import { shipHorn } from '../lib/sound'
 import { zap } from '../lib/zap'
 import Surface from '../world/Surface'
-import Sealife, { fishing } from '../world/Sealife'
+import Sealife, { divers, fishing } from '../world/Sealife'
 import Underwater from '../world/Underwater'
 
 // The world behind the page: an island at the surface, then the ocean below,
@@ -73,10 +75,24 @@ export default function Backdrop() {
       const r = ship?.getBoundingClientRect()
       return r && x > r.left && x < r.right && y > r.top + r.height * 0.15 && y < r.bottom ? ship : undefined
     }
+    // ...and the plane, while it's flying.
+    const overPlane = (x: number, y: number) => {
+      const plane = surface.current?.querySelector<SVGGElement>('#plane:not([data-crashed]) [data-plane-body]')
+      const r = plane?.getBoundingClientRect()
+      return r && x > r.left - 8 && x < r.right + 8 && y > r.top - 8 && y < r.bottom + 8 ? plane : undefined
+    }
+    // ...and the pirate ship, until it sinks.
+    const overPirate = (x: number, y: number) => {
+      const hull = surface.current?.querySelector<SVGGElement>('#pirate-ship:not([data-sunk]) [data-pirate]')
+      const r = hull?.getBoundingClientRect()
+      return r && x > r.left && x < r.right && y > r.top && y < r.bottom ? hull : undefined
+    }
     const click = (e: MouseEvent) => {
       if ((e.target as Element).closest('a, button')) return
       const [x, y] = [e.clientX, e.clientY]
-      // Hooking a fish, or letting one go, takes the click.
+      // Poking a diver (unless there's a fish on the hook to let go) beats
+      // hooking a fish swimming past them; otherwise the hook takes the click.
+      if (!fishing.holding() && divers.click(x, y)) return
       if (fishing.click(x, y)) {
         document.body.style.cursor = ''
         return
@@ -84,7 +100,11 @@ export default function Backdrop() {
       const jelly = overJelly(x, y)
       const nut = overCoconut(x, y)
       const ship = overShip(x, y)
-      if (jelly) zap(x, y, jelly.getAttribute('data-jelly')!, jelly)
+      const plane = overPlane(x, y)
+      const pirate = overPirate(x, y)
+      if (plane) crashPlane(plane)
+      else if (pirate) hitShip(pirate, x, y)
+      else if (jelly) zap(x, y, jelly.getAttribute('data-jelly')!, jelly)
       else if (nut) dropCoconut(nut)
       else if (ship) {
         shipHorn()
@@ -96,7 +116,7 @@ export default function Backdrop() {
     const hover = (e: PointerEvent) => {
       if ((e.target as Element).closest('a, button')) return
       const [x, y] = [e.clientX, e.clientY]
-      document.body.style.cursor = fishing.over(x, y) || overJelly(x, y) || overCoconut(x, y) || overShip(x, y) || overSky(x, y) ? 'var(--cursor-pointer)' : ''
+      document.body.style.cursor = fishing.over(x, y) || divers.over(x, y) || overPlane(x, y) || overPirate(x, y) || overJelly(x, y) || overCoconut(x, y) || overShip(x, y) || overSky(x, y) ? 'var(--cursor-pointer)' : ''
     }
     window.addEventListener('click', click)
     window.addEventListener('pointermove', hover)

@@ -118,55 +118,59 @@ function Gull({ x, y, dur, delay, animate }: { x: number; y: number; dur: number
 }
 
 // Now and then a pirate ship sails slowly past behind the island, bobbing on
-// the swell. It waits off-screen for the first part of each cycle.
+// the swell. It waits off-screen for the first part of each cycle. Clicking
+// it lands hits on it, and enough of them sink it (src/lib/pirate.ts).
 function PirateShip({ y, dur, delay, animate }: { y: number; dur: number; delay: number; animate: boolean }) {
   if (!animate) return null
   return (
     <g id="pirate-ship">
       <animateTransform attributeName="transform" type="translate" values="-260 0; -260 0; 1860 0" keyTimes="0; 0.45; 1" dur={`${dur}s`} begin={`-${delay}s`} repeatCount="indefinite" />
       <g transform={`translate(0 ${y}) scale(0.55)`}>
-        <g>
-          <animateTransform attributeName="transform" type="rotate" values="-2; 2; -2" dur="4s" repeatCount="indefinite" />
-          {/* rigging, then the masts and sails */}
-          <path d="M20 -228 L160 -70 M-70 -168 L20 -150" stroke={INK} strokeWidth={2.5} />
-          <rect x={-75} y={-172} width={10} height={130} fill={WOOD} {...thin} />
-          <rect x={15} y={-232} width={10} height={190} fill={WOOD} {...thin} />
-          <path d="M-105 -160 Q-70 -150 -35 -160 Q-30 -122 -35 -85 Q-70 -93 -105 -85 Q-100 -122 -105 -160 Z" fill="#2b2b30" {...thin} />
-          <path d="M-45 -205 Q20 -190 85 -205 Q96 -142 85 -80 Q20 -95 -45 -80 Q-35 -142 -45 -205 Z" fill="#2b2b30" {...thin} />
-          {/* skull and crossbones */}
-          <path d="M2 -110 L38 -126 M2 -126 L38 -110" stroke="#f4efe6" strokeWidth={6} strokeLinecap="round" />
-          <circle cx={20} cy={-150} r={17} fill="#f4efe6" />
-          <rect x={11} y={-140} width={18} height={12} rx={3} fill="#f4efe6" />
-          <circle cx={13} cy={-151} r={4.5} fill="#2b2b30" />
-          <circle cx={27} cy={-151} r={4.5} fill="#2b2b30" />
-          {/* the flag, fluttering */}
-          <path d="M25 -230 L68 -224 L60 -214 L68 -204 L25 -208 Z" fill="#2b2b30" {...thin} strokeWidth={2.5}>
-            <animate attributeName="d" values="M25 -230 L68 -224 L60 -214 L68 -204 L25 -208 Z; M25 -230 L66 -220 L58 -212 L68 -200 L25 -208 Z; M25 -230 L68 -224 L60 -214 L68 -204 L25 -208 Z" dur="1.2s" repeatCount="indefinite" />
-          </path>
-          <circle cx={40} cy={-219} r={4} fill="#f4efe6" />
-          {/* hull: raised stern, gold stripe, gun ports, bowsprit */}
-          <path d="M110 -46 L162 -72" {...line} />
-          <path d="M-122 -76 L-70 -76 L-70 -46 L-122 -46 Z" fill="#5a361e" {...thin} />
-          <path d="M-122 -46 L122 -46 Q114 -6 82 0 L-92 0 Q-118 -10 -122 -46 Z" fill="#6b4226" {...line} />
-          <path d="M-118 -32 L118 -32" stroke="#d9a441" strokeWidth={5} />
-          {[-60, -20, 20, 60].map((x) => (
-            <circle key={x} cx={x} cy={-18} r={6} fill={INK} />
-          ))}
-          <path d="M-110 2 Q-80 -8 -50 2 T10 2 T70 2 T120 2" fill="none" stroke={FOAM} strokeWidth={6} strokeLinecap="round" />
+        <g data-pirate>
+          <g data-pirate-art>
+            <animateTransform attributeName="transform" type="rotate" values="-2; 2; -2" dur="4s" repeatCount="indefinite" />
+            {/* rigging, then the masts and sails */}
+            <path d="M20 -228 L160 -70 M-70 -168 L20 -150" stroke={INK} strokeWidth={2.5} />
+            <rect x={-75} y={-172} width={10} height={130} fill={WOOD} {...thin} />
+            <rect x={15} y={-232} width={10} height={190} fill={WOOD} {...thin} />
+            <path d="M-105 -160 Q-70 -150 -35 -160 Q-30 -122 -35 -85 Q-70 -93 -105 -85 Q-100 -122 -105 -160 Z" fill="#2b2b30" {...thin} />
+            <path d="M-45 -205 Q20 -190 85 -205 Q96 -142 85 -80 Q20 -95 -45 -80 Q-35 -142 -45 -205 Z" fill="#2b2b30" {...thin} />
+            {/* skull and crossbones */}
+            <path d="M2 -110 L38 -126 M2 -126 L38 -110" stroke="#f4efe6" strokeWidth={6} strokeLinecap="round" />
+            <circle cx={20} cy={-150} r={17} fill="#f4efe6" />
+            <rect x={11} y={-140} width={18} height={12} rx={3} fill="#f4efe6" />
+            <circle cx={13} cy={-151} r={4.5} fill="#2b2b30" />
+            <circle cx={27} cy={-151} r={4.5} fill="#2b2b30" />
+            {/* the flag, fluttering */}
+            <path d="M25 -230 L68 -224 L60 -214 L68 -204 L25 -208 Z" fill="#2b2b30" {...thin} strokeWidth={2.5}>
+              <animate attributeName="d" values="M25 -230 L68 -224 L60 -214 L68 -204 L25 -208 Z; M25 -230 L66 -220 L58 -212 L68 -200 L25 -208 Z; M25 -230 L68 -224 L60 -214 L68 -204 L25 -208 Z" dur="1.2s" repeatCount="indefinite" />
+            </path>
+            <circle cx={40} cy={-219} r={4} fill="#f4efe6" />
+            {/* hull: raised stern, gold stripe, gun ports, bowsprit */}
+            <path d="M110 -46 L162 -72" {...line} />
+            <path d="M-122 -76 L-70 -76 L-70 -46 L-122 -46 Z" fill="#5a361e" {...thin} />
+            <path d="M-122 -46 L122 -46 Q114 -6 82 0 L-92 0 Q-118 -10 -122 -46 Z" fill="#6b4226" {...line} />
+            <path d="M-118 -32 L118 -32" stroke="#d9a441" strokeWidth={5} />
+            {[-60, -20, 20, 60].map((x) => (
+              <circle key={x} cx={x} cy={-18} r={6} fill={INK} />
+            ))}
+            <path d="M-110 2 Q-80 -8 -50 2 T10 2 T70 2 T120 2" fill="none" stroke={FOAM} strokeWidth={6} strokeLinecap="round" />
+          </g>
         </g>
       </g>
     </g>
   )
 }
 
-// A little propeller plane that crosses the sky every so often.
+// A little propeller plane that crosses the sky every so often. Clicking it
+// sends it crashing into the sea (src/lib/crash.ts).
 function Plane({ y, dur, delay, animate }: { y: number; dur: number; delay: number; animate: boolean }) {
   if (!animate) return null
   return (
     <g id="plane">
       <animateTransform attributeName="transform" type="translate" values="-200 0; -200 0; 1800 -40" keyTimes="0; 0.82; 1" dur={`${dur}s`} begin={`-${delay}s`} repeatCount="indefinite" />
       <g transform={`translate(0 ${y})`}>
-        <g>
+        <g data-plane-body>
           <animateTransform attributeName="transform" type="translate" values="0 0; 0 -5; 0 0" dur="2.2s" repeatCount="indefinite" />
           <path d="M-52 -6 L-66 -32 L-50 -32 L-34 -8 Z" fill="#e5483b" {...thin} />
           <path d="M-60 -4 Q-40 -16 20 -14 Q48 -12 54 0 Q48 12 20 12 Q-40 10 -60 4 Z" fill="#f4efe6" {...thin} />
@@ -239,6 +243,10 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
           <use href="#palm-right" filter="url(#silhouette)" />
           <use href="#pirate-ship" filter="url(#silhouette)" />
         </mask>
+        {/* the sinking pirate ship is cut off at the waterline */}
+        <clipPath id="above-water" clipPathUnits="userSpaceOnUse">
+          <rect x={-1000} y={-1000} width={3600} height={1652} />
+        </clipPath>
         <mask id="behind-clouds" maskUnits="userSpaceOnUse" x={0} y={0} width={1600} height={900}>
           <rect width={1600} height={900} fill="#fff" />
           <use href="#clouds" filter="url(#silhouette)" />
@@ -259,6 +267,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
         <Cloud x={0} y={60} s={0.6} dur={170} delay={130} animate={animate} />
       </g>
       <Plane y={150} dur={60} delay={36} animate={animate} />
+      <g className="crash-layer" />
       <Gull x={0} y={250} dur={38} delay={4} animate={animate} />
       <Gull x={40} y={225} dur={38} delay={4.6} animate={animate} />
 
@@ -277,6 +286,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       <Waves y={630} color="#7fd0d8" dur={5} animate={animate} />
       <Waves y={680} color="#9fdde2" dur={3.6} animate={animate} />
       <PirateShip y={648} dur={100} delay={38} animate={animate} />
+      <g className="ship-layer" />
 
       {/* the island */}
       <path d="M290 900 L340 780 Q450 692 800 666 Q1150 692 1260 780 L1310 900 Z" fill={SAND} {...line} />
