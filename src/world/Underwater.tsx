@@ -210,8 +210,17 @@ export default function Underwater() {
         />
       ))}
 
-      {/* the island's rocky base, lined up under the island at the surface */}
-      <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '100vh', width: 'calc(var(--s, 1) * 1200px)' }}>
+      {/* the island's rocky base, lined up under the island at the surface,
+          fading into the water as it goes down */}
+      <div
+        className="absolute left-1/2 -translate-x-1/2"
+        style={{
+          top: '100vh',
+          width: 'calc(var(--s, 1) * 1200px)',
+          maskImage: 'linear-gradient(to bottom, #000 15%, transparent 95%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, #000 15%, transparent 95%)',
+        }}
+      >
         <svg viewBox="0 0 1200 460" className="w-full overflow-visible">
           {/* Only the sides are outlined, so there's no seam at the surface. */}
           <path d="M140 0 L1060 0 Q1150 180 1200 460 L0 460 Q60 180 140 0 Z" fill="#5f7e74" />

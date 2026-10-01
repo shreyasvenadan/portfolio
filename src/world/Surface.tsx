@@ -13,10 +13,9 @@ const rand = seeded(5)
 const STARS = Array.from({ length: 70 }, () => ({ x: rand() * 1600, y: rand() * 500, r: 1.5 + rand() * 2.5, delay: rand() * 4 }))
 
 // The surface: a small island off Bali at golden hour, with the sea in front.
-// Props nod to Shreyas's story: fish jumping out of the reef, a camera on a
-// tripod (photography and video), a football, and a signpost for Melbourne,
-// Bali and Jakarta. Its bottom edge is water in
-// SEA_FRONT, which the underwater world below continues from.
+// Props nod to Shreyas's story: a camera on a tripod (photography and video),
+// a football, and a signpost for Melbourne, Bali and Jakarta. Its bottom edge
+// is water in SEA_FRONT, which the underwater world below continues from.
 
 const INK = '#120d0a'
 const SKY_TOP = '#f3b872'
@@ -90,35 +89,6 @@ function Palm({ id, x, y, s, flip = 1, animate }: { id?: string; x: number; y: n
         <circle data-coconut data-ground={y} cx={12} cy={18} r={13} fill="#6b4a2b" {...thin} />
         <circle data-coconut data-ground={y} cx={0} cy={0} r={12} fill="#6b4a2b" {...thin} />
       </g>
-    </g>
-  )
-}
-
-// A fish that leaps out of the water every few seconds.
-function JumpingFish({ x, y, dur, delay, flip = 1, animate }: { x: number; y: number; dur: number; delay: number; flip?: 1 | -1; animate: boolean }) {
-  if (!animate) return null
-  const arc = flip === 1 ? 'M0 0 Q60 -150 120 0' : 'M0 0 Q-60 -150 -120 0'
-  const land = flip * 120
-  const timing = { dur: `${dur}s`, begin: `${delay}s`, repeatCount: 'indefinite' }
-  return (
-    <g transform={`translate(${x} ${y})`}>
-      <g opacity={0}>
-        <animateMotion path={arc} rotate="auto" keyPoints="0;1;1" keyTimes="0;0.16;1" calcMode="linear" {...timing} />
-        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.16;0.17;1" {...timing} />
-        <g transform={`scale(${flip === 1 ? 1 : -1} ${flip === 1 ? 1 : -1})`}>
-          <path d="M-34 0 L-50 -14 L-48 14 Z" fill="#f08a3a" {...thin} />
-          <ellipse cx={0} cy={0} rx={34} ry={17} fill="#f7a14a" {...thin} />
-          <path d="M8 -15 Q2 0 8 15" {...thin} fill="none" />
-          <circle cx={20} cy={-4} r={3.5} fill={INK} />
-        </g>
-      </g>
-      {[0, land].map((cx, i) => (
-        <ellipse key={cx} cx={cx} cy={4} rx={0} ry={0} fill="none" stroke={FOAM} strokeWidth={4}>
-          <animate attributeName="rx" values={i ? '0;0;34;46' : '0;30;42;0'} keyTimes={i ? '0;0.15;0.25;1' : '0;0.06;0.1;1'} {...timing} />
-          <animate attributeName="ry" values={i ? '0;0;8;11' : '0;7;10;0'} keyTimes={i ? '0;0.15;0.25;1' : '0;0.06;0.1;1'} {...timing} />
-          <animate attributeName="opacity" values={i ? '0;0;1;0' : '0;1;0;0'} keyTimes={i ? '0;0.15;0.2;0.3' : '0;0.03;0.1;1'} {...timing} />
-        </ellipse>
-      ))}
     </g>
   )
 }
@@ -219,8 +189,6 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       <path className="day-only" d="M1130 606 L1410 606 M1180 626 L1360 626" stroke="#ffe9a8" strokeWidth={5} strokeLinecap="round" opacity={0.8} />
       <Waves y={630} color="#7fd0d8" dur={5} animate={animate} />
       <Waves y={680} color="#9fdde2" dur={3.6} animate={animate} />
-      <JumpingFish x={1400} y={660} dur={7} delay={1.2} animate={animate} />
-      <JumpingFish x={200} y={670} dur={9} delay={4.5} flip={-1} animate={animate} />
 
       {/* the island */}
       <path d="M290 900 L340 780 Q450 692 800 666 Q1150 692 1260 780 L1310 900 Z" fill={SAND} {...line} />
