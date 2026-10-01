@@ -278,7 +278,9 @@ body {
   inset: 0;
   z-index: 50;
   pointer-events: none;
-  animation: zap-flash 0.7s ease-out forwards;
+  animation:
+    zap-flash 0.3s ease-out forwards,
+    zap-out var(--zap-time, 0.7s) ease-in forwards;
 }
 .zap-glow,
 .zap-core {
@@ -288,23 +290,27 @@ body {
 }
 .zap-glow {
   stroke: var(--zap);
-  stroke-width: 12;
+  stroke-width: calc(6px + 8px * var(--zap-power, 0.6));
   opacity: 0.7;
   filter: blur(4px);
 }
 .zap-core {
   stroke: #fff;
-  stroke-width: 3;
+  stroke-width: calc(1.5px + 2px * var(--zap-power, 0.6));
 }
-/* A white flash that fades, with the bolts lingering on top. */
+/* A white flash, brighter for stronger stings, then the bolts linger and
+   fade as the sound dies away. */
 @keyframes zap-flash {
-  0% { background: rgb(255 255 255 / 0.85); }
-  25% { background: rgb(255 255 255 / 0); opacity: 1; }
-  100% { background: rgb(255 255 255 / 0); opacity: 0; }
+  0% { background: rgb(255 255 255 / calc(0.9 * var(--zap-power, 0.6))); }
+  100% { background: rgb(255 255 255 / 0); }
+}
+@keyframes zap-out {
+  0%, 60% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
-/* The screen inverts for a beat, as if seeing your own x-ray, and shakes. */
-:root.zapped {
+/* Strong stings invert the screen for a beat, as if seeing your own x-ray. */
+:root.zapped-hard {
   animation: zap-invert 0.7s steps(1) forwards;
 }
 @keyframes zap-invert {
@@ -313,19 +319,20 @@ body {
   40% { filter: saturate(1.8) contrast(1.2); }
   60% { filter: none; }
 }
+/* Every sting shakes the page; stronger ones harder and for longer. */
 :root.zapped :is(main, footer, header, .character) {
-  animation: zap-shake 0.5s linear;
+  animation: zap-shake calc(0.3s + 1.2s * var(--zap-power, 0.6)) linear;
 }
 @keyframes zap-shake {
   0%, 100% { translate: 0 0; }
-  10% { translate: -8px 4px; }
-  20% { translate: 7px -6px; }
-  30% { translate: -6px -3px; }
-  40% { translate: 6px 5px; }
-  50% { translate: -4px 2px; }
-  60% { translate: 4px -3px; }
-  70% { translate: -2px 2px; }
-  80% { translate: 2px -1px; }
+  10% { translate: calc(-12px * var(--zap-power)) calc(6px * var(--zap-power)); }
+  20% { translate: calc(11px * var(--zap-power)) calc(-9px * var(--zap-power)); }
+  30% { translate: calc(-9px * var(--zap-power)) calc(-5px * var(--zap-power)); }
+  40% { translate: calc(9px * var(--zap-power)) calc(7px * var(--zap-power)); }
+  50% { translate: calc(-6px * var(--zap-power)) calc(3px * var(--zap-power)); }
+  60% { translate: calc(6px * var(--zap-power)) calc(-4px * var(--zap-power)); }
+  70% { translate: calc(-3px * var(--zap-power)) calc(3px * var(--zap-power)); }
+  80% { translate: calc(3px * var(--zap-power)) calc(-2px * var(--zap-power)); }
 }
 
 .zapping {
@@ -334,10 +341,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .zap {
-    animation: zap-fade 0.7s ease-out forwards;
-  }
-  @keyframes zap-fade {
-    to { opacity: 0; }
+    animation: zap-out var(--zap-time, 0.7s) ease-in forwards;
   }
 }
 

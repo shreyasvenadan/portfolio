@@ -147,6 +147,16 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
           <stop offset="0" stopColor="#4a5fb0" />
           <stop offset="1" stopColor="#9aa6dd" />
         </linearGradient>
+        {/* Below the waterline the sand turns to the rock of the island's
+            underwater base (Underwater.tsx), so the two meet without a seam. */}
+        <linearGradient id="sand-to-rock" gradientUnits="userSpaceOnUse" x1="0" y1="792" x2="0" y2="900">
+          <stop offset="0" stopColor="#5f7e74" stopOpacity={0} />
+          <stop offset="1" stopColor="#5f7e74" />
+        </linearGradient>
+        <linearGradient id="shade-to-rock" gradientUnits="userSpaceOnUse" x1="0" y1="792" x2="0" y2="900">
+          <stop offset="0" stopColor="#50695f" stopOpacity={0} />
+          <stop offset="1" stopColor="#50695f" />
+        </linearGradient>
         <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={SEA} />
           <stop offset="1" stopColor={SEA_FRONT} />
@@ -200,6 +210,8 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       {/* the island */}
       <path d="M290 900 L340 780 Q450 692 800 666 Q1150 692 1260 780 L1310 900 Z" fill={SAND} {...line} />
       <path d="M1000 686 Q1150 700 1250 776 L1300 900 L1130 900 Q1140 780 1000 686 Z" fill={SAND_SHADE} />
+      <path d="M290 900 L340 780 Q450 692 800 666 Q1150 692 1260 780 L1310 900 Z" fill="url(#sand-to-rock)" />
+      <path d="M1000 686 Q1150 700 1250 776 L1300 900 L1130 900 Q1140 780 1000 686 Z" fill="url(#shade-to-rock)" />
       {[
         [470, 716],
         [700, 684],

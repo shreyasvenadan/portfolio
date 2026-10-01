@@ -102,7 +102,10 @@ export default function Backdrop() {
     let night = isNight() ? 1 : 0
     const tick = () => {
       const p = sectionProgress()
-      const shift = `translate3d(0, ${-p * window.innerHeight}px, 0)`
+      // Snapped to whole device pixels so the surface and underwater layers meet
+      // exactly; a fractional offset leaves a hairline between their night tints.
+      const dpr = window.devicePixelRatio || 1
+      const shift = `translate3d(0, ${Math.round(-p * window.innerHeight * dpr) / dpr}px, 0)`
       if (world.current) world.current.style.transform = shift
       if (front.current) front.current.style.transform = shift
 
