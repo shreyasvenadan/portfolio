@@ -6,8 +6,17 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Pencil Child';
+  src: url('/portfolio/fonts/PencilChild.woff2') format('woff2');
+  font-display: swap;
+}
+
 @theme {
-  --font-display: 'Bristol', 'Comic Sans MS', cursive;
+  /* Pencil Child for headings and other display text; Bristol only for the
+     name in the top left. */
+  --font-display: 'Pencil Child', 'Comic Sans MS', cursive;
+  --font-name: 'Bristol', 'Comic Sans MS', cursive;
   --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
 
   --color-paper: #e3d7bf;
@@ -76,7 +85,7 @@ body {
   color: var(--color-bone);
 }
 
-/* Bristol display type for the big headings. The font has one weight,
+/* Pencil Child display type for the big headings. The font has one weight,
    so turn off the browser's fake bold to keep the pen strokes clean. */
 .display {
   font-family: var(--font-display);
@@ -85,9 +94,10 @@ body {
   line-height: 1;
 }
 
-/* Everything in the display font is written in lowercase. */
+/* Everything in the display fonts is written in lowercase. */
 .display,
-.font-display {
+.font-display,
+.font-name {
   text-transform: lowercase;
 }
 

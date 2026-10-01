@@ -265,25 +265,43 @@ export default function Underwater() {
   useEffect(() => watchWreck(wreck.current!), [])
   return (
     <>
-      {/* sunlight shafts reaching down from the surface */}
+      {/* Sunlight shafts reaching down from the surface, in the open water either
+          side of the island. Placed in surface-drawing units from its centre
+          (the island's base starts at ±510 and slopes out at about 18°), and
+          fanning outward more steeply than that so they never cross the rock.
+          Each is a soft wedge, narrow at the surface and spreading as it sinks. */}
       {[
-        [18, -14, 7],
-        [38, -6, 5],
-        [62, 8, 8],
-        [84, 16, 6],
-      ].map(([left, angle, w]) => (
+        [-600, 24, 110, 0],
+        [-780, 30, 80, 2.5],
+        [-950, 36, 120, 5],
+        [600, -24, 120, 1.5],
+        [770, -30, 90, 4],
+        [940, -35, 110, 0.8],
+      ].map(([x, angle, w, delay]) => (
         <div
-          key={left}
+          key={x}
           className="rays absolute origin-top"
           style={{
-            left: `${left}%`,
+            left: `calc(50% + var(--s, 1) * ${x}px)`,
             top: wy(100),
-            width: `${w}vw`,
-            height: wspan(100, 250),
+            width: `calc(var(--s, 1) * ${w}px)`,
+            height: wspan(100, 220),
+            translate: '-50% 0',
             rotate: `${angle}deg`,
-            background: 'linear-gradient(to bottom, rgb(255 250 220 / 0), rgb(255 250 220 / 0.35) 12%, rgb(255 250 220 / 0))',
+            animationDelay: `-${delay}s`,
+            // The blur sits outside the wedge's clip, so it softens the edges.
+            filter: 'blur(calc(var(--s, 1) * 10px))',
           }}
-        />
+        >
+          <div
+            className="h-full w-full"
+            style={{
+              clipPath: 'polygon(38% 0, 62% 0, 100% 100%, 0 100%)',
+              background:
+                'linear-gradient(to bottom, rgb(255 248 215 / 0.5), rgb(255 248 215 / 0.22) 30%, rgb(255 248 215 / 0) 85%)',
+            }}
+          />
+        </div>
       ))}
 
       {/* The island's rocky base and the reef growing on it. Both fill the band
@@ -342,7 +360,7 @@ export default function Underwater() {
           <At className="grounded" top="42%" left="35%" width="min(12vw, 150px)">
             <BrainCoral color="#f5a55a" />
           </At>
-          <At className="grounded" top="44%" left="88%" width="min(6vw, 72px)">
+          <At className="grounded" top="48%" left="80%" width="min(6vw, 72px)">
             <TubeCoral color="#b48cf0" rim="#4b2f7a" />
           </At>
           <At className="grounded" top="48%" left="58%" width="min(9vw, 110px)">

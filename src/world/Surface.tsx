@@ -233,7 +233,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
           <stop offset="1" stopColor={SEA_FRONT} />
         </linearGradient>
         {/* The moon and its reflection are drawn above the night tint to stay
-            bright, so the clouds, plane, palm and pirate ship in front of
+            bright, so the clouds, plane, gulls, palm and pirate ship in front of
             them are cut out as black silhouettes. */}
         <filter id="silhouette">
           <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" />
@@ -251,6 +251,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
           <rect width={1600} height={900} fill="#fff" />
           <use href="#clouds" filter="url(#silhouette)" />
           <use href="#plane" filter="url(#silhouette)" />
+          <use href="#gulls" filter="url(#silhouette)" />
         </mask>
       </defs>
 
@@ -268,8 +269,10 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       </g>
       <Plane y={150} dur={60} delay={36} animate={animate} />
       <g className="crash-layer" />
-      <Gull x={0} y={250} dur={38} delay={4} animate={animate} />
-      <Gull x={40} y={225} dur={38} delay={4.6} animate={animate} />
+      <g id="gulls">
+        <Gull x={0} y={250} dur={38} delay={4} animate={animate} />
+        <Gull x={40} y={225} dur={38} delay={4.6} animate={animate} />
+      </g>
 
       {/* Mount Agung and hills on the horizon */}
       <path d="M40 572 L260 360 Q284 340 308 360 L550 572 Z" fill={MOUNTAIN} {...line} />

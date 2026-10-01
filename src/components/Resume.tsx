@@ -88,7 +88,7 @@ export default function Resume() {
       <header className="flex items-center justify-between px-5 py-4 md:px-10 md:py-6">
         <a
           href={import.meta.env.BASE_URL}
-          className="font-display text-lg font-bold tracking-tight whitespace-nowrap md:text-xl"
+          className="font-name text-lg font-bold tracking-tight whitespace-nowrap md:text-xl"
         >
           ← {profile.name}
         </a>

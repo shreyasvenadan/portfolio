@@ -56,8 +56,7 @@ export default function Header() {
         onPointerLeave={() => setJustSwitched(false)}
         onBlur={() => setJustSwitched(false)}
         aria-pressed={night}
-        title={night ? 'Switch to day' : 'Switch to night'}
-        className={`group -mx-3 inline-flex cursor-pointer items-center rounded-full px-3 py-1 font-display text-lg font-bold tracking-tight whitespace-nowrap transition-colors duration-300 md:text-xl ${
+        className={`group -mx-3 inline-flex cursor-pointer items-center rounded-full px-3 py-1 font-name text-lg font-bold tracking-tight whitespace-nowrap transition-colors duration-300 md:text-xl ${
           justSwitched
             ? ''
             : night
