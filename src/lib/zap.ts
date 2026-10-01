@@ -1,7 +1,9 @@
 // Touching a jellyfish: lightning crackles out from the sting across the whole
-// screen, the screen flashes and inverts, and the page shakes. Built straight
-// in the DOM since it's a one-off overlay that removes itself.
+// screen with an electric buzz, the screen flashes and inverts, and the page
+// shakes. Built straight in the DOM since it's a one-off overlay that removes
+// itself.
 import { prefersReducedMotion } from './sections'
+import { zapSound } from './sound'
 
 const DURATION = 700
 let busy = false
@@ -39,6 +41,7 @@ export function zap(x: number, y: number, color: string, jelly?: Element) {
   if (busy) return
   busy = true
   const still = prefersReducedMotion()
+  zapSound(DURATION / 1000)
 
   const overlay = document.createElement('div')
   overlay.className = 'zap'

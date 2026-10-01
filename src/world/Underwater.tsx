@@ -205,7 +205,7 @@ export default function Underwater() {
             width: `${w}vw`,
             height: '150vh',
             rotate: `${angle}deg`,
-            background: 'linear-gradient(to bottom, rgb(255 250 220 / 0.35), rgb(255 250 220 / 0))',
+            background: 'linear-gradient(to bottom, rgb(255 250 220 / 0), rgb(255 250 220 / 0.35) 12%, rgb(255 250 220 / 0))',
           }}
         />
       ))}
@@ -216,16 +216,28 @@ export default function Underwater() {
         className="absolute left-1/2 -translate-x-1/2"
         style={{
           top: '100vh',
-          width: 'calc(var(--s, 1) * 1200px)',
+          width: 'calc(var(--s, 1) * 1360px)',
           maskImage: 'linear-gradient(to bottom, #000 15%, transparent 95%)',
           WebkitMaskImage: 'linear-gradient(to bottom, #000 15%, transparent 95%)',
         }}
       >
-        <svg viewBox="0 0 1200 460" className="w-full overflow-visible">
+        {/* Drawn 1360 wide (x -80 to 1280), centred under the 1600-wide surface
+            scene so the top edge (x 90-1110) meets the island's sand (x 290-1310) and the
+            sides carry on its slope. */}
+        <svg viewBox="-80 0 1360 460" className="w-full">
+          <defs>
+            <linearGradient id="base-sea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#2b93a6" stopOpacity={0.9} />
+              <stop offset="0.35" stopColor="#2b93a6" stopOpacity={0} />
+            </linearGradient>
+          </defs>
           {/* Only the sides are outlined, so there's no seam at the surface. */}
-          <path d="M140 0 L1060 0 Q1150 180 1200 460 L0 460 Q60 180 140 0 Z" fill="#5f7e74" />
-          <path d="M860 0 L1060 0 Q1150 180 1200 460 L980 460 Q960 200 860 0 Z" fill="#50695f" />
-          <path d="M140 0 Q60 180 0 460 M1060 0 Q1150 180 1200 460" fill="none" {...line} />
+          <path d="M90 0 L1110 0 Q1200 180 1260 460 L-60 460 Q0 180 90 0 Z" fill="#5f7e74" />
+          <path d="M930 0 L1110 0 Q1200 180 1260 460 L1040 460 Q1010 200 930 0 Z" fill="#50695f" />
+          <path d="M90 0 Q0 180 -60 460 M1110 0 Q1200 180 1260 460" fill="none" {...line} />
+          {/* The same sea that covers the island's foot at the surface, thinning
+              with depth so the rock emerges gradually. */}
+          <rect x={-80} width={1360} height={460} fill="url(#base-sea)" />
         </svg>
       </div>
 

@@ -151,14 +151,19 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
           <stop offset="0" stopColor={SEA} />
           <stop offset="1" stopColor={SEA_FRONT} />
         </linearGradient>
-        {/* The moon's reflection is drawn above the night tint to stay bright,
-            so the palm in front of it is cut out as a black silhouette. */}
+        {/* The moon and its reflection are drawn above the night tint to stay
+            bright, so the clouds and palm in front of them are cut out as
+            black silhouettes. */}
         <filter id="silhouette">
           <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" />
         </filter>
         <mask id="behind-palm" maskUnits="userSpaceOnUse" x={0} y={0} width={1600} height={900}>
           <rect width={1600} height={900} fill="#fff" />
           <use href="#palm-right" filter="url(#silhouette)" />
+        </mask>
+        <mask id="behind-clouds" maskUnits="userSpaceOnUse" x={0} y={0} width={1600} height={900}>
+          <rect width={1600} height={900} fill="#fff" />
+          <use href="#clouds" filter="url(#silhouette)" />
         </mask>
       </defs>
 
@@ -169,9 +174,11 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
         <circle cx={1270} cy={540} r={160} fill={SUN} opacity={0.35} />
         <circle data-sky="sun" cx={1270} cy={540} r={105} fill={SUN} {...line} />
       </g>
-      <Cloud x={0} y={110} s={1.1} dur={140} delay={30} animate={animate} />
-      <Cloud x={0} y={210} s={0.75} dur={110} delay={80} animate={animate} />
-      <Cloud x={0} y={60} s={0.6} dur={170} delay={130} animate={animate} />
+      <g id="clouds">
+        <Cloud x={0} y={110} s={1.1} dur={140} delay={30} animate={animate} />
+        <Cloud x={0} y={210} s={0.75} dur={110} delay={80} animate={animate} />
+        <Cloud x={0} y={60} s={0.6} dur={170} delay={130} animate={animate} />
+      </g>
       <Gull x={0} y={250} dur={38} delay={4} animate={animate} />
       <Gull x={40} y={225} dur={38} delay={4.6} animate={animate} />
 
@@ -251,12 +258,15 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
         <path className="shooting-star" d="M0 0 L-140 50" stroke="#fff8dc" strokeWidth={3} strokeLinecap="round" />
         <path mask="url(#behind-palm)" d="M1150 610 L1390 610 M1200 634 L1340 634 M1240 656 L1300 656" stroke="#e8f1ff" strokeWidth={5} strokeLinecap="round" opacity={0.7} />
       </g>
-      <g className="night-only moon-rise">
-        <circle cx={1270} cy={250} r={130} fill="#f4f1d8" opacity={0.18} />
-        <circle data-sky="moon" cx={1270} cy={250} r={80} fill="#f4f1d8" {...line} />
-        <circle cx={1245} cy={232} r={14} fill="#dcd6b4" />
-        <circle cx={1296} cy={270} r={10} fill="#dcd6b4" />
-        <circle cx={1285} cy={218} r={7} fill="#dcd6b4" />
+      {/* outer group keeps the mask still while the moon rises */}
+      <g mask="url(#behind-clouds)">
+        <g className="night-only moon-rise">
+          <circle cx={1270} cy={250} r={130} fill="#f4f1d8" opacity={0.18} />
+          <circle data-sky="moon" cx={1270} cy={250} r={80} fill="#f4f1d8" {...line} />
+          <circle cx={1245} cy={232} r={14} fill="#dcd6b4" />
+          <circle cx={1296} cy={270} r={10} fill="#dcd6b4" />
+          <circle cx={1285} cy={218} r={7} fill="#dcd6b4" />
+        </g>
       </g>
     </svg>
   )

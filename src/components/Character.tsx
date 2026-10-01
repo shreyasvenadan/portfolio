@@ -306,59 +306,62 @@ export default function Character() {
 
             {/* head */}
             <g ref={set('head')}>
-              <path d="M134 150 C114 142 110 190 136 196 Z" fill={SKIN} {...line} />
-              <path d="M266 150 C286 142 290 190 264 196 Z" fill={SKIN} {...line} />
-              <path d="M129 160 Q124 172 132 182 M271 160 Q276 172 268 182" {...thin} fill="none" />
-              <path
-                d="M132 150 C130 100 160 72 200 72 C240 72 270 100 268 150 C268 205 250 250 222 270 Q200 284 178 270 C150 250 132 205 132 150 Z"
-                fill={SKIN}
-                {...line}
-              />
-              <path d="M266 150 C266 205 248 248 222 268 Q212 275 205 277 Q236 248 250 200 Q258 172 260 150 Z" fill={SKIN_SHADE} />
+              {/* a short face, sitting low so the chin meets the neck */}
+              <g transform="translate(0 22)">
+                <path d="M134 150 C114 142 110 182 136 187 Z" fill={SKIN} {...line} />
+                <path d="M266 150 C286 142 290 182 264 187 Z" fill={SKIN} {...line} />
+                <path d="M129 158 Q124 168 132 176 M271 158 Q276 168 268 176" {...thin} fill="none" />
+                <path
+                  d="M132 150 C130 100 160 72 200 72 C240 72 270 100 268 150 C268 194 250 230 222 246 Q200 257 178 246 C150 230 132 194 132 150 Z"
+                  fill={SKIN}
+                  {...line}
+                />
+                <path d="M266 150 C266 194 248 228 222 244 Q212 250 205 252 Q236 228 250 190 Q258 168 260 150 Z" fill={SKIN_SHADE} />
 
-              {/* mouths: one is shown at a time */}
-              <g ref={set('mouth-grin')}>
-                <path d="M168 222 Q200 234 234 220 Q228 254 201 256 Q176 254 168 222 Z" fill={MOUTH} {...thin} />
-                <path d="M171 224 Q200 235 231 222 L228 233 Q200 243 174 235 Z" fill="#fffdf6" />
-                <path d="M188 249 Q201 242 214 249 Q201 254 188 249 Z" fill="#d0605c" />
-              </g>
-              <g ref={set('mouth-laugh')} display="none">
-                <path d="M164 218 Q200 230 238 216 Q234 270 201 274 Q168 270 164 218 Z" fill={MOUTH} {...thin} />
-                <path d="M167 220 Q200 231 235 218 L232 230 Q200 241 170 232 Z" fill="#fffdf6" />
-                <path d="M182 263 Q201 249 220 263 Q201 273 182 263 Z" fill="#d0605c" />
-              </g>
-              <g ref={set('mouth-oh')} display="none">
-                <ellipse cx={201} cy={240} rx={12} ry={15} fill={MOUTH} {...thin} />
-              </g>
-              <path d="M182 214 Q200 208 220 214 Q200 211 182 214 Z" fill={HAIR} opacity={0.75} />
-
-              {/* hooked nose */}
-              <path d="M204 172 Q216 192 207 199 Q200 202 195 197" {...thin} fill="none" />
-
-              {/* tall oval eyes; pupils follow the cursor */}
-              {(['L', 'R'] as const).map((side) => (
-                <g key={side} transform={`translate(${side === 'L' ? 178 : 222} 160)`}>
-                  <g ref={set(`eye${side}`)}>
-                    <ellipse rx={16} ry={21} fill="#fffef8" {...thin} />
-                    <g ref={set(`pupil${side}`)}>
-                      <circle r={5.5} fill={INK} />
-                    </g>
-                    <path d="M-17 -3 Q-16 -24 0 -24 Q16 -24 17 -3" fill="none" {...line} strokeWidth={6.5} />
-                  </g>
+                {/* mouths: one is shown at a time */}
+                <g ref={set('mouth-grin')}>
+                  <path d="M168 208 Q200 217 234 206 Q228 233 201 235 Q176 233 168 208 Z" fill={MOUTH} {...thin} />
+                  <path d="M171 209 Q200 218 231 208 L228 216 Q200 224 174 218 Z" fill="#fffdf6" />
+                  <path d="M188 229 Q201 224 214 229 Q201 233 188 229 Z" fill="#d0605c" />
                 </g>
-              ))}
+                <g ref={set('mouth-laugh')} display="none">
+                  <path d="M164 204 Q200 214 238 203 Q234 246 201 249 Q168 246 164 204 Z" fill={MOUTH} {...thin} />
+                  <path d="M167 206 Q200 215 235 204 L232 214 Q200 223 170 216 Z" fill="#fffdf6" />
+                  <path d="M182 240 Q201 229 220 240 Q201 248 182 240 Z" fill="#d0605c" />
+                </g>
+                <g ref={set('mouth-oh')} display="none">
+                  <ellipse cx={201} cy={222} rx={12} ry={12} fill={MOUTH} {...thin} />
+                </g>
+                <path d="M182 201 Q200 196 220 201 Q200 199 182 201 Z" fill={HAIR} opacity={0.75} />
 
-              {/* chunky brows */}
-              <g ref={set('brows')}>
-                <path d="M158 131 Q176 119 195 126 L195 134 Q176 129 160 139 Z" fill={HAIR} {...thin} strokeWidth={2} />
-                <path d="M242 131 Q224 119 205 126 L205 134 Q224 129 240 139 Z" fill={HAIR} {...thin} strokeWidth={2} />
-              </g>
+                {/* hooked nose */}
+                <path d="M204 168 Q216 184 207 189 Q200 192 195 188" {...thin} fill="none" />
 
-              {/* curly hair with sandy tips */}
-              <g ref={set('hair')}>
-                <path d={HAIR_PATH} fill={HAIR} {...line} />
-                <path d={CURLS_DARK.map(curl).join(' ')} stroke="#3f2b1f" strokeWidth={4} fill="none" strokeLinecap="round" />
-                <path d={CURLS_LIGHT.map(curl).join(' ')} stroke={HAIR_TIPS} strokeWidth={4.5} fill="none" strokeLinecap="round" />
+                {/* tall oval eyes; pupils follow the cursor */}
+                {(['L', 'R'] as const).map((side) => (
+                  <g key={side} transform={`translate(${side === 'L' ? 178 : 222} 160)`}>
+                    <g ref={set(`eye${side}`)}>
+                      <ellipse rx={16} ry={21} fill="#fffef8" {...thin} />
+                      <g ref={set(`pupil${side}`)}>
+                        <circle r={5.5} fill={INK} />
+                      </g>
+                      <path d="M-17 -3 Q-16 -24 0 -24 Q16 -24 17 -3" fill="none" {...line} strokeWidth={6.5} />
+                    </g>
+                  </g>
+                ))}
+
+                {/* chunky brows */}
+                <g ref={set('brows')}>
+                  <path d="M158 131 Q176 119 195 126 L195 134 Q176 129 160 139 Z" fill={HAIR} {...thin} strokeWidth={2} />
+                  <path d="M242 131 Q224 119 205 126 L205 134 Q224 129 240 139 Z" fill={HAIR} {...thin} strokeWidth={2} />
+                </g>
+
+                {/* curly hair with sandy tips */}
+                <g ref={set('hair')}>
+                  <path d={HAIR_PATH} fill={HAIR} {...line} />
+                  <path d={CURLS_DARK.map(curl).join(' ')} stroke="#3f2b1f" strokeWidth={4} fill="none" strokeLinecap="round" />
+                  <path d={CURLS_LIGHT.map(curl).join(' ')} stroke={HAIR_TIPS} strokeWidth={4.5} fill="none" strokeLinecap="round" />
+                </g>
               </g>
             </g>
           </g>
