@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react'
 // Everything below the surface. Positions are in screen heights from the top
 // of the world (the surface scene is 0-100vh), so each page section lines up
 // with one depth zone:
-//   100-200vh  about       shallow reef, light rays, coral, SeaLens camera
+//   100-200vh  about       island base, reef (coral, rocks, anemones), light rays, SeaLens camera
 //   200-300vh  work        open blue: jellyfish, bubbles
 //   300-400vh  experience  twilight: glowing jellyfish, shipwreck
 //   400-500vh  contact     abyss: sea floor, message in a bottle
@@ -21,6 +21,12 @@ function seeded(seed: number) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
+}
+
+// Fades content out towards the bottom of its box, starting at `from` opacity.
+const fade = (from: number) => {
+  const image = `linear-gradient(to bottom, rgb(0 0 0 / ${from}) 15%, transparent 95%)`
+  return { maskImage: image, WebkitMaskImage: image }
 }
 
 type AtProps = { top: string; left: string; width: string; className?: string; style?: CSSProperties; children: ReactNode }
@@ -94,6 +100,88 @@ function SeaFan({ color }: { color: string }) {
     <svg viewBox="0 0 160 180" className="sway w-full overflow-visible">
       <path d="M80 180 L80 130 Q10 120 12 60 Q20 6 80 4 Q140 6 148 60 Q150 120 80 130" fill={color} {...line} />
       <path d="M80 130 L40 40 M80 130 L80 12 M80 130 L120 40 M80 130 L24 80 M80 130 L136 80 M30 60 Q80 90 130 60 M22 96 Q80 122 138 96" {...thin} fill="none" opacity={0.5} />
+    </svg>
+  )
+}
+
+function TableCoral({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 160 112" className="w-full overflow-visible">
+      <path d="M68 44 Q70 80 62 110 L98 110 Q90 80 92 44 Z" fill={color} {...line} />
+      <path d="M8 40 Q14 14 80 14 Q146 14 152 40 Q130 52 108 44 Q94 54 80 46 Q64 54 50 44 Q30 52 8 40 Z" fill={color} {...line} />
+      <path d="M34 30 h0.1 M60 24 h0.1 M90 26 h0.1 M118 30 h0.1 M76 36 h0.1" stroke={INK} strokeWidth={6} strokeLinecap="round" opacity={0.4} />
+    </svg>
+  )
+}
+
+function TubeCoral({ color, rim }: { color: string; rim: string }) {
+  const tubes = [
+    [18, 62],
+    [42, 96],
+    [66, 78],
+    [90, 112],
+    [114, 58],
+  ]
+  return (
+    <svg viewBox="0 0 132 124" className="w-full overflow-visible">
+      {tubes.map(([x, h]) => (
+        <g key={x}>
+          <rect x={x - 11} y={122 - h} width={22} height={h} rx={11} fill={color} {...thin} />
+          <ellipse cx={x} cy={128 - h} rx={7} ry={4} fill={rim} />
+        </g>
+      ))}
+    </svg>
+  )
+}
+
+function Anemone({ color, base }: { color: string; base: string }) {
+  const tips = [-58, -44, -28, -12, 4, 20, 36, 50, 62]
+  return (
+    <svg viewBox="-72 -96 144 112" className="w-full overflow-visible">
+      <g className="sway">
+        {tips.map((x, i) => {
+          const d = `M${x * 0.45} 0 Q${x * 0.6 + (i % 2 ? 10 : -10)} -46 ${x} ${-70 - (i % 3) * 10}`
+          return (
+            <g key={x}>
+              <path d={d} stroke={INK} strokeWidth={13} strokeLinecap="round" fill="none" />
+              <path d={d} stroke={color} strokeWidth={7} strokeLinecap="round" fill="none" />
+            </g>
+          )
+        })}
+      </g>
+      <path d="M-44 14 Q-48 -10 0 -10 Q48 -10 44 14 Z" fill={base} {...line} />
+    </svg>
+  )
+}
+
+const ROCKS = [
+  'M6 120 Q0 70 40 52 Q70 20 120 30 Q180 38 194 90 L196 120 Z',
+  'M10 120 Q14 60 70 50 Q110 6 150 40 Q190 60 190 120 Z',
+  'M4 120 Q2 80 36 70 Q62 52 92 78 L100 120 Z M88 120 Q94 50 150 46 Q196 56 196 120 Z',
+]
+function Rock({ shape = 0, color = '#6d7f86' }: { shape?: number; color?: string }) {
+  return (
+    <svg viewBox="0 0 200 122" className="w-full overflow-visible">
+      <path d={ROCKS[shape]} fill={color} {...line} />
+      <path d="M50 64 Q80 44 116 46" stroke="#fff" strokeWidth={6} strokeLinecap="round" fill="none" opacity={0.25} />
+      <path d="M128 72 l14 14 l-6 16 M60 92 l12 -6" {...thin} fill="none" opacity={0.5} />
+    </svg>
+  )
+}
+
+const STAR = Array.from({ length: 10 }, (_, i) => {
+  const a = (i / 10) * Math.PI * 2 - Math.PI / 2
+  const r = i % 2 ? 17 : 44
+  return `${(Math.cos(a) * r).toFixed(1)} ${(Math.sin(a) * r).toFixed(1)}`
+}).join(' L')
+function Starfish({ color }: { color: string }) {
+  return (
+    <svg viewBox="-50 -50 100 96" className="w-full overflow-visible">
+      <path d={`M${STAR} Z`} fill={color} {...line} />
+      {[0, 1, 2, 3, 4].map((i) => {
+        const a = (i / 5) * Math.PI * 2 - Math.PI / 2
+        return <circle key={i} cx={Math.cos(a) * 24} cy={Math.sin(a) * 24} r={3} fill="#fff4dc" />
+      })}
     </svg>
   )
 }
@@ -210,59 +298,99 @@ export default function Underwater() {
         />
       ))}
 
-      {/* the island's rocky base, lined up under the island at the surface,
-          fading into the water as it goes down */}
-      <div
-        className="absolute left-1/2 -translate-x-1/2"
-        style={{
-          top: '100vh',
-          width: 'calc(var(--s, 1) * 1360px)',
-          maskImage: 'linear-gradient(to bottom, #000 15%, transparent 95%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, #000 15%, transparent 95%)',
-        }}
-      >
+      {/* The island's rocky base and the reef growing on it. Both fill the band
+          just below the waterline (as tall as the base drawing, so it scales
+          with the island) and fade out together as they go deeper. */}
+      <div className="absolute inset-x-0" style={{ top: '100vh', height: 'calc(var(--s, 1) * 460px)' }}>
         {/* Drawn 1360 wide (x -80 to 1280), centred under the 1600-wide surface
-            scene so the top edge (x 90-1110) meets the island's sand (x 290-1310) and the
-            sides carry on its slope. */}
-        <svg viewBox="-80 0 1360 460" className="w-full">
-          <defs>
-            <linearGradient id="base-sea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#2b93a6" stopOpacity={0.9} />
-              <stop offset="0.35" stopColor="#2b93a6" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          {/* Only the sides are outlined, so there's no seam at the surface. */}
-          <path d="M90 0 L1110 0 Q1200 180 1260 460 L-60 460 Q0 180 90 0 Z" fill="#5f7e74" />
-          <path d="M930 0 L1110 0 Q1200 180 1260 460 L1040 460 Q1010 200 930 0 Z" fill="#50695f" />
-          <path d="M90 0 Q0 180 -60 460 M1110 0 Q1200 180 1260 460" fill="none" {...line} />
-          {/* The same sea that covers the island's foot at the surface, thinning
-              with depth so the rock emerges gradually. */}
-          <rect x={-80} width={1360} height={460} fill="url(#base-sea)" />
-        </svg>
-      </div>
+            scene so the top edge (x 90-1110) meets the island's sand (x 290-1310)
+            and the sides carry on its slope. It starts as see-through as the
+            submerged sand above the waterline and only fades from there. */}
+        <div
+          className="absolute top-0 left-1/2 h-full -translate-x-1/2"
+          style={{ width: 'calc(var(--s, 1) * 1360px)', ...fade(0.45) }}
+        >
+          <svg viewBox="-80 0 1360 460" className="h-full w-full">
+            {/* Only the sides are outlined, so there's no seam at the surface. */}
+            <path d="M90 0 L1110 0 Q1200 180 1260 460 L-60 460 Q0 180 90 0 Z" fill="#5f7e74" />
+            <path d="M930 0 L1110 0 Q1200 180 1260 460 L1040 460 Q1010 200 930 0 Z" fill="#50695f" />
+            <path d="M90 0 Q0 180 -60 460 M1110 0 Q1200 180 1260 460" fill="none" {...line} />
+          </svg>
+        </div>
 
-      {/* shallow reef (about) */}
-      <At top="134vh" left="27%" width="min(9vw, 110px)">
-        <BranchCoral color="#f07c8c" />
-      </At>
-      <At top="142vh" left="35%" width="min(12vw, 150px)">
-        <BrainCoral color="#f5a55a" />
-      </At>
-      <At top="128vh" left="67%" width="min(11vw, 140px)">
-        <SeaFan color="#9b6fd0" />
-      </At>
-      <At top="140vh" left="75%" width="min(8vw, 100px)">
-        <BranchCoral color="#ffcf5c" />
-      </At>
-      <At top="118vh" left="46%" width="min(14vw, 170px)">
-        <SeaLensRig />
-      </At>
-      <At top="140vh" left="9%" width="min(7vw, 90px)" style={{ height: 'auto' }}>
-        <Seaweed />
-      </At>
-      <At top="150vh" left="93%" width="min(7vw, 90px)">
-        <Seaweed color="#4aa060" />
-      </At>
+        {/* shallow reef (about); tops are a share of the band's height */}
+        <div className="absolute inset-0" style={fade(1)}>
+          <At top="12%" left="46%" width="min(14vw, 170px)">
+            <SeaLensRig />
+          </At>
+          <At top="16%" left="31%" width="min(5vw, 64px)">
+            <Rock shape={2} color="#7d8a77" />
+          </At>
+          <At top="18%" left="21%" width="min(12vw, 150px)">
+            <TableCoral color="#5cc6b5" />
+          </At>
+          <At top="16%" left="79%" width="min(7vw, 90px)">
+            <Anemone color="#ffa25c" base="#c75a3a" />
+          </At>
+          <At top="24%" left="57%" width="min(7vw, 90px)">
+            <BrainCoral color="#8fcf6a" />
+          </At>
+          <At top="22%" left="67%" width="min(11vw, 140px)">
+            <SeaFan color="#9b6fd0" />
+          </At>
+          <At top="28%" left="38%" width="min(7vw, 88px)">
+            <TubeCoral color="#f2694c" rim="#7a2618" />
+          </At>
+          <At top="30%" left="84%" width="min(10vw, 130px)">
+            <Rock shape={1} />
+          </At>
+          <At top="34%" left="27%" width="min(9vw, 110px)">
+            <BranchCoral color="#f07c8c" />
+          </At>
+          <At top="38%" left="70%" width="min(4vw, 50px)">
+            <Starfish color="#ff8a5b" />
+          </At>
+          <At top="40%" left="75%" width="min(8vw, 100px)">
+            <BranchCoral color="#ffcf5c" />
+          </At>
+          <At top="42%" left="35%" width="min(12vw, 150px)">
+            <BrainCoral color="#f5a55a" />
+          </At>
+          <At top="44%" left="88%" width="min(6vw, 72px)">
+            <TubeCoral color="#b48cf0" rim="#4b2f7a" />
+          </At>
+          <At top="48%" left="58%" width="min(9vw, 110px)">
+            <Anemone color="#ff8fc8" base="#8c3d6b" />
+          </At>
+          <At top="50%" left="14%" width="min(6vw, 80px)">
+            <Seaweed color="#4aa060" />
+          </At>
+          <At top="52%" left="45%" width="min(16vw, 200px)">
+            <Rock shape={0} color="#5c6b78" />
+          </At>
+          <At top="56%" left="30%" width="min(4vw, 48px)">
+            <Starfish color="#ffd166" />
+          </At>
+          <At top="58%" left="18%" width="min(7vw, 80px)">
+            <BranchCoral color="#9fb8ff" />
+          </At>
+          <At top="60%" left="9%" width="min(7vw, 90px)">
+            <Seaweed />
+          </At>
+          <At top="62%" left="64%" width="min(7vw, 90px)">
+            <Rock shape={2} color="#6d7f86" />
+          </At>
+          <At top="64%" left="37%" width="min(8vw, 100px)">
+            <SeaFan color="#e0566b" />
+          </At>
+          <At top="66%" left="80%" width="min(9vw, 110px)">
+            <TableCoral color="#e7c35a" />
+          </At>
+          <At top="70%" left="93%" width="min(7vw, 90px)">
+            <Seaweed color="#4aa060" />
+          </At>
+        </div>
+      </div>
 
       {/* open blue (work) */}
       <At top="250vh" left="86%" width="min(8vw, 100px)" className="bob">

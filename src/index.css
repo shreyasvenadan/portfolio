@@ -17,9 +17,20 @@
   --color-bone: #f4efe0;
 }
 
+/* A fishing hook for the mouse pointer, baited with a worm over anything
+   clickable. The hook's point is the hotspot. */
+:root {
+  --cursor: url('/portfolio/cursors/hook.svg') 6 7, auto;
+  --cursor-pointer: url('/portfolio/cursors/hook-pointer.svg') 6 7, pointer;
+}
+
 html {
   scroll-behavior: smooth;
   color-scheme: light;
+  cursor: var(--cursor);
+}
+:is(a[href], button, .cursor-pointer) {
+  cursor: var(--cursor-pointer);
 }
 
 @media (prefers-reduced-motion: reduce) {

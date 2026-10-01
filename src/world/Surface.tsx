@@ -251,15 +251,15 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
         </circle>
       </g>
 
-      {/* the sea in front of the island, closest to us */}
+      {/* the sea in front of the island, closest to us; as see-through as the
+          island's underwater base starts out (Underwater.tsx) */}
       <g>
         {animate && <animateTransform attributeName="transform" type="translate" values="0 0; 0 6; 0 0" dur="4.5s" repeatCount="indefinite" />}
-        <path d="M-40 792 Q60 776 160 792 T360 792 T560 792 T760 792 T960 792 T1160 792 T1360 792 T1560 792 T1760 792 L1760 920 L-40 920 Z" fill={SEA_FRONT} opacity={0.9} />
+        <path d="M-40 792 Q60 776 160 792 T360 792 T560 792 T760 792 T960 792 T1160 792 T1360 792 T1560 792 T1760 792 L1760 920 L-40 920 Z" fill={SEA_FRONT} opacity={0.55} />
         <path d="M-40 792 Q60 776 160 792 T360 792 T560 792 T760 792 T960 792 T1160 792 T1360 792 T1560 792 T1760 792" fill="none" stroke={FOAM} strokeWidth={7} strokeLinecap="round" />
       </g>
       <Waves y={840} color="#6cc3cf" dur={4.2} animate={animate} />
       <Waves y={880} color="#5ab4c3" dur={3} animate={animate} />
-      <rect y={895} width={1600} height={10} fill={SEA_FRONT} />
 
       {/* --- night: a blue moonlit tint, then the moon, stars and reflection on top */}
       <rect className="night-tint" width={1600} height={900} fill="#27346e" />

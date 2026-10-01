@@ -5,7 +5,7 @@ import { dropCoconut } from '../lib/coconut'
 import { shipHorn } from '../lib/sound'
 import { zap } from '../lib/zap'
 import Surface from '../world/Surface'
-import Sealife from '../world/Sealife'
+import Sealife, { fishing } from '../world/Sealife'
 import Underwater from '../world/Underwater'
 
 // The world behind the page: an island at the surface, then the ocean below,
@@ -76,6 +76,11 @@ export default function Backdrop() {
     const click = (e: MouseEvent) => {
       if ((e.target as Element).closest('a, button')) return
       const [x, y] = [e.clientX, e.clientY]
+      // Hooking a fish, or letting one go, takes the click.
+      if (fishing.click(x, y)) {
+        document.body.style.cursor = ''
+        return
+      }
       const jelly = overJelly(x, y)
       const nut = overCoconut(x, y)
       const ship = overShip(x, y)
@@ -91,7 +96,7 @@ export default function Backdrop() {
     const hover = (e: PointerEvent) => {
       if ((e.target as Element).closest('a, button')) return
       const [x, y] = [e.clientX, e.clientY]
-      document.body.style.cursor = overJelly(x, y) || overCoconut(x, y) || overShip(x, y) || overSky(x, y) ? 'pointer' : ''
+      document.body.style.cursor = fishing.over(x, y) || overJelly(x, y) || overCoconut(x, y) || overShip(x, y) || overSky(x, y) ? 'var(--cursor-pointer)' : ''
     }
     window.addEventListener('click', click)
     window.addEventListener('pointermove', hover)

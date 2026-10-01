@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- A fishing hook; its point at (6, 7) is the hotspot. -->
+  <!-- fishing line running up out of the cursor -->
+  <path d="M19 0 L19 4.5" stroke="#120d0a" stroke-width="1.4" />
+  <!-- outline, then steel on top: eye, shank, bend and point -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke="#120d0a" stroke-width="5">
+      <circle cx="19" cy="7" r="2.6" />
+      <path d="M19 9.6 L19 20.5 A6.5 6.5 0 0 1 6 20.5 L6 8.5" />
+      <path d="M6 8.5 L10 14.5" />
+    </g>
+    <g stroke="#dfe5ea" stroke-width="2.2">
+      <circle cx="19" cy="7" r="2.6" />
+      <path d="M19 9.6 L19 20.5 A6.5 6.5 0 0 1 6 20.5 L6 8.5" />
+      <path d="M6 8.5 L10 14.5" />
+    </g>
+    <path d="M17.6 11 L17.6 20" stroke="#fff" stroke-width="0.9" opacity="0.8" />
+  </g>
+</svg>

@@ -284,6 +284,25 @@ for (const kind of KINDS) {
   }
 }
 
+// --- fishing ---------------------------------------------------------------
+
+// The cursor is a fishing hook: click near a small fish to hook it, and it
+// hangs by its mouth from the bend of the hook, thrashing, until the next
+// click lets it go. Anything wider than CATCHABLE is too big to land.
+const CATCHABLE = 70
+// The bend of the hook cursor, relative to its point (the hotspot).
+const BEND = { x: 6.5, y: 20 }
+// How far from a fish's centre a click still hooks it, beyond its half-width.
+const SLOP = 24
+
+let hooking: { near: (x: number, y: number) => boolean; click: (x: number, y: number) => boolean } | null = null
+export const fishing = {
+  // Is there a fish to hook here (and nothing on the hook already)?
+  over: (x: number, y: number) => hooking?.near(x, y) ?? false,
+  // Hook a fish here, or let the hooked one go. True if the click was used.
+  click: (x: number, y: number) => hooking?.click(x, y) ?? false,
+}
+
 // --- swimming --------------------------------------------------------------
 
 type Body = {
@@ -365,10 +384,43 @@ function swim(layer: HTMLElement) {
   }
 
   let pointer: { x: number; y: number } | null = null
-  const track = (e: PointerEvent) => (pointer = { x: e.clientX, y: e.clientY })
+  // Where the hook is; unlike pointer, kept when the cursor leaves the page.
+  let hook = { x: 0, y: 0 }
+  const track = (e: PointerEvent) => (pointer = hook = { x: e.clientX, y: e.clientY })
   const untrack = () => (pointer = null)
   window.addEventListener('pointermove', track)
   document.documentElement.addEventListener('pointerleave', untrack)
+
+  let caught: Body | null = null
+  const nearest = (x: number, y: number) => {
+    const offset = layer.getBoundingClientRect().top
+    let best: Body | null = null
+    let bestDist = Infinity
+    for (const b of bodies) {
+      if (b.spec.size > CATCHABLE) continue
+      const dist = Math.hypot(b.x - x, b.y + offset - y)
+      if (dist < b.w / 2 + SLOP && dist < bestDist) [best, bestDist] = [b, dist]
+    }
+    return best
+  }
+  hooking = {
+    near: (x, y) => !caught && !!nearest(x, y),
+    click: (x, y) => {
+      if (caught) {
+        // Let it go: it darts off downwards in a panic.
+        caught.heading = Math.PI / 2 + (Math.random() - 0.5) * 1.4
+        caught.vx = Math.cos(caught.heading) * 2
+        caught.vy = 3
+        caught.face = Math.cos(caught.heading) > 0 ? 1 : -1
+        caught.panic = 90
+        caught = null
+        return true
+      }
+      caught = nearest(x, y)
+      if (caught) hook = { x, y }
+      return !!caught
+    },
+  }
 
   let frame = 0
   let last = performance.now()
@@ -380,6 +432,17 @@ function swim(layer: HTMLElement) {
     const offset = layer.getBoundingClientRect().top
 
     for (const b of bodies) {
+      if (b === caught) {
+        // Hung by the mouth from the bend of the hook, nose up, swinging and
+        // thrashing about it. The nose is ~0.44 of the width from the centre.
+        const swing = Math.sin(now / 110) * 0.35 + Math.sin(now / 47) * 0.12
+        const r = b.w * 0.44
+        b.x = hook.x + BEND.x - Math.sin(swing) * r
+        b.y = hook.y + BEND.y - offset + Math.cos(swing) * r
+        b.vx = b.vy = 0
+        b.el.style.transform = `translate3d(${b.x.toFixed(1)}px, ${b.y.toFixed(1)}px, 0) translate(-50%, -50%) rotate(${(swing * 57.3 - 90).toFixed(1)}deg)`
+        continue
+      }
       const { spec } = b
       const top = (spec.zone[0] * H) / 100
       const bottom = (spec.zone[1] * H) / 100
@@ -388,7 +451,7 @@ function swim(layer: HTMLElement) {
       let ay = 0
 
       const L = b.leader
-      if (L && b.panic <= 0 && L.panic <= 0) {
+      if (L && L !== caught && b.panic <= 0 && L.panic <= 0) {
         // Keep station behind the leader, matching its speed.
         const tx = L.x - Math.sign(L.face) * spec.ox * L.w
         const ty = L.y + spec.oy * L.w
@@ -452,6 +515,7 @@ function swim(layer: HTMLElement) {
   frame = requestAnimationFrame(tick)
 
   return () => {
+    hooking = null
     cancelAnimationFrame(frame)
     window.removeEventListener('resize', resize)
     window.removeEventListener('pointermove', track)
