@@ -197,6 +197,12 @@ body {
   to { translate: 0 12px; }
 }
 
+/* The hero's scroll hint arrow, beckoning downward. */
+@keyframes nudge {
+  0%, 100% { translate: 0 0; opacity: 0.6; }
+  50% { translate: 0 6px; opacity: 1; }
+}
+
 .sway {
   transform-box: fill-box;
   transform-origin: 50% 100%;

@@ -70,12 +70,15 @@ export default function Resume() {
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
+    // Destroying the task on cleanup rejects its promise; that isn't a failure.
+    let active = true
     const task = getDocument({ url: links.resume })
     task.promise
       .then((pdf) => Promise.all(Array.from({ length: pdf.numPages }, (_, i) => pdf.getPage(i + 1))))
-      .then(setPages)
-      .catch(() => setFailed(true))
+      .then((loaded) => active && setPages(loaded))
+      .catch(() => active && setFailed(true))
     return () => {
+      active = false
       task.destroy()
     }
   }, [])

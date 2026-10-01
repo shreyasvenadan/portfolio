@@ -1,6 +1,19 @@
-import { useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { links, profile } from '../data/content'
 import { isNight, subscribeNight, toggleNight } from '../lib/night'
+
+const MoonIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden className="h-[1em] w-[1em] fill-current">
+    <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
+  </svg>
+)
+
+const SunIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden className="h-[1em] w-[1em] fill-current stroke-current" strokeWidth={2.2} strokeLinecap="round">
+    <circle cx={12} cy={12} r={4.5} />
+    <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" fill="none" />
+  </svg>
+)
 
 const GithubIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 fill-current">
@@ -26,16 +39,39 @@ const YoutubeIcon = () => (
 
 export default function Header() {
   const night = useSyncExternalStore(subscribeNight, isNight)
+  // Right after a click the preview stays off until the pointer leaves, so it
+  // doesn't flip straight back to suggesting the mode just left.
+  const [justSwitched, setJustSwitched] = useState(false)
   return (
     <header className="fixed inset-x-0 top-0 z-20 flex items-center justify-between px-5 py-4 md:px-10 md:py-6">
-      {/* Clicking the name switches between day and night. */}
+      {/* Clicking the name switches between day and night. Hovering previews the
+          other mode: a night-blue pill with a moon by day, a sunset pill with a
+          sun by night. */}
       <button
         type="button"
-        onClick={toggleNight}
+        onClick={() => {
+          toggleNight()
+          setJustSwitched(true)
+        }}
+        onPointerLeave={() => setJustSwitched(false)}
+        onBlur={() => setJustSwitched(false)}
         aria-pressed={night}
         title={night ? 'Switch to day' : 'Switch to night'}
-        className="cursor-pointer font-display text-lg font-bold tracking-tight whitespace-nowrap md:text-xl"
+        className={`group -mx-3 inline-flex cursor-pointer items-center rounded-full px-3 py-1 font-display text-lg font-bold tracking-tight whitespace-nowrap transition-colors duration-300 md:text-xl ${
+          justSwitched
+            ? ''
+            : night
+              ? 'hover:bg-[#f3b872] hover:text-[#4a2410] focus-visible:bg-[#f3b872] focus-visible:text-[#4a2410]'
+              : 'hover:bg-[#27346e] hover:text-[#f4f1d8] focus-visible:bg-[#27346e] focus-visible:text-[#f4f1d8]'
+        }`}
       >
+        <span
+          className={`inline-flex w-0 overflow-hidden opacity-0 transition-all duration-300 ${
+            justSwitched ? '' : 'group-hover:mr-2 group-hover:w-[1em] group-hover:opacity-100 group-focus-visible:mr-2 group-focus-visible:w-[1em] group-focus-visible:opacity-100'
+          }`}
+        >
+          {night ? <SunIcon /> : <MoonIcon />}
+        </span>
         {profile.name}
       </button>
       <nav aria-label="Profiles" className="flex shrink-0 gap-2">

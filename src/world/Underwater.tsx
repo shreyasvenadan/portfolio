@@ -4,7 +4,7 @@ import { watchWreck } from '../lib/wreck'
 // Everything below the surface. Positions are in screen heights from the top
 // of the world (the surface scene is 0-100vh), so each page section lines up
 // with one depth zone:
-//   100-200vh  about       island base, reef (coral, rocks, anemones), light rays, SeaLens camera
+//   100-200vh  about       island base, reef (coral, rocks, anemones), light rays
 //   200-300vh  work        open blue: jellyfish, bubbles
 //   300-400vh  experience  twilight: glowing jellyfish, shipwreck (which sinks to the floor)
 //   400-500vh  contact     abyss: sea floor, message in a bottle
@@ -187,22 +187,6 @@ function Starfish({ color }: { color: string }) {
   )
 }
 
-// A SeaLens-style underwater camera rig filming the reef.
-function SeaLensRig() {
-  return (
-    <svg viewBox="-110 -170 220 200" className="w-full overflow-visible">
-      <path d="M0 -60 L-70 20 M0 -60 L70 20 M0 -60 L0 20" {...line} />
-      <rect x={-60} y={-130} width={120} height={78} rx={14} fill="#f2c230" {...line} />
-      <circle cx={-10} cy={-91} r={30} fill="#253447" {...line} />
-      <circle cx={-10} cy={-91} r={15} fill="#8fd3e8" {...thin} />
-      <circle cx={40} cy={-114} r={6} fill="#e5483b" className="blink" />
-      <text x={0} y={-140} textAnchor="middle" fontSize={26} fill="#fdf7e6" className="font-display">
-        sealens
-      </text>
-    </svg>
-  )
-}
-
 function Shipwreck() {
   return (
     <svg viewBox="0 0 440 280" data-ship className="w-full overflow-visible">
@@ -324,9 +308,6 @@ export default function Underwater() {
         {/* shallow reef (about); tops are a share of the band's height, and each
             piece fades at its base so it sinks into the seabed */}
         <div className="absolute inset-0" style={fade(1)}>
-          <At className="grounded" top="12%" left="46%" width="min(14vw, 170px)">
-            <SeaLensRig />
-          </At>
           <At className="grounded" top="16%" left="31%" width="min(5vw, 64px)">
             <Rock shape={2} color="#7d8a77" />
           </At>

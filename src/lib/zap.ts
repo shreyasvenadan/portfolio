@@ -43,12 +43,14 @@ function crackle(x: number, y: number, power: number) {
 export function zap(x: number, y: number, color: string, jelly?: Element) {
   if (busy) return
   busy = true
+  // Where the jellyfish was when touched, so the bolts can stay on it.
+  const box = jelly?.getBoundingClientRect()
   zapSound()
     .catch(() => FALLBACK_SECONDS)
-    .then((seconds) => sting(x, y, color, seconds, jelly))
+    .then((seconds) => sting(x, y, color, seconds, jelly, box))
 }
 
-function sting(x: number, y: number, color: string, seconds: number, jelly?: Element) {
+function sting(x: number, y: number, color: string, seconds: number, jelly?: Element, box?: DOMRect) {
   const still = prefersReducedMotion()
   // 0.3 for the shortest clips up to 1 for anything five seconds or longer.
   const power = 0.3 + 0.7 * Math.min(1, Math.max(0, (seconds - 0.3) / 4.7))
@@ -69,14 +71,31 @@ function sting(x: number, y: number, color: string, seconds: number, jelly?: Ele
   overlay.append(svg)
   document.body.append(overlay)
 
+  // The bolts come from the touched spot on the jellyfish, wherever it has
+  // moved to since (scrolling, bobbing).
+  const origin = () => {
+    const r = jelly?.getBoundingClientRect()
+    return r && box ? [x + r.left - box.left, y + r.top - box.top] : [x, y]
+  }
+  let drawnAt = [x, y]
   const draw = () => {
-    const d = crackle(x, y, power)
+    drawnAt = origin()
+    const d = crackle(drawnAt[0], drawnAt[1], power)
     glow.setAttribute('d', d)
     core.setAttribute('d', d)
+    svg.style.transform = ''
   }
   draw()
   // Redraw the bolts a few times so they crackle.
   const timer = still ? 0 : window.setInterval(draw, 80)
+  // Between redraws, carry the bolts along with the jellyfish.
+  let frame = 0
+  const follow = () => {
+    const [ox, oy] = origin()
+    svg.style.transform = `translate(${ox - drawnAt[0]}px, ${oy - drawnAt[1]}px)`
+    frame = requestAnimationFrame(follow)
+  }
+  frame = requestAnimationFrame(follow)
 
   // The CSS reads these to size the flash, shake and fade.
   const root = document.documentElement
@@ -89,6 +108,7 @@ function sting(x: number, y: number, color: string, seconds: number, jelly?: Ele
 
   window.setTimeout(() => {
     window.clearInterval(timer)
+    cancelAnimationFrame(frame)
     overlay.remove()
     root.classList.remove('zapped', 'zapped-hard')
     root.style.removeProperty('--zap-power')

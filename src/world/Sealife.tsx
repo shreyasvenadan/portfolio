@@ -455,8 +455,15 @@ type Body = {
   panic: number
   face: number
   w: number
+  h: number
   nerve: number
+  // Opacity: front creatures fade while over the reading card.
+  fade: number
 }
+
+// How see-through a creature in front of the text gets over the reading card
+// (src/lib/focus.ts), so it doesn't hide what's being read.
+const SEE_THROUGH = 0.2
 
 // `layer` holds the creatures in front of the page text and `back` those
 // behind it; both scroll together, so positions in one hold for the other.
@@ -481,6 +488,8 @@ function swim(layer: HTMLElement, back: HTMLElement) {
       panic: 0,
       face: Math.cos(heading) > 0 ? 1 : -1,
       w: els[i].offsetWidth,
+      h: els[i].offsetHeight,
+      fade: 1,
       nerve: 0.7 + Math.random() * 0.6,
     }
   })
@@ -512,6 +521,7 @@ function swim(layer: HTMLElement, back: HTMLElement) {
       b.x *= sx
       b.y *= sy
       b.w = b.el.offsetWidth
+      b.h = b.el.offsetHeight
     }
   }
   window.addEventListener('resize', resize)
@@ -591,8 +601,22 @@ function swim(layer: HTMLElement, back: HTMLElement) {
     const offset = layer.getBoundingClientRect().top
     // Nothing swims up into the island scene, which fills the first screen.
     const ceiling = H
+    const card = document.querySelector('.reading-card.shown')?.getBoundingClientRect()
 
     for (const b of bodies) {
+      // In front of the text and over the reading card: turn see-through so
+      // the text stays readable. One on the hook stays solid.
+      if (!b.spec.behind) {
+        const sy = b.y + offset
+        const over =
+          !!card && b !== caught && b.x + b.w / 2 > card.left && b.x - b.w / 2 < card.right && sy + b.h / 2 > card.top && sy - b.h / 2 < card.bottom
+        const target = over ? SEE_THROUGH : 1
+        if (b.fade !== target) {
+          b.fade += (target - b.fade) * Math.min(1, 0.15 * dt)
+          if (Math.abs(target - b.fade) < 0.01) b.fade = target
+          b.el.style.opacity = b.fade.toFixed(2)
+        }
+      }
       if (b === caught && b.y - b.w / 2 < ceiling) {
         // Pulled up to the island: it wriggles off the hook and dives.
         caught = null

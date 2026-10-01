@@ -9,9 +9,16 @@ export default function Hero() {
       <div className="mt-7 flex flex-wrap justify-center gap-3 font-display [text-shadow:none]">
         <a
           href="#work"
-          className="rounded-full bg-accent px-6 py-3 font-semibold text-bone transition hover:bg-ink hover:text-bone"
+          className="flex flex-col items-center gap-1 text-lg text-ink/80 transition hover:text-accent"
         >
-          See my work
+          scroll to dive
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden
+            className="h-6 w-6 fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round] motion-safe:animate-[nudge_1.6s_ease-in-out_infinite]"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         </a>
         {profile.resumeUrl && (
           <a
