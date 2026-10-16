@@ -23,7 +23,7 @@ const WATER = `linear-gradient(to bottom,
 
 // Text colours at the surface and in the deep; the page fades from one to the
 // other as it goes underwater so copy stays readable.
-const SURFACE_TONE = { ink: '#141911', muted: '#2f382a', accent: '#5a1f2e', bone: '#f4efe0', halo: [227, 215, 191] }
+const SURFACE_TONE = { ink: '#141911', muted: '#2f382a', accent: '#5a1f2e', bone: '#f4efe0', halo: [250, 246, 233] }
 const DEEP_TONE = { ink: '#eef6f4', muted: '#b9d3d8', accent: '#ffab7a', bone: '#0c2233', halo: [6, 24, 44] }
 
 const mix = (a: string, b: string, t: number) => {

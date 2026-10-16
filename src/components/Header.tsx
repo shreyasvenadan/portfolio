@@ -33,7 +33,7 @@ const YoutubeIcon = () => (
       className="fill-current"
       d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8Z"
     />
-    <path className="fill-ink transition group-hover:fill-accent" d="M9.6 15.6V8.4l6.3 3.6-6.3 3.6Z" />
+    <path className="fill-bone transition group-hover:fill-accent" d="M9.6 15.6V8.4l6.3 3.6-6.3 3.6Z" />
   </svg>
 )
 
@@ -77,7 +77,7 @@ export default function Header() {
         <a
           href={`${import.meta.env.BASE_URL}resume/`}
           title="Resume"
-          className="grid h-8 place-items-center rounded-full bg-ink/85 px-3 text-xs font-semibold tracking-wide text-bone transition hover:bg-accent"
+          className="grid h-8 place-items-center rounded-full border-2 border-ink bg-bone px-3 font-comic text-sm tracking-wide text-ink uppercase transition hover:-rotate-3 hover:bg-accent hover:text-bone"
         >
           resume
         </a>
@@ -87,7 +87,7 @@ export default function Header() {
           rel="noreferrer"
           aria-label="GitHub"
           title="GitHub"
-          className="grid h-8 w-8 place-items-center rounded-full bg-ink/85 text-bone transition hover:bg-accent"
+          className="grid h-8 w-8 place-items-center rounded-full border-2 border-ink bg-bone text-ink transition hover:-rotate-6 hover:bg-accent hover:text-bone"
         >
           <GithubIcon />
         </a>
@@ -97,7 +97,7 @@ export default function Header() {
           rel="noreferrer"
           aria-label="LinkedIn"
           title="LinkedIn"
-          className="grid h-8 w-8 place-items-center rounded-full bg-ink/85 text-bone transition hover:bg-accent"
+          className="grid h-8 w-8 place-items-center rounded-full border-2 border-ink bg-bone text-ink transition hover:-rotate-6 hover:bg-accent hover:text-bone"
         >
           <LinkedinIcon />
         </a>
@@ -107,7 +107,7 @@ export default function Header() {
           rel="noreferrer"
           aria-label="YouTube"
           title="YouTube"
-          className="group grid h-8 w-8 place-items-center rounded-full bg-ink/85 text-bone transition hover:bg-accent"
+          className="group grid h-8 w-8 place-items-center rounded-full border-2 border-ink bg-bone text-ink transition hover:-rotate-6 hover:bg-accent hover:text-bone"
         >
           <YoutubeIcon />
         </a>

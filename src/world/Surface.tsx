@@ -12,32 +12,36 @@ function seeded(seed: number) {
 const rand = seeded(5)
 const STARS = Array.from({ length: 70 }, () => ({ x: rand() * 1600, y: rand() * 500, r: 1.5 + rand() * 2.5, delay: rand() * 4 }))
 
-// The surface: a small island off Bali at golden hour, with the sea in front.
+// The surface: a small island off Bali on a sunny day, drawn like a Peanuts
+// Sunday strip: thin hand-inked lines with a slight wobble, flat colours, and
+// hatching instead of shading.
 // Props nod to Shreyas's story: a camera on a tripod (photography and video),
 // a football, and a signpost for Melbourne, Bali and Jakarta. Its bottom edge
 // is water in SEA_FRONT, which the underwater world below continues from.
 
-const INK = '#120d0a'
-const SKY_TOP = '#f3b872'
-const SKY_LOW = '#fbe2b4'
-const SUN = '#ffd680'
-const MOUNTAIN = '#a9a0b9'
-const MOUNTAIN_SHADE = '#8d85a1'
-const HILL = '#8a9bb0'
-const SEA = '#35a2b1'
-const SEA_DEEP = '#26808f'
+const INK = '#1d1915'
+const SKY_TOP = '#7fc6e4'
+const SKY_LOW = '#d3edf1'
+const SUN = '#fbd54e'
+const MOUNTAIN = '#aeacd0'
+const HILL = '#93c47d'
+const SEA = '#5cbcd2'
+const SEA_DEEP = '#3fa3bb'
 export const SEA_FRONT = '#2b93a6'
-const FOAM = '#f5fbf4'
-const SAND = '#f1d69e'
-const SAND_SHADE = '#e0bf80'
-const TRUNK = '#9b6a3e'
-const TRUNK_SHADE = '#7c5230'
-const LEAF = '#3f9a58'
-const LEAF_SHADE = '#2f7a44'
-const WOOD = '#b98150'
+const FOAM = '#fbfdf8'
+const SAND = '#f6e0a6'
+const SAND_SHADE = '#eed293'
+const TRUNK = '#b07d4c'
+const LEAF = '#62b462'
+const LEAF_SHADE = '#4c9a50'
+const WOOD = '#c99560'
 
-const line = { stroke: INK, strokeWidth: 5, strokeLinejoin: 'round', strokeLinecap: 'round' } as const
-const thin = { ...line, strokeWidth: 3.5 }
+const line = { stroke: INK, strokeWidth: 3, strokeLinejoin: 'round', strokeLinecap: 'round' } as const
+const thin = { ...line, strokeWidth: 2.2 }
+// Short parallel pen strokes, Schulz's way of shading.
+const hatch = { stroke: INK, strokeWidth: 1.6, strokeLinecap: 'round', fill: 'none', opacity: 0.75 } as const
+const hatching = (x: number, y: number, n: number, gap: number, dx: number, dy: number) =>
+  Array.from({ length: n }, (_, i) => `M${x + i * gap} ${y} l${dx} ${dy}`).join(' ')
 
 function Cloud({ x, y, s, dur, delay, animate }: { x: number; y: number; s: number; dur: number; delay: number; animate: boolean }) {
   return (
@@ -46,8 +50,8 @@ function Cloud({ x, y, s, dur, delay, animate }: { x: number; y: number; s: numb
         {animate && (
           <animateTransform attributeName="transform" type="translate" values="-260 0; 1900 0" dur={`${dur}s`} begin={`-${delay}s`} repeatCount="indefinite" />
         )}
-        <path d="M0 50 Q-4 18 30 20 Q38 -6 72 2 Q92 -18 122 4 Q150 -4 160 22 Q196 22 192 50 Z" fill="#fff5e2" {...line} />
-        <path d="M14 50 Q60 40 110 46 Q150 42 180 50 Z" fill="#f4dfc1" />
+        <path d="M0 50 Q-4 18 30 20 Q38 -6 72 2 Q92 -18 122 4 Q150 -4 160 22 Q196 22 192 50 Z" fill="#fff" {...line} />
+        <path d="M58 22 Q66 12 78 14 M124 18 Q134 14 142 22" {...thin} strokeWidth={1.6} fill="none" />
       </g>
     </g>
   )
@@ -67,9 +71,8 @@ function Palm({ id, x, y, s, flip = 1, animate }: { id?: string; x: number; y: n
   return (
     <g id={id} transform={`translate(${x} ${y}) scale(${s * flip} ${s})`}>
       <path d="M-20 0 Q-10 -210 36 -410 L58 -404 Q18 -206 18 0 Z" fill={TRUNK} {...line} />
-      <path d="M4 0 Q8 -206 48 -406 L58 -404 Q18 -206 18 0 Z" fill={TRUNK_SHADE} />
-      {[-60, -130, -200, -270, -340].map((h, i) => (
-        <path key={h} d={`M${-16 + i * 7} ${h} q16 8 ${32 - i} 0`} {...thin} fill="none" />
+      {[-40, -100, -160, -220, -280, -340].map((h, i) => (
+        <path key={h} d={`M${-15 + i * 7} ${h} q12 7 ${24 - i} 2`} {...thin} strokeWidth={1.8} fill="none" />
       ))}
       <g transform="translate(46 -408)">
         {animate && (
@@ -82,6 +85,7 @@ function Palm({ id, x, y, s, flip = 1, animate }: { id?: string; x: number; y: n
               fill={i % 2 ? LEAF_SHADE : LEAF}
               {...thin}
             />
+            <path d="M8 -2 Q92 -44 196 14" {...thin} strokeWidth={1.4} fill="none" />
           </g>
         ))}
         {/* Coconuts can be knocked down (src/lib/coconut.ts); they land at the palm's foot. */}
@@ -96,7 +100,7 @@ function Palm({ id, x, y, s, flip = 1, animate }: { id?: string; x: number; y: n
 function Waves({ y, color, dur, animate }: { y: number; color: string; dur: number; animate: boolean }) {
   const d = `M-120 ${y} ` + Array.from({ length: 30 }, () => 'q20 -10 40 0 t40 0').join(' ')
   return (
-    <path d={d} fill="none" stroke={color} strokeWidth={4} strokeLinecap="round">
+    <path d={d} fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeDasharray="70 50">
       {animate && <animateTransform attributeName="transform" type="translate" values="0 0; 80 0" dur={`${dur}s`} repeatCount="indefinite" />}
     </path>
   )
@@ -109,7 +113,7 @@ function Gull({ x, y, dur, delay, animate }: { x: number; y: number; dur: number
         {animate && (
           <animateTransform attributeName="transform" type="translate" values="-400 0; 1100 -60" dur={`${dur}s`} begin={`-${delay}s`} repeatCount="indefinite" />
         )}
-        <path d="M-18 0 Q-9 -10 0 0 Q9 -10 18 0" fill="none" {...thin}>
+        <path d="M-18 0 Q-9 -10 0 0 Q9 -10 18 0" fill="none" {...thin} strokeWidth={2.4}>
           {animate && <animate attributeName="d" values="M-18 0 Q-9 -10 0 0 Q9 -10 18 0; M-18 -6 Q-9 2 0 0 Q9 2 18 -6; M-18 0 Q-9 -10 0 0 Q9 -10 18 0" dur="0.9s" repeatCount="indefinite" />}
         </path>
       </g>
@@ -210,6 +214,12 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
   return (
     <svg ref={ref} viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" className="absolute inset-x-0 top-0 h-screen w-full">
       <defs>
+        {/* A slight tremble in the pen line. Only used on parts that hold
+            still, so the filtered image is drawn once and cached. */}
+        <filter id="ink" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7" />
+          <feDisplacementMap in="SourceGraphic" scale="3.5" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
         <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={SKY_TOP} />
           <stop offset="1" stopColor={SKY_LOW} />
@@ -258,9 +268,21 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       {/* sky, sun, clouds, gulls */}
       <rect width={1600} height={600} fill="url(#sky)" />
       <rect className="night-only" width={1600} height={600} fill="url(#night-sky)" />
+      {/* a comic-strip sun: a plain disc with short pen-stroke rays */}
       <g className="day-only sun-set">
-        <circle cx={1270} cy={540} r={160} fill={SUN} opacity={0.35} />
-        <circle data-sky="sun" cx={1270} cy={540} r={105} fill={SUN} {...line} />
+        <g>
+          {animate && <animateTransform attributeName="transform" type="rotate" values="0 1270 250; 360 1270 250" dur="90s" repeatCount="indefinite" />}
+          <path
+            d={Array.from({ length: 14 }, (_, i) => {
+              const a = (i / 14) * Math.PI * 2
+              const [r0, r1] = i % 2 ? [92, 112] : [92, 126]
+              return `M${(1270 + r0 * Math.cos(a)).toFixed(1)} ${(250 + r0 * Math.sin(a)).toFixed(1)} L${(1270 + r1 * Math.cos(a)).toFixed(1)} ${(250 + r1 * Math.sin(a)).toFixed(1)}`
+            }).join(' ')}
+            {...line}
+            stroke="#e3a92a"
+          />
+        </g>
+        <circle data-sky="sun" cx={1270} cy={250} r={76} fill={SUN} {...line} />
       </g>
       <g id="clouds">
         <Cloud x={0} y={110} s={1.1} dur={140} delay={30} animate={animate} />
@@ -274,42 +296,56 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
         <Gull x={40} y={225} dur={38} delay={4.6} animate={animate} />
       </g>
 
-      {/* Mount Agung and hills on the horizon */}
-      <path d="M40 572 L260 360 Q284 340 308 360 L550 572 Z" fill={MOUNTAIN} {...line} />
-      <path d="M284 348 Q308 358 320 372 L550 572 L400 572 Q360 462 284 348 Z" fill={MOUNTAIN_SHADE} />
-      <path d="M248 374 Q264 388 280 376 Q296 390 312 374 Q300 358 284 346 Q266 356 248 374 Z" fill="#f4efe6" {...thin} />
-      <path d="M430 572 Q560 492 720 572 Z" fill={HILL} {...line} />
-      <path d="M1400 572 Q1470 540 1560 572 Z" fill={HILL} {...line} />
+      {/* Mount Agung and rolling green hills on the horizon */}
+      <g filter="url(#ink)">
+        <path d="M40 572 L260 360 Q284 340 308 360 L550 572 Z" fill={MOUNTAIN} {...line} />
+        <path d="M248 374 Q264 388 280 376 Q296 390 312 374 Q300 358 284 346 Q266 356 248 374 Z" fill="#fff" {...thin} />
+        {/* hatching just inside the shady right-hand slope */}
+        <path
+          d={Array.from({ length: 8 }, (_, i) => {
+            const t = 0.18 + i * 0.1
+            return `M${(304 + t * 246 - 8).toFixed(1)} ${(356 + t * 216 + 2).toFixed(1)} l-26 20`
+          }).join(' ')}
+          {...hatch}
+        />
+        <path d="M430 572 Q560 492 720 572 Z" fill={HILL} {...line} />
+        <path d="M1400 572 Q1470 540 1560 572 Z" fill={HILL} {...line} />
+        <path d="M520 548 l6 -8 l6 8 M610 540 l6 -8 l6 8 M1460 562 l5 -7 l5 7" {...thin} strokeWidth={1.6} fill="none" />
+      </g>
 
       {/* open sea */}
       <rect y={570} width={1600} height={330} fill="url(#sea)" />
       <rect y={570} width={1600} height={22} fill={SEA_DEEP} />
       <path d="M0 572 L1600 572" {...line} />
-      <path className="day-only" d="M1130 606 L1410 606 M1180 626 L1360 626" stroke="#ffe9a8" strokeWidth={5} strokeLinecap="round" opacity={0.8} />
-      <Waves y={630} color="#7fd0d8" dur={5} animate={animate} />
-      <Waves y={680} color="#9fdde2" dur={3.6} animate={animate} />
+      <path className="day-only" d="M1130 606 L1410 606 M1180 626 L1360 626" stroke="#fff6c8" strokeWidth={3} strokeLinecap="round" strokeDasharray="40 22" opacity={0.9} />
+      <Waves y={630} color="#e9f7f7" dur={5} animate={animate} />
+      <Waves y={680} color="#c8ecef" dur={3.6} animate={animate} />
       <PirateShip y={648} dur={100} delay={38} animate={animate} />
       <g className="ship-layer" />
 
-      {/* the island */}
-      <path d="M290 900 L340 780 Q450 692 800 666 Q1150 692 1260 780 L1310 900 Z" fill={SAND} {...line} />
-      <path d="M1000 686 Q1150 700 1250 776 L1300 900 L1130 900 Q1140 780 1000 686 Z" fill={SAND_SHADE} />
+      {/* the island: flat sand, hatched on the shady side, with inked tufts of grass */}
+      <g filter="url(#ink)">
+        <path d="M290 900 L340 780 Q450 692 800 666 Q1150 692 1260 780 L1310 900 Z" fill={SAND} {...line} />
+        <path d="M1000 686 Q1150 700 1250 776 L1300 900 L1130 900 Q1140 780 1000 686 Z" fill={SAND_SHADE} />
+        <path d={hatching(1150, 732, 6, 18, 14, 24)} {...hatch} />
+        <path d="M600 720 l14 0 M760 700 l18 0 M880 742 l12 0 M420 760 l16 0 M980 716 l10 0" {...hatch} />
+        {[
+          [470, 716],
+          [700, 684],
+          [1120, 712],
+        ].map(([gx, gy]) => (
+          <path key={gx} d={`M${gx} ${gy} q2 -12 -4 -18 M${gx + 6} ${gy} q0 -14 2 -22 M${gx + 12} ${gy} q2 -10 9 -16`} {...thin} fill="none" />
+        ))}
+      </g>
       <path d="M290 900 L340 780 Q450 692 800 666 Q1150 692 1260 780 L1310 900 Z" fill="url(#sand-to-rock)" />
       <path d="M1000 686 Q1150 700 1250 776 L1300 900 L1130 900 Q1140 780 1000 686 Z" fill="url(#shade-to-rock)" />
-      {[
-        [470, 716],
-        [700, 684],
-        [1120, 712],
-      ].map(([gx, gy]) => (
-        <path key={gx} d={`M${gx} ${gy} l6 -20 l6 20 l6 -15 l5 15 l6 -22 l5 22`} fill="none" stroke="#3f9a58" strokeWidth={4} strokeLinejoin="round" />
-      ))}
 
       <Palm x={430} y={770} s={0.78} animate={animate} />
       <Palm id="palm-right" x={1175} y={772} s={0.72} flip={-1} animate={animate} />
       <g className="fallen-nuts" />
 
       {/* signpost: Melbourne, Bali, Jakarta */}
-      <g transform="translate(548 738) scale(0.72)">
+      <g transform="translate(548 738) scale(0.72)" filter="url(#ink)">
         <rect x={-9} y={-250} width={18} height={250} fill={WOOD} {...line} />
         <SignBoard y={-222} label="melbourne" dir={-1} w={150} />
         <SignBoard y={-172} label="bali" dir={1} w={96} />
@@ -317,7 +353,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       </g>
 
       {/* football */}
-      <g transform="translate(985 690) scale(0.8)">
+      <g transform="translate(985 690) scale(0.8)" filter="url(#ink)">
         <circle r={28} fill="#fffdf6" {...line} />
         <path d="M0 -10 L10 -3 L6 9 L-6 9 L-10 -3 Z" fill={INK} />
         <path d="M0 -10 L0 -27 M10 -3 L25 -9 M6 9 L15 22 M-6 9 L-15 22 M-10 -3 L-25 -9" {...thin} strokeWidth={3} />

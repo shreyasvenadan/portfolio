@@ -11,11 +11,11 @@ export default function About() {
           </p>
         ))}
       </div>
-      <dl className="mt-16 grid gap-x-10 gap-y-8 sm:grid-cols-2">
+      <dl className="mt-16 space-y-10">
         {Object.entries(profile.skills).map(([group, skills]) => (
           <div key={group} data-focus>
-            <dt className="font-display text-lg font-semibold text-accent">{group}</dt>
-            <dd className="mt-2 leading-relaxed text-muted">{skills.join(', ')}</dd>
+            <dt className="font-display text-2xl font-semibold text-accent">{group}</dt>
+            <dd className="mt-2 text-xl leading-[1.7] text-muted">{skills.join(', ')}</dd>
           </div>
         ))}
       </dl>

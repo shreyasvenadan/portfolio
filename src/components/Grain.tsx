@@ -12,8 +12,8 @@ function makeNoise(seed: number) {
     seed = (seed * 16807) % 2147483647
     const r = seed / 2147483647
     const o = i * 4
-    if (r < 0.03) {
-      image.data.set([8, 12, 10, 120], o)
+    if (r < 0.012) {
+      image.data.set([8, 12, 10, 80], o)
     } else if (r > 0.985) {
       image.data.set([235, 240, 225, 70], o)
     }
