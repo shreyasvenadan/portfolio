@@ -345,12 +345,9 @@ body {
 @keyframes sun-pulse {
   50% { scale: 1.035; }
 }
-/* Sprites over the painted night plate are dimmed to match it. */
-.dim-at-night {
-  transition: filter 1.4s ease;
-}
-:root[data-night='true'] .dim-at-night {
-  filter: brightness(0.5) saturate(0.7) hue-rotate(-10deg);
+/* A soft halo on the moon. */
+.moon-glow {
+  filter: drop-shadow(0 0 10px rgb(255 238 186 / 0.55));
 }
 .moon-rise {
   translate: 0 180px;

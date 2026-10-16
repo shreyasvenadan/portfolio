@@ -52,7 +52,7 @@ export default function Backdrop() {
       const s = Math.max(window.innerWidth / 1600, window.innerHeight / 900)
       document.documentElement.style.setProperty('--s', String(s))
       const croppedTop = Math.max(0, 900 - window.innerHeight / s)
-      surface.current?.querySelector<SVGGElement>('[data-sky-anchor]')?.setAttribute('transform', `translate(0 ${croppedTop.toFixed(1)})`)
+      for (const sky of surface.current?.querySelectorAll('[data-sky-anchor]') ?? []) sky.setAttribute('transform', `translate(0 ${croppedTop.toFixed(1)})`)
     }
     size()
     window.addEventListener('resize', size)
@@ -74,7 +74,6 @@ export default function Backdrop() {
     }
     // ...as are the coconuts on the palms and the shipwreck.
     const overCoconut = (x: number, y: number) => {
-      if (isNight()) return
       for (const nut of surface.current?.querySelectorAll<SVGCircleElement>('[data-coconut]:not([data-fallen])') ?? []) {
         const r = nut.getBoundingClientRect()
         if (Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) < r.width / 2 + 6) return nut
