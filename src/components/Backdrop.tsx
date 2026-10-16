@@ -23,7 +23,7 @@ const WATER = `linear-gradient(to bottom,
 
 // Text colours at the surface and in the deep; the page fades from one to the
 // other as it goes underwater so copy stays readable.
-const SURFACE_TONE = { ink: '#141911', muted: '#2f382a', accent: '#5a1f2e', bone: '#f4efe0', halo: [250, 246, 233] }
+const SURFACE_TONE = { ink: '#fbfdff', muted: '#e2edf7', accent: '#ffd36b', bone: '#17375a', halo: [16, 52, 96] }
 const DEEP_TONE = { ink: '#eef6f4', muted: '#b9d3d8', accent: '#ffab7a', bone: '#0c2233', halo: [6, 24, 44] }
 
 const mix = (a: string, b: string, t: number) => {
@@ -45,9 +45,15 @@ export default function Backdrop() {
   const animate = useMemo(() => !prefersReducedMotion(), [])
 
   useEffect(() => {
-    // --s: screen pixels per unit of the 1600×900 surface drawing, so the
-    // island's underwater base can match its width at any screen size.
-    const size = () => world.current?.style.setProperty('--s', String(Math.max(window.innerWidth / 1600, window.innerHeight / 900)))
+    // --s: screen pixels per unit of the 1600×900 surface scene, so the
+    // island's underwater base and the hero's speech balloon can follow it
+    // at any screen size.
+    const size = () => {
+      const s = Math.max(window.innerWidth / 1600, window.innerHeight / 900)
+      document.documentElement.style.setProperty('--s', String(s))
+      const croppedTop = Math.max(0, 900 - window.innerHeight / s)
+      surface.current?.querySelector<SVGGElement>('[data-sky-anchor]')?.setAttribute('transform', `translate(0 ${croppedTop.toFixed(1)})`)
+    }
     size()
     window.addEventListener('resize', size)
 
@@ -68,6 +74,7 @@ export default function Backdrop() {
     }
     // ...as are the coconuts on the palms and the shipwreck.
     const overCoconut = (x: number, y: number) => {
+      if (isNight()) return
       for (const nut of surface.current?.querySelectorAll<SVGCircleElement>('[data-coconut]:not([data-fallen])') ?? []) {
         const r = nut.getBoundingClientRect()
         if (Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) < r.width / 2 + 6) return nut
@@ -135,6 +142,7 @@ export default function Backdrop() {
     let frame = 0
     let paused = false
     let tone = -1
+    let grain = -1
     let night = isNight() ? 1 : 0
     const tick = () => {
       const p = sectionProgress()
@@ -154,6 +162,12 @@ export default function Backdrop() {
       if (next !== tone) {
         tone = next
         applyTone(tone)
+      }
+      // The grain belongs to the hand-drawn sea; the 3D island stays clean.
+      const nextGrain = Math.round(depth * 40) / 40
+      if (nextGrain !== grain) {
+        grain = nextGrain
+        document.documentElement.style.setProperty('--grain', String(grain))
       }
       frame = requestAnimationFrame(tick)
     }

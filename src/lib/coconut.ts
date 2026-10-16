@@ -18,10 +18,8 @@ export function dropCoconut(nut: SVGCircleElement) {
   const ground = Number(nut.dataset.ground) - r + (Math.random() - 0.5) * 8
 
   const fallen = document.createElementNS(NS, 'g')
-  fallen.innerHTML = `<circle r="${r}" fill="${nut.getAttribute('fill')}" stroke="#120d0a" stroke-width="2.6" />
-    <circle cx="${-r * 0.35}" cy="${-r * 0.2}" r="${r * 0.14}" fill="#3d2914" />
-    <circle cx="${r * 0.05}" cy="${-r * 0.42}" r="${r * 0.14}" fill="#3d2914" />
-    <circle cx="${r * 0.3}" cy="${-r * 0.05}" r="${r * 0.14}" fill="#3d2914" />`
+  // Same fill as the one on the tree (its own tile of the painted coconuts).
+  fallen.innerHTML = `<circle r="${r}" fill="${nut.getAttribute('fill')}" />`
   fallen.style.transition = 'opacity 1s ease'
   layer.append(fallen)
   nut.style.transition = 'opacity 1s ease'

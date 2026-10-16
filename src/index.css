@@ -172,6 +172,7 @@ body {
   inset: -50%;
   z-index: 40;
   pointer-events: none;
+  opacity: var(--grain, 0);
   animation: grain 16s steps(1) infinite;
 }
 
@@ -334,7 +335,22 @@ body {
 }
 /* The sun sinks below the horizon as the moon rises. */
 :root[data-night='true'] .sun-set {
-  translate: 0 470px;
+  translate: 0 160px;
+}
+.sun-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sun-pulse 6s ease-in-out infinite;
+}
+@keyframes sun-pulse {
+  50% { scale: 1.035; }
+}
+/* Sprites over the painted night plate are dimmed to match it. */
+.dim-at-night {
+  transition: filter 1.4s ease;
+}
+:root[data-night='true'] .dim-at-night {
+  filter: brightness(0.5) saturate(0.7) hue-rotate(-10deg);
 }
 .moon-rise {
   translate: 0 180px;
@@ -655,7 +671,9 @@ dialog.note::backdrop {
   position: absolute;
   z-index: 1;
   left: 50%;
-  bottom: calc(66svh + 22px);
+  /* Above his head: the island scene is pinned to the bottom of the screen,
+     --s screen px per scene unit, and his hair starts 550 units up. */
+  bottom: calc(var(--s, 1) * 560px + 26px);
   width: min(21rem, calc(100vw - 2.5rem));
   padding: 1.1rem 1.5rem 1.2rem;
   translate: -50% 0;
@@ -689,9 +707,9 @@ dialog.note::backdrop {
 @media (min-width: 768px) {
   .balloon {
     left: auto;
-    right: calc(50% + 10vh);
-    bottom: 58svh;
-    width: min(21rem, calc(50vw - 10vh - 2rem));
+    right: calc(50% + var(--s, 1) * 70px);
+    bottom: calc(var(--s, 1) * 495px);
+    width: min(21rem, calc(50vw - var(--s, 1) * 70px - 2rem));
     translate: 0 0;
     font-size: 1.08rem;
     transform-origin: 100% 100%;
@@ -711,7 +729,7 @@ dialog.note::backdrop {
   to { scale: 1; opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .balloon {
+  .balloon, .sun-pulse {
     animation: none;
   }
 }

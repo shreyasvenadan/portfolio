@@ -8,7 +8,7 @@ import { cannonHit, sinkingShip } from './sound'
 
 const HITS_TO_SINK = 4
 // The ship's waterline in the scene's units, and how deep splinters fall.
-const WATER_Y = 650
+const WATER_Y = 628
 // Per hit, in the ship's own units: degrees of list and how much lower it sits.
 const LIST = 3
 const LOWER = 4

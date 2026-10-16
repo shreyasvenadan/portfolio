@@ -17,6 +17,8 @@ const EYES = [
   { x: 296.4, y: 178.4, rx: 5.6, ry: 7.6 },
 ]
 const EYE_INK = '#130d0a'
+// His height in units of the 1600x900 island scene.
+const HEIGHT = 400
 
 type Action = 'look' | 'nod' | 'dance' | 'tilt'
 const ACTIONS: Action[] = ['look', 'dance', 'nod', 'tilt']
@@ -38,6 +40,7 @@ function blinkAt(t: number) {
 
 export default function Character() {
   const wrapper = useRef<HTMLDivElement>(null)
+  const sizer = useRef<HTMLDivElement>(null)
   const svg = useRef<SVGSVGElement>(null)
   const parts = useRef<Partial<Record<string, SVGGElement>>>({})
   const set = (key: string) => (el: SVGGElement | null) => {
@@ -51,6 +54,8 @@ export default function Character() {
     const look = { x: 0, y: 0 }
     const state = { lean: 0, lastProgress: sectionProgress(), onIsland: true, jumpAt: -10 }
     let start = -1 // set on the first animation frame
+    let stand: HTMLElement | null = null
+    let offset = 0
 
     const move = (e: PointerEvent) => {
       pointer.x = e.clientX
@@ -79,7 +84,17 @@ export default function Character() {
       // the page as it heads into the ocean.
       const progress = sectionProgress()
       state.onIsland = progress < 0.6
-      if (wrapper.current) wrapper.current.style.transform = `translate3d(0, ${-Math.min(window.scrollY, window.innerHeight * 2)}px, 0)`
+      // Sized with the island scene (src/world/Surface.tsx), and moved so his
+      // feet are on its #stand mark, which scrolls with the page.
+      const s = Math.max(window.innerWidth / 1600, window.innerHeight / 900)
+      if (sizer.current) sizer.current.style.height = `${HEIGHT * s}px`
+      const mark = (stand ??= document.getElementById('stand'))?.getBoundingClientRect()
+      const figure = svg.current?.getBoundingClientRect()
+      if (wrapper.current && mark && figure) {
+        const feet = figure.top - offset + (figure.height * FEET.y) / H
+        offset = mark.top + mark.height / 2 - feet
+        wrapper.current.style.transform = `translate3d(0, ${offset}px, 0)`
+      }
       // Lean into fast scrolling, then settle back.
       const velocity = dt > 0 ? (progress - state.lastProgress) / dt : 0
       state.lastProgress = progress
@@ -191,9 +206,9 @@ export default function Character() {
 
   return (
     <div aria-hidden className="character pointer-events-none fixed inset-0 z-[5] overflow-hidden">
-      {/* Feet stand on the sand in the backdrop, 15% up from the bottom. */}
+      {/* Placed on the island's sand each frame (see the scroll step above). */}
       <div ref={wrapper} className="flex h-full items-end justify-center pb-[15vh] will-change-transform">
-        <div className="h-[50vh]">
+        <div ref={sizer} className="h-[44vh]">
           <svg ref={svg} viewBox={`0 0 ${W} ${H}`} className="h-full w-auto overflow-visible">
             <g ref={set('shadow')}>
               <image href={`${LAYERS}shadow.webp`} width={W} height={H} />

@@ -6,7 +6,7 @@ import { planeCrash, splash } from './sound'
 
 const NS = 'http://www.w3.org/2000/svg'
 // Where the wreck hits the water, in the scene's units: just below the horizon.
-const SEA_Y = 600
+const SEA_Y = 610
 // Long enough for the hidden plane to have finished crossing the sky.
 const RETURN = 15000
 const GRAVITY = 0.12
