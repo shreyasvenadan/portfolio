@@ -10,13 +10,11 @@ const SKIN = '#c98652'
 const SKIN_SHADE = '#a5663a'
 const HAIR = '#1b120d'
 const HAIR_TIPS = '#c99d5f'
-const TOP = '#232329'
-const TOP_SHADE = '#16161b'
-const STRAP = '#0d0d10'
-const BUCKLE = '#44444d'
-const JEANS = '#3b4a6b'
-const JEANS_SHADE = '#2b3753'
-const SHOE = '#f1ede2'
+const TOP = '#2f62a3'
+const TOP_SHADE = '#234c80'
+const JEANS = '#24242a'
+const JEANS_SHADE = '#17171b'
+const SHOE = '#1d1d22'
 const SHOE_TRIM = '#b7392f'
 const MOUTH = '#6e211d'
 
@@ -237,7 +235,7 @@ export default function Character() {
       const shut = Math.max(blinkAt(t), laugh * 0.6)
       for (const side of ['L', 'R']) {
         p[`eye${side}`]?.setAttribute('transform', `scale(1 ${1 - shut * 0.88})`)
-        p[`pupil${side}`]?.setAttribute('transform', `translate(${lx * 7} ${ly * 6})`)
+        p[`pupil${side}`]?.setAttribute('transform', `translate(${lx * 5} ${ly * 5})`)
       }
 
       const mouth = jumping ? (jx < 0.4 ? 'oh' : 'laugh') : laugh > 0.1 ? 'laugh' : 'grin'
@@ -258,7 +256,12 @@ export default function Character() {
       <rect x={-18} y={-8} width={36} height={134} rx={18} fill={TOP} {...line} />
       <g ref={set(`elbow${side}`)} transform="translate(0 118)">
         <rect x={-16} y={-10} width={32} height={122} rx={16} fill={TOP} {...line} />
-        <path d="M-14 100 L14 100" {...thin} />
+        {/* covers where the two sleeve pieces overlap, so the elbow reads as one
+            sleeve; round, so it stays inside the outline however far it bends */}
+        <circle r={13.5} fill={TOP} />
+        {/* buttoned cuff */}
+        <path d="M-15 80 L15 80" {...thin} />
+        <circle cx={7} cy={90} r={2.5} fill="#e8edf3" />
         <g transform={`translate(0 104) scale(${side === 'L' ? -1 : 1} 1)`}>
           <Hand />
         </g>
@@ -283,26 +286,26 @@ export default function Character() {
             <path d="M202 822 Q188 848 194 870 L260 870 Q272 852 254 822 Z" fill={SHOE} {...line} />
             <path d="M142 856 L206 856 M194 856 L258 856" stroke={SHOE_TRIM} strokeWidth={5} />
 
-            {/* torso: black quarter-zip */}
+            {/* neck with the hard shadow under the jaw */}
+            <path d="M183 262 L183 322 L217 322 L217 262 Z" fill={SKIN} {...line} />
+            <path d="M186 266 L214 266 L214 292 Q200 302 186 292 Z" fill={SKIN_SHADE} />
+
+            {/* torso: blue button-up; the collar sits in front of the neck */}
             <g ref={set('torso')}>
               <path d="M130 344 Q140 318 176 312 L224 312 Q260 318 270 344 L272 602 Q200 616 128 602 Z" fill={TOP} {...line} />
               <path d="M246 330 Q266 338 268 364 L270 598 Q256 604 248 604 Z" fill={TOP_SHADE} />
-              <path d="M170 300 L174 332 L200 352 L226 332 L230 300 L218 307 L200 336 L182 307 Z" fill={TOP} {...line} />
-              <path d="M172 305 L184 312 M228 305 L216 312" stroke="#c0392b" strokeWidth={3.5} strokeLinecap="round" />
-              <path d="M172 311 L184 318 M228 311 L216 318" stroke="#2e7d4f" strokeWidth={3.5} strokeLinecap="round" />
-              <path d="M200 352 L200 420" stroke={BUCKLE} strokeWidth={3.5} />
-              <path d="M224 386 L246 386 L246 406 Q235 418 224 406 Z M229 393 L241 393 M229 399 L241 399" fill="none" stroke="#d8d4c8" strokeWidth={3} strokeLinejoin="round" />
-              {/* crossbody strap */}
-              <path d="M244 316 L262 326 L158 596 L140 586 Z" fill={STRAP} {...thin} />
-              <path d="M214 380 L234 390 L226 408 L206 398 Z M190 440 L210 450 L202 468 L182 458 Z" fill={BUCKLE} {...thin} strokeWidth={3} />
+              {/* button placket */}
+              <path d="M204 332 L204 608" stroke={TOP_SHADE} strokeWidth={4} />
+              {[364, 412, 460, 508, 556].map((y) => (
+                <circle key={y} cx={211} cy={y} r={4} fill="#e8edf3" stroke={INK} strokeWidth={2} />
+              ))}
+              {/* pointed collar */}
+              <path d="M172 300 L200 332 L184 346 L162 318 Z" fill={TOP} {...thin} />
+              <path d="M228 300 L200 332 L216 346 L238 318 Z" fill={TOP} {...thin} />
             </g>
 
             {arm('L')}
             {arm('R')}
-
-            {/* neck with the hard shadow under the jaw */}
-            <path d="M183 262 L183 322 L217 322 L217 262 Z" fill={SKIN} {...line} />
-            <path d="M186 266 L214 266 L214 292 Q200 302 186 292 Z" fill={SKIN_SHADE} />
 
             {/* head */}
             <g ref={set('head')}>
@@ -341,11 +344,11 @@ export default function Character() {
                 {(['L', 'R'] as const).map((side) => (
                   <g key={side} transform={`translate(${side === 'L' ? 178 : 222} 160)`}>
                     <g ref={set(`eye${side}`)}>
-                      <ellipse rx={16} ry={21} fill="#fffef8" {...thin} />
+                      <ellipse rx={12} ry={16} fill="#fffef8" {...thin} />
                       <g ref={set(`pupil${side}`)}>
-                        <circle r={5.5} fill={INK} />
+                        <circle r={4.5} fill={INK} />
                       </g>
-                      <path d="M-17 -3 Q-16 -24 0 -24 Q16 -24 17 -3" fill="none" {...line} strokeWidth={6.5} />
+                      <path d="M-13 -2 Q-12 -19 0 -19 Q12 -19 13 -2" fill="none" {...line} strokeWidth={6} />
                     </g>
                   </g>
                 ))}
