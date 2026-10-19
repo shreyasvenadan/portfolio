@@ -8,7 +8,6 @@ import Grain from './components/Grain'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import Projects from './components/Projects'
-import Character from './components/Character'
 import { profile } from './data/content'
 import { watchFocus } from './lib/focus'
 import { watchSections } from './lib/sections'
@@ -32,7 +31,6 @@ export default function App() {
           <feDisplacementMap in="SourceGraphic" scale="4" />
         </filter>
       </svg>
-      <Character />
       <Grain />
 
       <Header />

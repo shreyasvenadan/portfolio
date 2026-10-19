@@ -329,13 +329,6 @@ body {
   translate: 0 0;
 }
 
-.character svg {
-  transition: filter 1.4s ease;
-}
-:root[data-night='true'] .character svg {
-  filter: brightness(0.72) saturate(0.8) hue-rotate(-8deg);
-}
-
 .twinkle {
   animation: twinkle 3.2s ease-in-out infinite alternate;
 }
@@ -357,23 +350,11 @@ body {
   100% { translate: 900px 210px; opacity: 0; }
 }
 
-/* A raining cloud turns grey (src/lib/weather.ts). */
-.cloud-puff,
-.cloud-shade {
-  transition: fill 1.2s ease;
-}
-.storm .cloud-puff {
-  fill: #9ea4b0;
-}
-.storm .cloud-shade {
-  fill: #7f8592;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .twinkle, .shooting-star {
     animation: none;
   }
-  .night-tint, .swimmers, .night-only, .day-only, .character svg {
+  .night-tint, .swimmers, .night-only, .day-only {
     transition: none;
   }
 }

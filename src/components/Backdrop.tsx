@@ -1,16 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { isNight, toggleNight } from '../lib/night'
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react'
+import { isNight } from '../lib/night'
 import { prefersReducedMotion, sectionProgress } from '../lib/sections'
 import { breakBottle } from '../lib/bottle'
-import { dropCoconut } from '../lib/coconut'
-import { crashPlane } from '../lib/crash'
-import { kickBall } from '../lib/football'
-import { annoyGull } from '../lib/gull'
-import { hitShip } from '../lib/pirate'
 import { shipHorn } from '../lib/sound'
-import { clickCloud, makeWish } from '../lib/weather'
 import { zap } from '../lib/zap'
-import Surface from '../world/Surface'
+import Island3D from '../world/Island3D'
 import Sealife, { divers, fishing } from '../world/Sealife'
 import Underwater from '../world/Underwater'
 import { wspan, wy } from '../lib/world'
@@ -44,8 +38,8 @@ function applyTone(t: number) {
 export default function Backdrop() {
   const world = useRef<HTMLDivElement>(null)
   const [behind, setBehind] = useState<HTMLDivElement | null>(null)
-  const surface = useRef<SVGSVGElement>(null)
-  const animate = useMemo(() => !prefersReducedMotion(), [])
+  const island = useRef<ComponentRef<typeof Island3D>>(null)
+  const still = useMemo(() => prefersReducedMotion(), [])
 
   useEffect(() => {
     // --s: screen pixels per unit of the 1600×900 surface drawing, so the
@@ -54,28 +48,15 @@ export default function Backdrop() {
     size()
     window.addEventListener('resize', size)
 
-    // The sun and moon sit behind the page content, so clicks are hit-tested by
-    // position: clicking whichever one is up switches between day and night.
-    const overSky = (x: number, y: number) => {
-      const body = surface.current?.querySelector(`[data-sky="${isNight() ? 'moon' : 'sun'}"]`)
-      if (!body) return false
-      const r = body.getBoundingClientRect()
-      return Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) < r.width / 2 + 12
-    }
-    // Jellyfish are hit-tested the same way; touching one (tentacles too) stings.
+    // The island and the sea creatures sit behind the page content, so clicks
+    // are hit-tested by position. Touching a jellyfish (tentacles too) stings...
     const overJelly = (x: number, y: number) => {
       for (const jelly of world.current?.querySelectorAll('[data-jelly]') ?? []) {
         const r = jelly.getBoundingClientRect()
         if (x > r.left - 4 && x < r.right + 4 && y > r.top - 4 && y < r.bottom + 4) return jelly
       }
     }
-    // ...as are the coconuts on the palms and the shipwreck.
-    const overCoconut = (x: number, y: number) => {
-      for (const nut of surface.current?.querySelectorAll<SVGCircleElement>('[data-coconut]:not([data-fallen])') ?? []) {
-        const r = nut.getBoundingClientRect()
-        if (Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) < r.width / 2 + 6) return nut
-      }
-    }
+    // ...as are the shipwreck...
     const overShip = (x: number, y: number) => {
       const ship = world.current?.querySelector('[data-ship]')
       const r = ship?.getBoundingClientRect()
@@ -86,43 +67,6 @@ export default function Backdrop() {
       const bottle = world.current?.querySelector<SVGSVGElement>('[data-bottle]')
       const r = bottle?.getBoundingClientRect()
       return r && bottle?.style.opacity !== '0' && x > r.left - 6 && x < r.right + 6 && y > r.top - 6 && y < r.bottom + 6 ? bottle : undefined
-    }
-    // ...and the plane, while it's flying.
-    const overPlane = (x: number, y: number) => {
-      const plane = surface.current?.querySelector<SVGGElement>('#plane:not([data-crashed]) [data-plane-body]')
-      const r = plane?.getBoundingClientRect()
-      return r && x > r.left - 8 && x < r.right + 8 && y > r.top - 8 && y < r.bottom + 8 ? plane : undefined
-    }
-    // ...and the pirate ship, until it sinks.
-    const overPirate = (x: number, y: number) => {
-      const hull = surface.current?.querySelector<SVGGElement>('#pirate-ship:not([data-sunk]) [data-pirate]')
-      const r = hull?.getBoundingClientRect()
-      return r && x > r.left && x < r.right && y > r.top && y < r.bottom ? hull : undefined
-    }
-    // ...and the clouds, and at night the shooting star while it's streaking past.
-    const overCloud = (x: number, y: number) => {
-      for (const puff of surface.current?.querySelectorAll('.cloud-puff') ?? []) {
-        const r = puff.getBoundingClientRect()
-        if (x > r.left && x < r.right && y > r.top && y < r.bottom) return puff.closest<SVGGElement>('[data-cloud]')!
-      }
-    }
-    const overStar = (x: number, y: number) => {
-      const star = surface.current?.querySelector<SVGPathElement>('[data-star]')
-      if (!star || !isNight() || Number(getComputedStyle(star).opacity) < 0.3) return
-      const r = star.getBoundingClientRect()
-      return x > r.left - 24 && x < r.right + 24 && y > r.top - 24 && y < r.bottom + 24 ? star : undefined
-    }
-    // ...and the gulls (small, so given a wide margin) and the football.
-    const overGull = (x: number, y: number) => {
-      for (const gull of surface.current?.querySelectorAll<SVGGElement>('[data-gull]:not([data-gone])') ?? []) {
-        const r = gull.getBoundingClientRect()
-        if (x > r.left - 14 && x < r.right + 14 && y > r.top - 14 && y < r.bottom + 14) return gull
-      }
-    }
-    const overBall = (x: number, y: number) => {
-      const ball = surface.current?.querySelector<SVGGElement>('[data-ball]:not([data-kicked])')
-      const r = ball?.getBoundingClientRect()
-      return r && Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) < r.width / 2 + 6 ? ball : undefined
     }
     const click = (e: MouseEvent) => {
       if ((e.target as Element).closest('a, button, dialog')) return
@@ -135,36 +79,21 @@ export default function Backdrop() {
         return
       }
       const jelly = overJelly(x, y)
-      const nut = overCoconut(x, y)
       const ship = overShip(x, y)
-      const plane = overPlane(x, y)
-      const pirate = overPirate(x, y)
       const bottle = overBottle(x, y)
-      const star = overStar(x, y)
-      const cloud = overCloud(x, y)
-      const gull = overGull(x, y)
-      const ball = overBall(x, y)
-      if (plane) crashPlane(plane)
-      else if (gull) annoyGull(gull)
-      else if (ball) kickBall(ball, x)
-      else if (pirate) hitShip(pirate, x, y)
-      else if (bottle) breakBottle(bottle)
+      if (bottle) breakBottle(bottle)
       else if (jelly) zap(x, y, jelly.getAttribute('data-jelly')!, jelly)
-      else if (nut) dropCoconut(nut)
       else if (ship) {
         shipHorn()
         ship.classList.remove('honk')
         void ship.getBoundingClientRect()
         ship.classList.add('honk')
-      } else if (star) makeWish(star)
-      // A cloud drifting across the sun or moon takes the click.
-      else if (cloud) clickCloud(cloud)
-      else if (overSky(x, y)) toggleNight()
+      } else island.current?.click(x, y)
     }
     const hover = (e: PointerEvent) => {
       if ((e.target as Element).closest('a, button, dialog')) return
       const [x, y] = [e.clientX, e.clientY]
-      document.body.style.cursor = fishing.over(x, y) || divers.over(x, y) || overPlane(x, y) || overPirate(x, y) || overJelly(x, y) || overCoconut(x, y) || overShip(x, y) || overBottle(x, y) || overSky(x, y) || overStar(x, y) || overCloud(x, y) || overGull(x, y) || overBall(x, y) ? 'var(--cursor-pointer)' : ''
+      document.body.style.cursor = fishing.over(x, y) || divers.over(x, y) || overJelly(x, y) || overShip(x, y) || overBottle(x, y) || island.current?.over(x, y) ? 'var(--cursor-pointer)' : ''
     }
     window.addEventListener('click', click)
     window.addEventListener('pointermove', hover)
@@ -176,11 +105,10 @@ export default function Backdrop() {
     const tick = () => {
       const p = sectionProgress()
 
-      // Stop the surface animations once the island has scrolled out of view.
+      // Stop drawing the island once it has scrolled out of view.
       const offscreen = p > 1.1
-      if (surface.current && offscreen !== paused) {
-        if (offscreen) surface.current.pauseAnimations()
-        else surface.current.unpauseAnimations()
+      if (offscreen !== paused) {
+        island.current?.setActive(!offscreen)
         paused = offscreen
       }
 
@@ -207,7 +135,7 @@ export default function Backdrop() {
     <>
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden" style={{ height: wy(500) }}>
         <div ref={world} className="absolute inset-0" style={{ background: WATER }}>
-          <Surface ref={surface} animate={animate} />
+          <Island3D ref={island} still={still} />
           <Underwater />
           {/* Sea creatures that swim behind the page text (the rest are in front). */}
           <div ref={setBehind} className="absolute inset-x-0 top-0" />
