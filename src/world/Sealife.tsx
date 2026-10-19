@@ -183,62 +183,61 @@ function Eel({ color = '#6b7a3a' }: { color?: string }) {
   )
 }
 
-// A scuba diver swimming belly-down, breathing out bubbles: a 3D render cut
-// into layers by scripts/build-diver.py, so each leg can flutter-kick from
-// the hip (the body keeps a stub of the thighs, drawn over them, to hide the
-// joint). In the dark the diver carries a lit torch. Coordinates are pixels
-// in the 600x321 layer images.
-const DIVER = `${import.meta.env.BASE_URL}sealife/diver-`
-const HIPS = { far: [227, 146], near: [222, 175] }
-const KICK = 7 // degrees either way
-const REGULATOR = [514, 217]
-const TORCH = [592, 257]
-
-function Diver({ torch = false }: { torch?: boolean }) {
+// A scuba diver swimming belly-down, kicking, breathing out bubbles. They
+// carry a SeaLens camera in the reef and a torch in the dark.
+function Diver({ suit = '#23262e', stripe = '#e2553d', gear }: { suit?: string; stripe?: string; gear?: 'camera' | 'torch' }) {
   const moving = !prefersReducedMotion()
-  const leg = (side: 'far' | 'near', delay: number) => {
-    const [x, y] = HIPS[side]
-    return (
-      <g>
-        {moving && (
-          <animateTransform
-            attributeName="transform"
-            type="rotate"
-            values={`${-KICK} ${x} ${y}; ${KICK} ${x} ${y}; ${-KICK} ${x} ${y}`}
-            calcMode="spline"
-            keySplines="0.45 0 0.55 1; 0.45 0 0.55 1"
-            dur="1.3s"
-            begin={`${delay}s`}
-            repeatCount="indefinite"
-          />
-        )}
-        <image href={`${DIVER}leg-${side}.webp`} width={600} height={321} />
-      </g>
-    )
-  }
+  const leg = (y: number, delay: number) => (
+    <g>
+      {moving && (
+        <animateTransform attributeName="transform" type="rotate" values={`-9 -36 ${y}; 9 -36 ${y}; -9 -36 ${y}`} dur="1.3s" begin={`${delay}s`} repeatCount="indefinite" />
+      )}
+      <path d={`M-36 ${y} L-80 ${y - 4}`} stroke={INK} strokeWidth={17} strokeLinecap="round" />
+      <path d={`M-36 ${y} L-80 ${y - 4}`} stroke={suit} strokeWidth={11} strokeLinecap="round" />
+      <path d={`M-78 ${y - 10} L-118 ${y - 16} L-116 ${y + 8} L-78 ${y + 4} Z`} fill="#f2c230" {...thin} />
+    </g>
+  )
   return (
-    <svg viewBox="0 0 600 321" className="w-full overflow-visible">
-      {torch && (
+    <svg viewBox="-122 -70 236 110" className="w-full overflow-visible">
+      {gear === 'torch' && (
         <>
           <defs>
-            <linearGradient id="torch-beam" x1={TORCH[0]} y1="0" x2={TORCH[0] + 380} y2="0" gradientUnits="userSpaceOnUse">
+            <linearGradient id="torch-beam" x1="96" y1="0" x2="250" y2="0" gradientUnits="userSpaceOnUse">
               <stop offset="0" stopColor="#fff6c8" stopOpacity={0.5} />
               <stop offset="1" stopColor="#fff6c8" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <path d={`M${TORCH[0]} ${TORCH[1]} L${TORCH[0] + 380} ${TORCH[1] - 110} L${TORCH[0] + 380} ${TORCH[1] + 140} Z`} fill="url(#torch-beam)" />
+          <path d="M96 14 L250 -30 L250 74 Z" fill="url(#torch-beam)" />
         </>
       )}
-      {/* the legs kick in turn */}
-      {leg('far', -0.65)}
-      {leg('near', 0)}
-      <image href={`${DIVER}body.webp`} width={600} height={321} />
+      {leg(6, -0.65)}
+      {/* air tank on the back, hose to the mouth */}
+      <rect x={-38} y={-36} width={66} height={18} rx={9} fill="#d8dde3" {...thin} />
+      <path d="M26 -30 Q56 -40 70 2" stroke={INK} strokeWidth={3} fill="none" />
+      <path d="M-40 -14 Q-10 -24 36 -16 Q50 -10 48 6 Q20 18 -40 14 Z" fill={suit} {...thin} />
+      <path d="M-8 -19 L-14 15" stroke={stripe} strokeWidth={5} />
+      {leg(-2, 0)}
+      {/* head in a hood with a mask and regulator */}
+      <circle cx={58} cy={-6} r={15} fill={suit} {...thin} />
+      <rect x={60} y={-16} width={17} height={13} rx={5} fill="#8fd3e8" {...thin} strokeWidth={3} />
+      <circle cx={71} cy={5} r={5} fill="#3a3d45" {...thin} strokeWidth={2.5} />
+      {/* reaching arm, holding the gear */}
+      <path d="M30 2 L84 14" stroke={INK} strokeWidth={15} strokeLinecap="round" />
+      <path d="M30 2 L84 14" stroke={suit} strokeWidth={9} strokeLinecap="round" />
+      {gear === 'camera' && (
+        <g>
+          <rect x={84} y={2} width={26} height={20} rx={4} fill="#f2c230" {...thin} strokeWidth={3} />
+          <circle cx={110} cy={12} r={7} fill="#253447" {...thin} strokeWidth={2.5} />
+          <circle cx={92} cy={6} r={2} fill="#e5483b" className="blink" />
+        </g>
+      )}
+      {gear === 'torch' && <rect x={82} y={8} width={16} height={11} rx={3} fill="#9aa3ad" {...thin} strokeWidth={2.5} />}
       {/* breath bubbles rising from the regulator */}
       {moving &&
         [0, 0.7, 1.4].map((delay, i) => (
-          <circle key={delay} cx={REGULATOR[0]} cy={REGULATOR[1]} r={8 + i * 2.5} fill="none" stroke="#e8f8ff" strokeWidth={4} opacity={0}>
-            <animate attributeName="cy" values={`${REGULATOR[1]};${REGULATOR[1] - 180}`} dur="2.1s" begin={`${delay}s`} repeatCount="indefinite" />
-            <animate attributeName="cx" values={`${REGULATOR[0]};${REGULATOR[0] + 14};${REGULATOR[0] - 6}`} dur="2.1s" begin={`${delay}s`} repeatCount="indefinite" />
+          <circle key={delay} cx={74 + i * 3} cy={0} r={3 + i} fill="none" stroke="#e8f8ff" strokeWidth={2} opacity={0}>
+            <animate attributeName="cy" values="0;-70" dur="2.1s" begin={`${delay}s`} repeatCount="indefinite" />
+            <animate attributeName="cx" values={`${74 + i * 3};${80 + i * 3};${72 + i * 3}`} dur="2.1s" begin={`${delay}s`} repeatCount="indefinite" />
             <animate attributeName="opacity" values="0.9;0.9;0" keyTimes="0;0.7;1" dur="2.1s" begin={`${delay}s`} repeatCount="indefinite" />
           </circle>
         ))}
@@ -361,7 +360,7 @@ const KINDS: Kind[] = [
   { art: <Butterflyfish />, size: 52, zone: [120, 185], speed: 0.7, count: 3 },
   { art: <Puffer />, size: 58, zone: [135, 190], speed: 0.35, count: 2 },
   { art: <Angelfish />, size: 56, zone: [125, 180], speed: 0.5, count: 2 },
-  { art: <Diver />, size: 190, zone: [130, 180], speed: 0.4, calm: true, diver: true },
+  { art: <Diver gear="camera" />, size: 190, zone: [130, 180], speed: 0.4, calm: true, diver: true },
   { art: <Fish color="#c77dff" />, size: 40, zone: [118, 190], speed: 0.9, count: 2 },
   { art: <Dolphin />, size: 170, zone: [120, 175], speed: 1.6, school: 3 },
   // open blue
@@ -370,7 +369,7 @@ const KINDS: Kind[] = [
   { art: <Fish color="#d6e4ea" />, size: 22, zone: [205, 260], speed: 1.7, school: 11 },
   { art: <Barracuda />, size: 150, zone: [215, 290], speed: 1.2, count: 3 },
   { art: <Swordfish />, size: 240, zone: [230, 280], speed: 1.5 },
-  { art: <Diver />, size: 180, zone: [225, 285], speed: 0.45, calm: true, diver: true },
+  { art: <Diver suit="#1f3b57" stripe="#f2c230" />, size: 180, zone: [225, 285], speed: 0.45, calm: true, diver: true },
   { art: <Tang body="#3fb57a" tail="#1d6e47" />, size: 62, zone: [205, 250], speed: 0.9, count: 2 },
   { art: <Fish color="#f25f5c" stripe="#ffe1a8" />, size: 46, zone: [210, 290], speed: 1, count: 3 },
   { art: <Whale />, size: 560, zone: [222, 262], speed: 0.3, calm: true },
@@ -381,7 +380,7 @@ const KINDS: Kind[] = [
   { art: <Lanternfish glow="#ffb8f2" />, size: 30, zone: [310, 395], speed: 0.6, count: 4 },
   { art: <Hatchetfish />, size: 40, zone: [305, 380], speed: 0.45, count: 4 },
   { art: <Eel />, size: 220, zone: [360, 390], speed: 0.35 },
-  { art: <Diver torch />, size: 180, zone: [325, 385], speed: 0.35, calm: true, diver: true },
+  { art: <Diver suit="#2a2d36" stripe="#5ad1e6" gear="torch" />, size: 180, zone: [325, 385], speed: 0.35, calm: true, diver: true },
   { art: <Puffer />, size: 50, zone: [320, 380], speed: 0.3 },
   { art: <Whale body="#2c3e57" belly="#7d93ab" />, size: 620, zone: [318, 350], speed: 0.25, calm: true },
   { art: <Shark body="#4d5d6b" />, size: 250, zone: [330, 392], speed: 0.6, calm: true },
