@@ -517,16 +517,36 @@ export function chest() {
 // bright at the top and fading out as it goes. Hangs from y = 0, one unit long.
 export function sunbeam() {
   const g = new THREE.CylinderGeometry(0.03, 0.12, 1, 16, 8, true).translate(0, -0.5, 0)
-  const colors: number[] = []
-  const p = g.attributes.position
-  for (let i = 0; i < p.count; i++) {
-    const k = -p.getY(i)
-    const a = (1 - k) ** 1.6
-    colors.push(a, a, a)
-  }
-  g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-  const m = new THREE.MeshBasicMaterial({ color: '#fff3c8', vertexColors: true, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })
-  m.defines = { GLOW: '' }
+  const m = new THREE.ShaderMaterial({
+    uniforms: { opacity: { value: 0.2 }, color: { value: new THREE.Color('#fff3c8') } },
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    vertexShader: /* glsl */ `
+      varying float vFade;
+      varying vec3 vNormal;
+      varying vec3 vView;
+      void main() {
+        vFade = pow(1.0 + position.y, 1.6) * smoothstep(0.0, 0.25, -position.y);
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vNormal = normalMatrix * normal;
+        vView = -mv.xyz;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    // Brightest through its middle and fading to nothing at its edges and
+    // its foot, so it reads as light rather than a solid cone.
+    fragmentShader: /* glsl */ `
+      uniform float opacity;
+      uniform vec3 color;
+      varying float vFade;
+      varying vec3 vNormal;
+      varying vec3 vView;
+      void main() {
+        float facing = abs(dot(normalize(vNormal), normalize(vView)));
+        gl_FragColor = vec4(color * vFade * pow(facing, 2.5) * opacity, 1.0);
+      }`,
+  })
   return new THREE.Mesh(g, m)
 }
 

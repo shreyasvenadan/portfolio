@@ -170,6 +170,8 @@ type Body = {
   face: number
   nerve: number
   phase: number
+  // How far it's rolled into a turn (rays bank).
+  roll: number
   len: number
   // Projected on screen this frame, and half its length in screen px.
   sx: number
@@ -288,6 +290,7 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
         face: Math.cos(heading) > 0 ? 1 : -1,
         nerve: 0.7 + Math.random() * 0.6,
         phase: Math.random() * 10,
+        roll: 0,
         len: 1,
         sx: 0,
         sy: 0,
@@ -435,8 +438,7 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
     // Sunbeams brighten and fade; at night they're faint moonbeams.
     beams.forEach((beam, i) => {
       beam.scale.y = -at(220, beam.position.z)
-      const m = beam.material as THREE.MeshBasicMaterial
-      m.opacity = (0.16 + 0.1 * Math.sin(at2 * 0.45 + i * 1.7)) * (1 - vw.night * 0.75)
+      beam.material.uniforms.opacity.value = (0.09 + 0.05 * Math.sin(at2 * 0.45 + i * 1.7)) * (1 - vw.night * 0.75)
     })
 
     // Jellyfish bob and pulse, trailing their tentacles.
@@ -651,7 +653,10 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
       // with its course; rays roll into their turns.
       const yaw = -Math.acos(Math.max(-1, Math.min(1, b.face)))
       const pitch = Math.max(-0.3, Math.min(0.3, Math.atan2(-b.vd, Math.abs(b.vx) + 1e-6)))
-      root.rotation.set(kind.bank ? Math.max(-0.5, Math.min(0.5, b.turn * 40)) : 0, yaw, pitch)
+      // The wander's turn is jittery from frame to frame, so the roll eases
+      // slowly after it.
+      if (kind.bank && !still) b.roll += (Math.max(-0.35, Math.min(0.35, b.turn * 25)) - b.roll) * Math.min(1, 0.02 * f)
+      root.rotation.set(b.roll, yaw, pitch)
       project(b, p)
       if (Math.abs(b.sy - vw.h / 2) < vw.h * 1.2) b.model.swim(still ? 0 : t + b.phase, b.panic > 0 ? 2.5 : b.cruise)
     }

@@ -177,7 +177,9 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     0.13 * Math.sin(x * 0.33 + t * 1.3) + 0.1 * Math.sin(z * 0.45 + t * 1.05) + 0.05 * Math.sin((x + z) * 0.9 + t * 2.1)
 
   // --- the island and everything on it ---------------------------------------------
-  scene.add(M.island())
+  const land = M.island()
+  scene.add(land)
+  const shore = land.getObjectByName('shore')!
   const foam = M.foam()
   scene.add(foam)
   scene.add(M.horizon())
@@ -731,6 +733,7 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
       pos.needsUpdate = true
     }
     foam.visible = camera.position.y > 0
+    shore.visible = camera.position.y > 0
     // The sky, and what's in it, can't be seen from deep under the water.
     const deep = camera.position.y < -3
     if (deep !== wasDeep) {

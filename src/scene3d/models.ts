@@ -62,7 +62,7 @@ export function island() {
     water.call(material, shader, renderer)
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <fog_fragment>',
-      '#include <fog_fragment>\n  if ( cameraPosition.y < 0.0 && vFogWorld.y < -0.02 ) discard;',
+      '#include <fog_fragment>\n  if ( cameraPosition.y < 0.0 && vFogWorld.y < 0.35 ) discard;',
     )
   }
   const mesh = plain(flat, material)
@@ -90,6 +90,10 @@ export function island() {
     tuft.position.set(x, groundAt(x, z), z)
     group.add(tuft)
   }
+  // The rocks at the water's edge are only seen from above it (world.ts).
+  const shore = new THREE.Group()
+  shore.name = 'shore'
+  group.add(shore)
   const rock = new THREE.DodecahedronGeometry(0.5, 0)
   for (const [x, z, s] of [
     [-9.3, 1.5, 1.2],
@@ -101,7 +105,7 @@ export function island() {
     r.scale.set(s, s * 0.7, s)
     r.rotation.set(x, z, s)
     r.position.set(x, Math.max(-0.1, groundAt(x, z)), z)
-    group.add(r)
+    shore.add(r)
   }
   return group
 }
