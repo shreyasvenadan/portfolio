@@ -39,15 +39,17 @@ const WOOD = '#b98150'
 const line = { stroke: INK, strokeWidth: 5, strokeLinejoin: 'round', strokeLinecap: 'round' } as const
 const thin = { ...line, strokeWidth: 3.5 }
 
+// Clicking a cloud makes it rain, and clicking it again while it rains brings
+// lightning (src/lib/weather.ts).
 function Cloud({ x, y, s, dur, delay, animate }: { x: number; y: number; s: number; dur: number; delay: number; animate: boolean }) {
   return (
     <g transform={`translate(${x} ${y}) scale(${s})`}>
-      <g>
+      <g data-cloud>
         {animate && (
           <animateTransform attributeName="transform" type="translate" values="-260 0; 1900 0" dur={`${dur}s`} begin={`-${delay}s`} repeatCount="indefinite" />
         )}
-        <path d="M0 50 Q-4 18 30 20 Q38 -6 72 2 Q92 -18 122 4 Q150 -4 160 22 Q196 22 192 50 Z" fill="#fff5e2" {...line} />
-        <path d="M14 50 Q60 40 110 46 Q150 42 180 50 Z" fill="#f4dfc1" />
+        <path className="cloud-puff" d="M0 50 Q-4 18 30 20 Q38 -6 72 2 Q92 -18 122 4 Q150 -4 160 22 Q196 22 192 50 Z" fill="#fff5e2" {...line} />
+        <path className="cloud-shade" d="M14 50 Q60 40 110 46 Q150 42 180 50 Z" fill="#f4dfc1" />
       </g>
     </g>
   )
@@ -102,10 +104,11 @@ function Waves({ y, color, dur, animate }: { y: number; color: string; dur: numb
   )
 }
 
+// Clicking a gull sends it after a coconut (src/lib/gull.ts).
 function Gull({ x, y, dur, delay, animate }: { x: number; y: number; dur: number; delay: number; animate: boolean }) {
   return (
     <g transform={`translate(${x} ${y})`}>
-      <g>
+      <g data-gull>
         {animate && (
           <animateTransform attributeName="transform" type="translate" values="-400 0; 1100 -60" dur={`${dur}s`} begin={`-${delay}s`} repeatCount="indefinite" />
         )}
@@ -262,11 +265,13 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
         <circle cx={1270} cy={540} r={160} fill={SUN} opacity={0.35} />
         <circle data-sky="sun" cx={1270} cy={540} r={105} fill={SUN} {...line} />
       </g>
+      <g className="rainbow-layer" />
       <g id="clouds">
         <Cloud x={0} y={110} s={1.1} dur={140} delay={30} animate={animate} />
         <Cloud x={0} y={210} s={0.75} dur={110} delay={80} animate={animate} />
         <Cloud x={0} y={60} s={0.6} dur={170} delay={130} animate={animate} />
       </g>
+      <g className="weather-layer" />
       <Plane y={150} dur={60} delay={36} animate={animate} />
       <g className="crash-layer" />
       <g id="gulls">
@@ -307,6 +312,7 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
       <Palm x={430} y={770} s={0.78} animate={animate} />
       <Palm id="palm-right" x={1175} y={772} s={0.72} flip={-1} animate={animate} />
       <g className="fallen-nuts" />
+      <g className="gull-layer" />
 
       {/* signpost: Melbourne, Bali, Jakarta */}
       <g transform="translate(548 738) scale(0.72)">
@@ -316,11 +322,13 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
         <SignBoard y={-122} label="jakarta" dir={1} w={124} />
       </g>
 
-      {/* football */}
+      {/* football: clicking kicks it into the sea (src/lib/football.ts) */}
       <g transform="translate(985 690) scale(0.8)">
-        <circle r={28} fill="#fffdf6" {...line} />
-        <path d="M0 -10 L10 -3 L6 9 L-6 9 L-10 -3 Z" fill={INK} />
-        <path d="M0 -10 L0 -27 M10 -3 L25 -9 M6 9 L15 22 M-6 9 L-15 22 M-10 -3 L-25 -9" {...thin} strokeWidth={3} />
+        <g data-ball>
+          <circle r={28} fill="#fffdf6" {...line} />
+          <path d="M0 -10 L10 -3 L6 9 L-6 9 L-10 -3 Z" fill={INK} />
+          <path d="M0 -10 L0 -27 M10 -3 L25 -9 M6 9 L15 22 M-6 9 L-15 22 M-10 -3 L-25 -9" {...thin} strokeWidth={3} />
+        </g>
       </g>
 
       {/* camera on a tripod, recording */}
@@ -334,6 +342,8 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
           {animate && <animate attributeName="opacity" values="1;1;0.15;0.15" keyTimes="0;0.5;0.55;1" dur="1.4s" repeatCount="indefinite" />}
         </circle>
       </g>
+
+      <g className="kick-layer" />
 
       {/* the sea in front of the island, closest to us; as see-through as the
           island's underwater base starts out (Underwater.tsx) */}
@@ -351,7 +361,8 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
         {STARS.map((s, i) => (
           <circle key={i} className="twinkle" style={{ animationDelay: `-${s.delay}s` }} cx={s.x} cy={s.y} r={s.r} fill="#fff8dc" />
         ))}
-        <path className="shooting-star" d="M0 0 L-140 50" stroke="#fff8dc" strokeWidth={3} strokeLinecap="round" />
+        <path data-star className="shooting-star" d="M0 0 L-140 50" stroke="#fff8dc" strokeWidth={3} strokeLinecap="round" />
+        <g className="wish-layer" />
         <path mask="url(#behind-palm)" d="M1150 610 L1390 610 M1200 634 L1340 634 M1240 656 L1300 656" stroke="#e8f1ff" strokeWidth={5} strokeLinecap="round" opacity={0.7} />
       </g>
       {/* outer group keeps the mask still while the moon rises */}
@@ -364,6 +375,8 @@ const Surface = forwardRef<SVGSVGElement, { animate: boolean }>(function Surface
           <circle cx={1285} cy={218} r={7} fill="#dcd6b4" />
         </g>
       </g>
+      {/* lightning flashes light up the whole scene */}
+      <g className="flash-layer" pointerEvents="none" />
     </svg>
   )
 })

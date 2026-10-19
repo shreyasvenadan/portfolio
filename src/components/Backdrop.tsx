@@ -4,8 +4,11 @@ import { prefersReducedMotion, sectionProgress } from '../lib/sections'
 import { breakBottle } from '../lib/bottle'
 import { dropCoconut } from '../lib/coconut'
 import { crashPlane } from '../lib/crash'
+import { kickBall } from '../lib/football'
+import { annoyGull } from '../lib/gull'
 import { hitShip } from '../lib/pirate'
 import { shipHorn } from '../lib/sound'
+import { clickCloud, makeWish } from '../lib/weather'
 import { zap } from '../lib/zap'
 import Surface from '../world/Surface'
 import Sealife, { divers, fishing } from '../world/Sealife'
@@ -96,6 +99,31 @@ export default function Backdrop() {
       const r = hull?.getBoundingClientRect()
       return r && x > r.left && x < r.right && y > r.top && y < r.bottom ? hull : undefined
     }
+    // ...and the clouds, and at night the shooting star while it's streaking past.
+    const overCloud = (x: number, y: number) => {
+      for (const puff of surface.current?.querySelectorAll('.cloud-puff') ?? []) {
+        const r = puff.getBoundingClientRect()
+        if (x > r.left && x < r.right && y > r.top && y < r.bottom) return puff.closest<SVGGElement>('[data-cloud]')!
+      }
+    }
+    const overStar = (x: number, y: number) => {
+      const star = surface.current?.querySelector<SVGPathElement>('[data-star]')
+      if (!star || !isNight() || Number(getComputedStyle(star).opacity) < 0.3) return
+      const r = star.getBoundingClientRect()
+      return x > r.left - 24 && x < r.right + 24 && y > r.top - 24 && y < r.bottom + 24 ? star : undefined
+    }
+    // ...and the gulls (small, so given a wide margin) and the football.
+    const overGull = (x: number, y: number) => {
+      for (const gull of surface.current?.querySelectorAll<SVGGElement>('[data-gull]:not([data-gone])') ?? []) {
+        const r = gull.getBoundingClientRect()
+        if (x > r.left - 14 && x < r.right + 14 && y > r.top - 14 && y < r.bottom + 14) return gull
+      }
+    }
+    const overBall = (x: number, y: number) => {
+      const ball = surface.current?.querySelector<SVGGElement>('[data-ball]:not([data-kicked])')
+      const r = ball?.getBoundingClientRect()
+      return r && Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) < r.width / 2 + 6 ? ball : undefined
+    }
     const click = (e: MouseEvent) => {
       if ((e.target as Element).closest('a, button, dialog')) return
       const [x, y] = [e.clientX, e.clientY]
@@ -112,7 +140,13 @@ export default function Backdrop() {
       const plane = overPlane(x, y)
       const pirate = overPirate(x, y)
       const bottle = overBottle(x, y)
+      const star = overStar(x, y)
+      const cloud = overCloud(x, y)
+      const gull = overGull(x, y)
+      const ball = overBall(x, y)
       if (plane) crashPlane(plane)
+      else if (gull) annoyGull(gull)
+      else if (ball) kickBall(ball, x)
       else if (pirate) hitShip(pirate, x, y)
       else if (bottle) breakBottle(bottle)
       else if (jelly) zap(x, y, jelly.getAttribute('data-jelly')!, jelly)
@@ -122,12 +156,15 @@ export default function Backdrop() {
         ship.classList.remove('honk')
         void ship.getBoundingClientRect()
         ship.classList.add('honk')
-      } else if (overSky(x, y)) toggleNight()
+      } else if (star) makeWish(star)
+      // A cloud drifting across the sun or moon takes the click.
+      else if (cloud) clickCloud(cloud)
+      else if (overSky(x, y)) toggleNight()
     }
     const hover = (e: PointerEvent) => {
       if ((e.target as Element).closest('a, button, dialog')) return
       const [x, y] = [e.clientX, e.clientY]
-      document.body.style.cursor = fishing.over(x, y) || divers.over(x, y) || overPlane(x, y) || overPirate(x, y) || overJelly(x, y) || overCoconut(x, y) || overShip(x, y) || overBottle(x, y) || overSky(x, y) ? 'var(--cursor-pointer)' : ''
+      document.body.style.cursor = fishing.over(x, y) || divers.over(x, y) || overPlane(x, y) || overPirate(x, y) || overJelly(x, y) || overCoconut(x, y) || overShip(x, y) || overBottle(x, y) || overSky(x, y) || overStar(x, y) || overCloud(x, y) || overGull(x, y) || overBall(x, y) ? 'var(--cursor-pointer)' : ''
     }
     window.addEventListener('click', click)
     window.addEventListener('pointermove', hover)

@@ -348,11 +348,25 @@ body {
   opacity: 0;
   animation: shooting-star 9s linear infinite 3s;
 }
+/* Slow enough to catch: clicking it makes a wish (src/lib/weather.ts). */
 @keyframes shooting-star {
   0% { translate: 1300px 60px; opacity: 0; }
   2% { opacity: 1; }
-  8% { translate: 900px 210px; opacity: 0; }
+  12% { opacity: 1; }
+  15% { translate: 900px 210px; opacity: 0; }
   100% { translate: 900px 210px; opacity: 0; }
+}
+
+/* A raining cloud turns grey (src/lib/weather.ts). */
+.cloud-puff,
+.cloud-shade {
+  transition: fill 1.2s ease;
+}
+.storm .cloud-puff {
+  fill: #9ea4b0;
+}
+.storm .cloud-shade {
+  fill: #7f8592;
 }
 
 @media (prefers-reduced-motion: reduce) {

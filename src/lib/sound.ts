@@ -213,3 +213,118 @@ export function glassBreak() {
     ring.stop(at + 0.4)
   }
 }
+
+// Steady rain: soft looping hiss that swells in. Returns a function that fades it out.
+export function rainfall() {
+  const a = audio()
+  const t = a.currentTime
+  const out = a.createGain()
+  out.gain.setValueAtTime(0, t)
+  out.gain.linearRampToValueAtTime(0.14, t + 1.2)
+  out.connect(a.destination)
+  const noise = a.createBufferSource()
+  noise.buffer = a.createBuffer(1, a.sampleRate * 2, a.sampleRate)
+  const data = noise.buffer.getChannelData(0)
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
+  noise.loop = true
+  const bandpass = a.createBiquadFilter()
+  bandpass.type = 'bandpass'
+  bandpass.frequency.value = 2400
+  bandpass.Q.value = 0.6
+  noise.connect(bandpass).connect(out)
+  noise.start(t)
+  return () => {
+    const now = a.currentTime
+    out.gain.cancelScheduledValues(now)
+    out.gain.setValueAtTime(out.gain.value, now)
+    out.gain.linearRampToValueAtTime(0, now + 1.5)
+    noise.stop(now + 1.6)
+  }
+}
+
+// Thunder: a sharp crack, then a long low rumble that rolls and dies away.
+export function thunder() {
+  const a = audio()
+  const t = a.currentTime
+  const crack = a.createBufferSource()
+  crack.buffer = a.createBuffer(1, a.sampleRate * 0.3, a.sampleRate)
+  const crackData = crack.buffer.getChannelData(0)
+  for (let i = 0; i < crackData.length; i++) crackData[i] = (Math.random() * 2 - 1) * (1 - i / crackData.length) ** 2
+  const highpass = a.createBiquadFilter()
+  highpass.type = 'highpass'
+  highpass.frequency.value = 1200
+  const crackGain = a.createGain()
+  crackGain.gain.value = 0.45
+  crack.connect(highpass).connect(crackGain).connect(a.destination)
+  crack.start(t)
+  const rumble = a.createBufferSource()
+  rumble.buffer = a.createBuffer(1, a.sampleRate * 3, a.sampleRate)
+  const data = rumble.buffer.getChannelData(0)
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
+  const lowpass = a.createBiquadFilter()
+  lowpass.type = 'lowpass'
+  lowpass.frequency.setValueAtTime(400, t)
+  lowpass.frequency.exponentialRampToValueAtTime(90, t + 3)
+  const out = a.createGain()
+  out.gain.setValueAtTime(0, t)
+  out.gain.linearRampToValueAtTime(0.9, t + 0.15)
+  // A couple of swells as the rumble rolls.
+  out.gain.linearRampToValueAtTime(0.45, t + 0.8)
+  out.gain.linearRampToValueAtTime(0.7, t + 1.3)
+  out.gain.exponentialRampToValueAtTime(0.001, t + 3)
+  rumble.connect(lowpass).connect(out).connect(a.destination)
+  rumble.start(t)
+}
+
+// A wish: a rising run of soft bell tones.
+export function chime() {
+  const a = audio()
+  const t = a.currentTime
+  ;[1046.5, 1318.5, 1568, 2093].forEach((freq, i) => {
+    const at = t + i * 0.09
+    const bell = a.createOscillator()
+    bell.type = 'sine'
+    bell.frequency.value = freq
+    const env = a.createGain()
+    env.gain.setValueAtTime(0, at)
+    env.gain.linearRampToValueAtTime(0.12, at + 0.01)
+    env.gain.exponentialRampToValueAtTime(0.001, at + 1.2)
+    bell.connect(env).connect(a.destination)
+    bell.start(at)
+    bell.stop(at + 1.3)
+  })
+}
+
+// A seagull: two or three harsh, falling "kee-ow" cries.
+export function squawk() {
+  const a = audio()
+  const t = a.currentTime
+  const cries = 2 + Math.round(Math.random())
+  for (let i = 0; i < cries; i++) {
+    const at = t + i * 0.24
+    const env = a.createGain()
+    env.gain.setValueAtTime(0, at)
+    env.gain.linearRampToValueAtTime(0.16, at + 0.02)
+    env.gain.exponentialRampToValueAtTime(0.001, at + 0.2)
+    const nasal = a.createBiquadFilter()
+    nasal.type = 'bandpass'
+    nasal.frequency.value = 1700
+    nasal.Q.value = 2.5
+    nasal.connect(env).connect(a.destination)
+    const osc = a.createOscillator()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(1500 + Math.random() * 200, at)
+    osc.frequency.exponentialRampToValueAtTime(700, at + 0.18)
+    // A fast wobble makes it rasp.
+    const wobble = a.createOscillator()
+    wobble.frequency.value = 38
+    const depth = a.createGain()
+    depth.gain.value = 60
+    wobble.connect(depth).connect(osc.frequency)
+    osc.connect(nasal)
+    osc.start(at)
+    osc.stop(at + 0.22)
+    wobble.start(at)
+    wobble.stop(at + 0.22)
+  }
+}
