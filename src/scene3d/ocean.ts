@@ -224,15 +224,12 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
     const jelly = R.jellyfish(spec.color, spec.glows)
     let light: THREE.PointLight | undefined
     if (spec.glows) {
-      // A bright glow close in, and a fainter one spreading wide.
-      for (const [size, opacity] of [
-        [2.4, 0.6],
-        [5, 0.25],
-      ]) {
-        const h = R.halo(spec.color, size, opacity)
-        h.position.y = 0.2
-        jelly.root.add(h)
-      }
+      // A faint haze over the whole of it, bell to tentacle tips (its bell
+      // and tentacles glow in their own shapes, reef.ts).
+      const haze = R.halo(spec.color, 1, 0.3)
+      haze.scale.set(2.2, 3.4, 1)
+      haze.position.y = -0.25
+      jelly.root.add(haze)
       light = lamp(spec.color, 18)
       light.position.y = 0.2
       jelly.root.add(light)

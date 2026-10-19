@@ -306,6 +306,15 @@ export function jellyfish(color: string, glows: boolean): Jelly {
   const material = glows ? glowing : paint
   const bell = quiet(inked(bellGeo, material, 2.2))
   inner.add(bell)
+  // Glowing ones shine in their own shape: a soft shell of light round the
+  // bell, and a fainter one along each tentacle.
+  const aura = glows ? auraMaterial(color, 0.42) : undefined
+  const armAura = glows ? auraMaterial(color, 0.16) : undefined
+  if (aura) {
+    const shell = new THREE.Mesh(cached('jelly:aura', () => new THREE.SphereGeometry(78, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.15, 1)), aura)
+    shell.position.y = -6
+    inner.add(shell)
+  }
   const arms: THREE.Group[] = []
   const armGeo = cached('jelly:arm', () => new THREE.CapsuleGeometry(2.6, 26, 2, 5).translate(0, -13, 0))
   const armMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85 })
@@ -321,6 +330,7 @@ export function jellyfish(color: string, glows: boolean): Jelly {
       const seg = new THREE.Group()
       if (k) seg.position.y = -26
       seg.add(new THREE.Mesh(armGeo, armMat))
+      if (armAura) seg.add(new THREE.Mesh(cached('jelly:arm:aura', () => new THREE.CapsuleGeometry(8, 30, 3, 8).translate(0, -13, 0)), armAura))
       parent.add(seg)
       parent = seg
     }
@@ -343,6 +353,35 @@ export function jellyfish(color: string, glows: boolean): Jelly {
       armMat.color.set(on ? '#ffffff' : base)
     },
   }
+}
+
+// Light glowing off a shape: brightest where the shape is thickest in view,
+// fading to nothing at its edges, so it hugs the outline it's drawn on.
+function auraMaterial(color: string, strength: number) {
+  return new THREE.ShaderMaterial({
+    uniforms: { color: { value: new THREE.Color(color) }, strength: { value: strength } },
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    vertexShader: /* glsl */ `
+      varying vec3 vNormal;
+      varying vec3 vView;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vNormal = normalMatrix * normal;
+        vView = -mv.xyz;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform vec3 color;
+      uniform float strength;
+      varying vec3 vNormal;
+      varying vec3 vView;
+      void main() {
+        float facing = abs(dot(normalize(vNormal), normalize(vView)));
+        gl_FragColor = vec4(color * pow(facing, 2.2) * strength, 1.0);
+      }`,
+  })
 }
 
 // --- the deep: shipwreck, sea floor, bottle, chest --------------------------------
