@@ -36,9 +36,11 @@ export type Island = {
   dispose(): void
 }
 
-type Options = { still: boolean; flash: (strength: number) => void }
+// `onHead` hears where his face is on the page (in page pixels) and how far
+// above it the top of his hair is, so his speech balloon can follow him.
+type Options = { still: boolean; flash: (strength: number) => void; onHead: (x: number, y: number, top: number) => void }
 
-export function createIsland(canvas: HTMLCanvasElement, { still, flash }: Options): Island {
+export function createIsland(canvas: HTMLCanvasElement, { still, flash, onHead }: Options): Island {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.shadowMap.enabled = true
@@ -638,6 +640,7 @@ export function createIsland(canvas: HTMLCanvasElement, { still, flash }: Option
   const sea1 = new THREE.Color()
   const mix = (a: string, b: string, k: number) => sea0.set(a).lerp(sea1.set(b), k).clone()
   const face = new THREE.Vector3()
+  const hair = new THREE.Vector3()
   let start: number | undefined
   let last = 0
   let frame = 0
@@ -778,6 +781,8 @@ export function createIsland(canvas: HTMLCanvasElement, { still, flash }: Option
 
     // Shreyas: eyes and head follow the cursor.
     const head = toScreen(shreyas.faceAt(face))
+    const top = toScreen(shreyas.topAt(hair))
+    onHead(head.x + window.scrollX, head.y + window.scrollY, head.y - top.y)
     const dx = pointer.x - head.x
     const dy = pointer.y - head.y
     const len = Math.hypot(dx, dy) || 1

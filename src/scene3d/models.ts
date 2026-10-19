@@ -235,9 +235,14 @@ function label(text: string, width: number, height: number) {
 // The signpost: Melbourne one way, Bali and Jakarta the other.
 export function signpost() {
   const group = new THREE.Group()
-  const post = inked(new THREE.BoxGeometry(0.2, 3, 0.2), toon(WOOD), 2.5)
-  post.position.y = 1.5
+  // The post finishes just above the top board in a little pointed cap.
+  const post = inked(new THREE.BoxGeometry(0.2, 2.95, 0.2), toon(WOOD), 2.5)
+  post.position.y = 1.475
   group.add(post)
+  const cap = inked(new THREE.ConeGeometry(0.17, 0.2, 4), toon(TRUNK_SHADE), 2)
+  cap.rotation.y = Math.PI / 4
+  cap.position.y = 3.05
+  group.add(cap)
   const boards: [string, number, 1 | -1, number][] = [
     ['melbourne', 2.7, -1, 1.6],
     ['bali', 2.25, 1, 1.05],
@@ -296,20 +301,25 @@ export function football(radius: number) {
 // A video camera on a tripod, its red light blinking: it's recording.
 export function tripodCamera() {
   const group = new THREE.Group()
-  const leg = new THREE.CylinderGeometry(0.035, 0.045, 2, 5)
+  // Three legs from a head under the camera, splayed out to the sand.
+  const top = new THREE.Vector3(0, 1.85, 0)
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * Math.PI * 2 + 0.4
-    const l = inked(leg, toon('#2c2c33'), 2)
-    l.position.set(Math.cos(a) * 0.35, 0.95, Math.sin(a) * 0.35)
-    l.rotation.set(Math.sin(a) * 0.35, 0, -Math.cos(a) * 0.35)
+    const foot = new THREE.Vector3(Math.cos(a) * 0.6, 0, Math.sin(a) * 0.6)
+    const l = inked(new THREE.CylinderGeometry(0.035, 0.045, top.distanceTo(foot), 6), toon('#2c2c33'), 2)
+    l.position.copy(top).add(foot).multiplyScalar(0.5)
+    l.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), top.clone().sub(foot).normalize())
     group.add(l)
   }
+  const head = inked(new THREE.CylinderGeometry(0.13, 0.1, 0.16, 8), toon('#2c2c33'), 2)
+  head.position.y = 1.88
+  group.add(head)
   const body = inked(new THREE.BoxGeometry(0.75, 0.48, 0.42), toon('#2c2c33'), 2.5)
-  body.position.y = 2.15
+  body.position.y = 2.2
   group.add(body)
-  const top = inked(new THREE.BoxGeometry(0.28, 0.14, 0.2), toon('#2c2c33'), 2)
-  top.position.set(-0.12, 0.3, 0)
-  body.add(top)
+  const handle = inked(new THREE.BoxGeometry(0.28, 0.14, 0.2), toon('#2c2c33'), 2)
+  handle.position.set(-0.12, 0.3, 0)
+  body.add(handle)
   const lens = inked(new THREE.CylinderGeometry(0.17, 0.2, 0.3, 10), toon('#4b5563'), 2)
   lens.rotation.z = Math.PI / 2
   lens.position.x = 0.5

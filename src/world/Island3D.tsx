@@ -37,6 +37,17 @@ const Island3D = forwardRef<Pick<Island, 'click' | 'over' | 'setActive'>, { stil
         still,
         // Lightning lights up the whole scene for a moment.
         flash: (strength) => flash.current?.animate([{ opacity: strength }, { opacity: 0 }], { duration: 170, easing: 'ease-out' }),
+        // Where his head is, for the speech balloon in the hero (Hero.tsx).
+        onHead: (x, y, top) => {
+          const root = document.documentElement.style
+          const set = (name: string, v: number) => {
+            const px = `${Math.round(v)}px`
+            if (root.getPropertyValue(name) !== px) root.setProperty(name, px)
+          }
+          set('--head-x', x)
+          set('--head-y', y)
+          set('--head-top', top)
+        },
       })
     })
     return () => {

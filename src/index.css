@@ -626,3 +626,77 @@ dialog.note::backdrop {
     animation: none;
   }
 }
+
+/* --- The hero's speech balloon (Hero.tsx) ------------------------------
+   Shreyas says the tagline. The 3D scene publishes where his head is on the
+   page (--head-x, --head-y: his face; --head-top: how far above that his hair
+   goes), and the balloon sits beside his face on wide screens, tail pointing
+   at his mouth, or above his head on phones. Fixed colours, so it stays a
+   white balloon at night. */
+.speech {
+  position: absolute;
+  z-index: 1;
+  left: calc(var(--head-x, 50vw) + var(--head-top, 60px) * 0.9 + 26px);
+  top: calc(var(--head-y, 40svh) - var(--head-top, 60px) * 1.7);
+  width: min(22rem, calc(100vw - var(--head-x, 50vw) - var(--head-top, 60px) - 48px));
+  padding: 0.85rem 1.15rem;
+  border: 3px solid #120d0a;
+  border-radius: 1.4rem;
+  background: #fffdf6;
+  box-shadow: 4px 5px 0 rgb(18 13 10 / 0.18);
+  color: #141911;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  line-height: 1.35;
+  text-align: left;
+  text-shadow: none;
+  transform-origin: 0 70%;
+  animation: speech-in 0.45s cubic-bezier(0.3, 1.5, 0.5, 1) 1.2s both;
+}
+/* The tail: a filled curve whose outline shows only on its two long sides,
+   tucked under the balloon's edge so it joins without a seam. */
+.speech-tail {
+  position: absolute;
+  left: -37px;
+  top: 48%;
+  width: 40px;
+  height: 40px;
+  fill: #fffdf6;
+  stroke: #120d0a;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  overflow: visible;
+}
+@keyframes speech-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* On phones there's no room beside him, so the balloon goes over his head. */
+@media (max-width: 767px) {
+  .speech {
+    left: 50%;
+    top: calc(var(--head-y, 40svh) - var(--head-top, 60px) - 38px);
+    width: min(21rem, calc(100vw - 2.5rem));
+    translate: -50% -100%;
+    font-size: 1.05rem;
+    text-align: center;
+    transform-origin: 50% 100%;
+  }
+  .speech-tail {
+    left: calc(50% - 14px);
+    top: 100%;
+    margin-top: -8px;
+    transform: rotate(-45deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .speech {
+    animation: none;
+  }
+}

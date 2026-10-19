@@ -319,4 +319,9 @@ export class Character {
   faceAt(target: THREE.Vector3) {
     return this.head.localToWorld(target.set(0, 0.5, 0.4))
   }
+
+  // The top of his hair.
+  topAt(target: THREE.Vector3) {
+    return this.head.localToWorld(target.set(0, 1.25, 0))
+  }
 }
