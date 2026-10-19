@@ -879,20 +879,22 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
       camera,
     )
 
-    // Creatures in front of the text fade where they cross the card behind
-    // the block being read (src/lib/focus.ts), so it stays readable.
+    // Creatures in front of the text fade away over the block being read
+    // (src/lib/focus.ts marks it with an invisible card), softly at its
+    // edges, so nothing swims across what's being read.
     const card = document.querySelector('.reading-card.shown')?.getBoundingClientRect()
-    const key = card ? [card.left, card.top, card.width, card.height].map(Math.round).join() : ''
+    const key = card ? [card.left, card.top, card.width, card.height, size.w, size.h].map(Math.round).join() : ''
     if (key !== maskKey) {
       maskKey = key
       const style = front.style
       if (!card) style.removeProperty('mask-image')
       else {
-        style.setProperty('mask-image', 'linear-gradient(rgb(0 0 0 / 0.2) 0 0), linear-gradient(#000 0 0), linear-gradient(#000 0 0)')
-        style.setProperty('mask-composite', 'add, exclude, add')
+        const [x, y, w, h] = [card.left, card.top, card.width, card.height].map(Math.round)
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size.w}" height="${size.h}"><filter id="f" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="16"/></filter><rect width="100%" height="100%" fill="#fff"/><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="20" fill="#000" filter="url(#f)"/></svg>`
+        style.setProperty('mask-image', `url("data:image/svg+xml,${encodeURIComponent(svg)}")`)
+        style.setProperty('mask-mode', 'luminance')
+        style.setProperty('mask-size', '100% 100%')
         style.setProperty('mask-repeat', 'no-repeat')
-        style.setProperty('mask-size', `100% 100%, ${Math.round(card.width)}px ${Math.round(card.height)}px, 100% 100%`)
-        style.setProperty('mask-position', `0 0, ${Math.round(card.left)}px ${Math.round(card.top)}px, 0 0`)
       }
     }
 

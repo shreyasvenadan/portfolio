@@ -111,18 +111,13 @@ body {
 [data-focus] {
   transition: opacity 0.35s ease-out;
 }
-/* The card behind the block being read. It's tinted with the halo colour, so
-   it's pale at the surface and deep navy below, always contrasting the text. */
+/* An invisible card that follows the block being read. Nothing shows; it
+   marks where sea creatures in front of the text fade out (src/scene3d/world.ts). */
 .reading-card {
   position: absolute;
   top: 0;
   left: 0;
   z-index: -1;
-  border: 2px solid color-mix(in srgb, var(--color-ink) 22%, transparent);
-  border-radius: 20px;
-  background: rgb(var(--halo) / 0.82);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
-  backdrop-filter: blur(6px);
   opacity: 0;
   pointer-events: none;
   transition:
