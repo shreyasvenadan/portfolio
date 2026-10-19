@@ -112,7 +112,7 @@ body {
   transition: opacity 0.35s ease-out;
 }
 /* An invisible card that follows the block being read. Nothing shows; it
-   marks where sea creatures in front of the text fade out (src/scene3d/world.ts). */
+   marks the text the sea creatures make way for (src/scene3d/ocean.ts). */
 .reading-card {
   position: absolute;
   top: 0;

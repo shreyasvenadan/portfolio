@@ -285,6 +285,7 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     h: 0,
     s: 1,
     night: 0,
+    reading: null,
     y: (py, z) => CAMERA.y - (py - frame.centre) * frame.k - ((CAMERA.y - TARGET.y) * (CAMERA.z - z)) / (CAMERA.z - TARGET.z),
     unit: (z) => (frame.k * (CAMERA.z - z)) / (CAMERA.z - TARGET.z),
   }
@@ -694,7 +695,6 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   let start: number | undefined
   let last = 0
   let raf = 0
-  let maskKey = ''
   let wasDeep = false
 
   const tick = (now: number) => {
@@ -872,31 +872,14 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     view.h = size.h
     view.s = frame.s
     view.night = night
+    // Where the block being read is, which the sea creatures make way for (ocean.ts).
+    view.reading = document.querySelector('.reading-card.shown')?.getBoundingClientRect() ?? null
     ocean.update(t, dt, view)
     setWater(
       WATER_DEPTHS.map((d) => view.y(depthPx(d), 0)),
       night,
       camera,
     )
-
-    // Creatures in front of the text fade away over the block being read
-    // (src/lib/focus.ts marks it with an invisible card), softly at its
-    // edges, so nothing swims across what's being read.
-    const card = document.querySelector('.reading-card.shown')?.getBoundingClientRect()
-    const key = card ? [card.left, card.top, card.width, card.height, size.w, size.h].map(Math.round).join() : ''
-    if (key !== maskKey) {
-      maskKey = key
-      const style = front.style
-      if (!card) style.removeProperty('mask-image')
-      else {
-        const [x, y, w, h] = [card.left, card.top, card.width, card.height].map(Math.round)
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size.w}" height="${size.h}"><filter id="f" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="16"/></filter><rect width="100%" height="100%" fill="#fff"/><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="20" fill="#000" filter="url(#f)"/></svg>`
-        style.setProperty('mask-image', `url("data:image/svg+xml,${encodeURIComponent(svg)}")`)
-        style.setProperty('mask-mode', 'luminance')
-        style.setProperty('mask-size', '100% 100%')
-        style.setProperty('mask-repeat', 'no-repeat')
-      }
-    }
 
     fx.step()
     camera.layers.set(0)

@@ -36,6 +36,8 @@ export type View = {
   // World units per screen pixel at `z`.
   unit(z: number): number
   night: number
+  // The block of text being read, on screen (src/lib/focus.ts), if any.
+  reading: { left: number; top: number; right: number; bottom: number } | null
 }
 
 export type Ocean = {
@@ -180,6 +182,8 @@ type Body = {
   // Where its depth zone is, for noticing when the page's layout moves it.
   top: number
   bottom: number
+  // Slipped behind the text, having strayed over what's being read.
+  tucked: boolean
 }
 
 const coin = () => Math.random() < 0.5
@@ -297,6 +301,7 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
         half: 0,
         top: 0,
         bottom: 0,
+        tucked: false,
       }
     }
     if (kind.school) {
@@ -316,6 +321,56 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
   window.addEventListener('pointermove', track)
   document.documentElement.addEventListener('pointerleave', untrack)
   let caught: Body | null = null
+
+  // A few small fish come to watch whatever's being read: each keeps a spot
+  // just off the block's edge (in screen px from its top left, `side` -1 left,
+  // 1 right, 0 above or below), hovering and now and then leaning in for a
+  // closer look. They scatter when reading moves on.
+  const watchers = new Map<Body, { ox: number; oy: number; side: number }>()
+  const reading = { key: '', since: 0, picked: false }
+
+  function scatter(b: Body, from: { x: number; y: number }) {
+    const u = view!.unit(b.lane)
+    b.heading = Math.atan2(b.sy - from.y, b.sx - from.x) + (Math.random() - 0.5) * 0.8
+    b.vx = Math.cos(b.heading) * 2 * u
+    b.vd = Math.sin(b.heading) * 2 * u
+    b.panic = 50 + Math.random() * 30
+  }
+
+  function gather(R: NonNullable<View['reading']>) {
+    const vw = view!
+    const key = `${Math.round(R.top + window.scrollY)}:${Math.round(R.bottom - R.top)}`
+    if (key !== reading.key) {
+      const centre = { x: (R.left + R.right) / 2, y: (R.top + R.bottom) / 2 }
+      for (const b of watchers.keys()) scatter(b, centre)
+      watchers.clear()
+      Object.assign(reading, { key, since: t, picked: false })
+    }
+    if (reading.picked || still || t - reading.since < 1.2) return
+    reading.picked = true
+    // Small loners that live at this depth, nearest first.
+    const page = (R.top + R.bottom) / 2 + window.scrollY
+    const near = bodies
+      .filter((b) => b.kind.size <= 70 && !b.kind.school && b !== caught && b.panic <= 0)
+      .filter((b) => page > depthPx(b.kind.zone[0]) - vw.h * 0.3 && page < depthPx(b.kind.zone[1]) + vw.h * 0.3)
+      .sort((a, b) => Math.hypot(a.sx - R.left, a.sy - R.top) - Math.hypot(b.sx - R.left, b.sy - R.top))
+      .slice(0, 2 + Math.round(Math.random()))
+    const width = R.right - R.left
+    const height = R.bottom - R.top
+    let side = Math.random() < 0.5 ? -1 : 1
+    near.forEach((b, i) => {
+      const gap = b.half + 26
+      let spot = { ox: side < 0 ? -gap : width + gap, oy: height * (0.2 + Math.random() * 0.6), side }
+      // No room beside it (a narrow screen), or the third: above or below.
+      const x = R.left + spot.ox
+      if (i === 2 || x < 8 || x > vw.w - 8) {
+        const above = i % 2 === 0
+        spot = { ox: width * (0.15 + Math.random() * 0.7), oy: above ? -(b.half * 0.5 + 24) : height + b.half * 0.5 + 24, side: 0 }
+      }
+      watchers.set(b, spot)
+      side = -side
+    })
+  }
 
   // --- this frame's view ------------------------------------------------------------------
   let view: View | undefined
@@ -533,6 +588,12 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
     const vw = view!
     const scale = Math.max(0.5, Math.min(1, vw.w / 1400))
     const p = new THREE.Vector3()
+    const R = vw.reading
+    if (R) gather(R)
+    else if (watchers.size) {
+      watchers.clear()
+      reading.key = ''
+    }
     for (const b of bodies) {
       const u = vw.unit(b.lane)
       const ceiling = -at(100, b.lane)
@@ -568,8 +629,22 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
       let ax = 0
       let ad = 0
       const L = b.leader
+      const watch = watchers.get(b)
+      let gaze = 0
       if (!still) {
-        if (L && L !== caught && b.panic <= 0 && L.panic <= 0) {
+        if (watch && R && b.panic <= 0) {
+          // Watching: holding its spot by the text, bobbing, and every so
+          // often leaning in for a closer look.
+          const lean = Math.max(0, Math.sin(t * 0.8 + b.phase)) ** 6 * 22
+          const tx = R.left + watch.ox - watch.side * lean
+          const ty = R.top + watch.oy + Math.sin(t * 1.4 + b.phase) * 5 + (watch.side ? 0 : watch.oy < 0 ? lean : -lean)
+          const goal = fromScreen(tx, ty, b.z)
+          ax += (goal.x - b.x) * 0.004 - b.vx * 0.1
+          ad += (-goal.y - b.d) * 0.004 - b.vd * 0.1
+          max *= 2.5
+          // Once there, it faces the text.
+          if (Math.hypot(tx - b.sx, ty - b.sy) < b.half * 3) gaze = Math.sign((R.left + R.right) / 2 - b.sx) || 1
+        } else if (L && L !== caught && b.panic <= 0 && L.panic <= 0) {
           // Keep station behind the leader, matching its speed.
           const tx = L.x - Math.sign(L.face) * b.ox * L.len
           const td = L.d + b.oy * L.len
@@ -592,8 +667,22 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
           ax += (Math.cos(b.heading) * speed - b.vx) * 0.03
           ad += (Math.sin(b.heading) * speed * (b.panic > 0 ? 1 : 0.45) - b.vd) * 0.03
         }
-        if (b.d < top - 40 * u) ad += 0.02 * u
-        if (b.d > bottom + 40 * u) ad -= 0.02 * u
+        if (!watch && b.d < top - 40 * u) ad += 0.02 * u
+        if (!watch && b.d > bottom + 40 * u) ad -= 0.02 * u
+
+        // In front of the text, the block being read is like a rock: seeing
+        // it ahead, it swims over or under, whichever is nearer.
+        if (R && b.front && !watch) {
+          const pad = b.half * 0.5 + 30
+          const inside = (x: number, y: number) => x > R.left - pad && x < R.right + pad && y > R.top - pad && y < R.bottom + pad
+          if (inside(b.sx, b.sy) || inside(b.sx + (b.vx / u) * 50, b.sy + (b.vd / u) * 50)) {
+            const dir = b.sy - (R.top - pad) < R.bottom + pad - b.sy ? -1 : 1
+            const strength = kind.calm ? 0.5 : 1
+            ad += dir * 0.05 * u * strength
+            const course = Math.atan2(dir * 0.8, Math.cos(b.heading) >= 0 ? 1 : -1)
+            b.heading += Math.atan2(Math.sin(course - b.heading), Math.cos(course - b.heading)) * 0.06 * f * strength
+          }
+        }
 
         if (pointer) {
           const dx = b.sx - pointer.x
@@ -608,6 +697,7 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
               ad += (dy / dist) * push
               if (b.panic <= 0) b.heading = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.6
               b.panic = 50 + Math.random() * 40
+              watchers.delete(b)
             }
           } else {
             // The calm ones ease out of the cursor's way, so they don't park
@@ -642,7 +732,7 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
           if (Math.sin(b.heading) < 0) b.heading = -b.heading
         }
         // Turn round to face the way it's swimming.
-        const want = b.vx > 0.12 * u ? 1 : b.vx < -0.12 * u ? -1 : Math.sign(b.face) || 1
+        const want = gaze || (b.vx > 0.12 * u ? 1 : b.vx < -0.12 * u ? -1 : Math.sign(b.face) || 1)
         b.face += (want - b.face) * Math.min(1, 0.08 * f)
         b.z = b.lane + Math.sin(t * 0.3 + b.phase) * 0.4
       }
@@ -658,6 +748,12 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
       if (kind.bank && !still) b.roll += (Math.max(-0.35, Math.min(0.35, b.turn * 25)) - b.roll) * Math.min(1, 0.02 * f)
       root.rotation.set(b.roll, yaw, pitch)
       project(b, p)
+      // One that ends up over the text anyway slips behind it until it's past.
+      const tuck = !!R && b.front && b.sx > R.left && b.sx < R.right && b.sy > R.top && b.sy < R.bottom
+      if (tuck !== b.tucked) {
+        b.tucked = tuck
+        root.traverse((o) => o.layers.set(tuck ? 0 : FRONT))
+      }
       if (Math.abs(b.sy - vw.h / 2) < vw.h * 1.2) b.model.swim(still ? 0 : t + b.phase, b.panic > 0 ? 2.5 : b.cruise)
     }
   }
