@@ -211,16 +211,34 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
     return beam
   })
 
+  // Down in the dark, the things that glow light up what's round them.
+  const lamp = (color: string, intensity: number) => {
+    const light = new THREE.PointLight(color, intensity, 10, 1.6)
+    light.layers.enableAll()
+    light.userData.intensity = intensity
+    return light
+  }
+
   // --- jellyfish ------------------------------------------------------------------------
   const jellies = JELLIES.map((spec) => {
     const jelly = R.jellyfish(spec.color, spec.glows)
+    let light: THREE.PointLight | undefined
     if (spec.glows) {
-      const h = R.halo(spec.color, 1.4, 0.55)
-      h.position.y = 0.2
-      jelly.root.add(h)
+      // A bright glow close in, and a fainter one spreading wide.
+      for (const [size, opacity] of [
+        [2.4, 0.6],
+        [5, 0.25],
+      ]) {
+        const h = R.halo(spec.color, size, opacity)
+        h.position.y = 0.2
+        jelly.root.add(h)
+      }
+      light = lamp(spec.color, 18)
+      light.position.y = 0.2
+      jelly.root.add(light)
     }
     group.add(jelly.root)
-    return { ...spec, jelly, width: 1 }
+    return { ...spec, jelly, light, width: 1 }
   })
 
   // --- the shipwreck, the floor, the bottle and the chest ----------------------------
@@ -231,14 +249,22 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
   const sinking = { state: still ? 'landed' : 'adrift', start: 0, honk: -10, width: 1 }
 
   const bottle = R.bottle()
-  const bottleHalo = R.halo('#bfe9ff', 2.2, 0.45)
-  bottle.add(bottleHalo)
+  bottle.add(R.halo('#bfe9ff', 2.4, 0.5), R.halo('#bfe9ff', 5, 0.22))
   group.add(bottle)
+  // The bottle's light stays put while the bottle's away being read.
+  const bottleLight = lamp('#bfe9ff', 14)
+  group.add(bottleLight)
   const chest = R.chest()
-  const chestHalo = R.halo('#ffd166', 2.4, 0.5)
-  chestHalo.position.y = 0.4
-  chest.add(chestHalo)
-  group.add(chest)
+  for (const [size, opacity] of [
+    [2.6, 0.55],
+    [5.5, 0.25],
+  ]) {
+    const h = R.halo('#ffd166', size, opacity)
+    h.position.y = 0.4
+    chest.add(h)
+  }
+  const chestLight = lamp('#ffc861', 22)
+  group.add(chest, chestLight)
 
   // --- bubbles and marine snow ----------------------------------------------------------
   const ring = R.speckTexture(true)
@@ -365,10 +391,12 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
     floor.position.y = floorY
     const bw = cssWidth(12, 150) * vw.unit(1.5)
     bottle.position.set(across(0.24, 1.5), floorY + bw * 0.14, 1.5)
+    bottleLight.position.copy(bottle.position).y += bw * 0.6
     bottle.scale.setScalar(bw)
     bottle.rotation.set(0, 0.35, 0.06)
     const cw = cssWidth(12, 150) * vw.unit(-0.5)
     chest.position.set(across(0.78, -0.5), floorY - 0.05, -0.5)
+    chestLight.position.copy(chest.position).add(new THREE.Vector3(0, cw * 0.7, cw * 0.4))
     chest.scale.setScalar(cw)
     chest.rotation.y = -0.35
     // The wreck keeps where it got to, by the page.
@@ -453,6 +481,8 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
       j.jelly.root.position.set(across(j.left, j.z), vw.y(depthPx(j.depth) + bob * vw.s, j.z) - j.width * 0.5, j.z)
       const pulse = Math.sin(at2 * 2.2 + j.delay)
       j.jelly.bell.scale.set(1 - pulse * 0.04, 1 + pulse * 0.07, 1 - pulse * 0.04)
+      // Its light swells and dims as it pulses.
+      if (j.light) j.light.intensity = j.light.userData.intensity * (0.85 + 0.15 * pulse)
       j.jelly.arms.forEach((chain, i) => {
         let seg: THREE.Object3D | undefined = chain
         let k = 0
