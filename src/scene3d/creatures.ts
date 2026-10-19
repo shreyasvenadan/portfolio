@@ -616,7 +616,8 @@ export function manta(): Model {
       const f = Math.sin(t * (1.4 + beat * 0.8)) * 0.35
       wings[0].rotation.x = -f
       wings[1].rotation.x = f
-      inner.position.y = -f * 12
+      // A gentle rise and fall with each beat (inner is in body lengths).
+      inner.position.y = -f * 0.03
     },
   }
 }
