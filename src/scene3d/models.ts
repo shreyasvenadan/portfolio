@@ -39,7 +39,7 @@ export function island() {
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i) + (rand() - 0.5) * 0.4
     const z = pos.getZ(i) + (rand() - 0.5) * 0.4
-    pos.setXYZ(i, x, Math.max(-1.2, groundAt(x, z) + (rand() - 0.5) * 0.08), z)
+    pos.setXYZ(i, x, Math.max(-0.45, groundAt(x, z) + (rand() - 0.5) * 0.08), z)
   }
   const flat = g.toNonIndexed()
   flat.computeVertexNormals()
@@ -54,7 +54,18 @@ export function island() {
     for (let k = 0; k < 3; k++) colors.push(c.r, c.g, c.b)
   }
   flat.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-  const mesh = plain(flat, new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: ramp }))
+  const material = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: ramp })
+  // From under the water, the sand below the waterline isn't drawn: the rock
+  // the island stands on (reef.ts) takes over there.
+  const water = material.onBeforeCompile
+  material.onBeforeCompile = (shader, renderer) => {
+    water.call(material, shader, renderer)
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <fog_fragment>',
+      '#include <fog_fragment>\n  if ( cameraPosition.y < 0.0 && vFogWorld.y < -0.02 ) discard;',
+    )
+  }
+  const mesh = plain(flat, material)
   mesh.name = 'island'
 
   const group = new THREE.Group()

@@ -2,6 +2,7 @@
 // bubbles, feathers and sparkles. Each is updated once a frame with its age in
 // frames until it says it's done, then removed.
 import * as THREE from 'three'
+import { speckTexture } from './reef'
 import { inked, toon } from './toon'
 
 type Live = { obj: THREE.Object3D; update: (obj: THREE.Object3D, age: number) => boolean; age: number }
@@ -21,6 +22,9 @@ const star = (() => {
 })()
 
 const fading = (color: string, opacity = 1) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false })
+const shard = new THREE.TetrahedronGeometry(1)
+let ringMap: THREE.Texture | undefined
+let dotMap: THREE.Texture | undefined
 
 export class Fx {
   private live: Live[] = []
@@ -151,5 +155,61 @@ export class Fx {
       ;(m.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 1 - age / 40)
       return age < 40
     })
+  }
+
+  // Under water: a bubble rising from a point, wobbling, until it pops or
+  // reaches the surface.
+  rise(at: THREE.Vector3, size = 0.12, life = 140) {
+    const material = new THREE.SpriteMaterial({ map: (ringMap ??= speckTexture(true)), transparent: true, depthWrite: false })
+    const b = new THREE.Sprite(material)
+    b.scale.setScalar(size)
+    b.position.copy(at)
+    const x0 = at.x
+    const phase = Math.random() * 6
+    this.add(b, (m, age) => {
+      m.position.y += 0.012 + size * 0.06
+      m.position.x = x0 + Math.sin(age / 9 + phase) * size * 0.5
+      material.opacity = Math.min(1, age / 8, (life - age) / 20)
+      return age < life && m.position.y < -0.1
+    })
+  }
+
+  // A cloud of silt kicked up off the sea floor, spreading and settling.
+  silt(at: THREE.Vector3, width: number) {
+    for (let i = 0; i < 9; i++) {
+      const material = new THREE.SpriteMaterial({ map: (dotMap ??= speckTexture(false)), color: '#78808c', transparent: true, depthWrite: false })
+      const s = new THREE.Sprite(material)
+      const dx = (Math.random() - 0.5) * width
+      s.position.set(at.x + dx * 0.6, at.y + Math.random() * width * 0.1, at.z + (Math.random() - 0.5) * width * 0.3)
+      const drift = new THREE.Vector3(dx * 0.004, 0.004 + Math.random() * 0.004, 0)
+      this.add(s, (m, age) => {
+        m.position.add(drift)
+        m.scale.setScalar(width * (0.25 + age * 0.004))
+        material.opacity = 0.7 * Math.max(0, 1 - age / 210)
+        return age < 210
+      })
+    }
+  }
+
+  // Shards of glass flung out, then sinking as they fade.
+  shards(at: THREE.Vector3, size: number) {
+    for (let i = 0; i < 14; i++) {
+      const a = Math.random() * Math.PI * 2
+      const v = new THREE.Vector3(Math.cos(a), Math.abs(Math.sin(a)) * 0.8 + 0.2, (Math.random() - 0.5) * 0.6).multiplyScalar(size * (0.02 + Math.random() * 0.025))
+      const spin = new THREE.Vector3(Math.random(), Math.random(), Math.random()).multiplyScalar(0.3)
+      const material = new THREE.MeshBasicMaterial({ color: '#bfe3ef', transparent: true, opacity: 0.85 })
+      const s = new THREE.Mesh(shard, material)
+      s.scale.setScalar(size * (0.04 + Math.random() * 0.05))
+      s.position.copy(at)
+      this.add(s, (m, age) => {
+        v.multiplyScalar(0.93)
+        v.y -= size * 0.0008
+        m.position.add(v)
+        m.rotation.x += spin.x
+        m.rotation.y += spin.y
+        material.opacity = 0.85 * Math.min(1, (70 - age) / 25)
+        return age < 70
+      })
+    }
   }
 }

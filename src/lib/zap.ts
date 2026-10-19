@@ -40,17 +40,31 @@ function crackle(x: number, y: number, power: number) {
   return paths.join(' ')
 }
 
-export function zap(x: number, y: number, color: string, jelly?: Element) {
-  if (busy) return
-  busy = true
-  // Where the jellyfish was when touched, so the bolts can stay on it.
-  const box = jelly?.getBoundingClientRect()
-  zapSound()
-    .catch(() => FALLBACK_SECONDS)
-    .then((seconds) => sting(x, y, color, seconds, jelly, box))
+// The jellyfish that stings: where the touched spot is now (it drifts, and
+// the page scrolls), and a way to light it up while it stings.
+export type Stinger = { at(): [number, number]; lit(on: boolean): void }
+
+// A drawn jellyfish (an element), followed by its box on the page.
+export function stingerOf(jelly: Element, x: number, y: number): Stinger {
+  const box = jelly.getBoundingClientRect()
+  return {
+    at() {
+      const r = jelly.getBoundingClientRect()
+      return [x + r.left - box.left, y + r.top - box.top]
+    },
+    lit: (on) => jelly.classList.toggle('zapping', on),
+  }
 }
 
-function sting(x: number, y: number, color: string, seconds: number, jelly?: Element, box?: DOMRect) {
+export function zap(x: number, y: number, color: string, jelly?: Stinger) {
+  if (busy) return
+  busy = true
+  zapSound()
+    .catch(() => FALLBACK_SECONDS)
+    .then((seconds) => sting(x, y, color, seconds, jelly))
+}
+
+function sting(x: number, y: number, color: string, seconds: number, jelly?: Stinger) {
   const still = prefersReducedMotion()
   // 0.3 for the shortest clips up to 1 for anything five seconds or longer.
   const power = 0.3 + 0.7 * Math.min(1, Math.max(0, (seconds - 0.3) / 4.7))
@@ -73,10 +87,7 @@ function sting(x: number, y: number, color: string, seconds: number, jelly?: Ele
 
   // The bolts come from the touched spot on the jellyfish, wherever it has
   // moved to since (scrolling, bobbing).
-  const origin = () => {
-    const r = jelly?.getBoundingClientRect()
-    return r && box ? [x + r.left - box.left, y + r.top - box.top] : [x, y]
-  }
+  const origin = () => jelly?.at() ?? [x, y]
   let drawnAt = [x, y]
   const draw = () => {
     drawnAt = origin()
@@ -104,7 +115,7 @@ function sting(x: number, y: number, color: string, seconds: number, jelly?: Ele
   if (!still) root.classList.add('zapped')
   // Only the stronger stings invert the screen.
   if (!still && power > 0.6) root.classList.add('zapped-hard')
-  jelly?.classList.add('zapping')
+  jelly?.lit(true)
 
   window.setTimeout(() => {
     window.clearInterval(timer)
@@ -113,7 +124,7 @@ function sting(x: number, y: number, color: string, seconds: number, jelly?: Ele
     root.classList.remove('zapped', 'zapped-hard')
     root.style.removeProperty('--zap-power')
     root.style.removeProperty('--zap-time')
-    jelly?.classList.remove('zapping')
+    jelly?.lit(false)
     busy = false
   }, seconds * 1000)
 }

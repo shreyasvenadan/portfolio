@@ -9,16 +9,39 @@ import { glassBreak } from './sound'
 const INK = '#120d0a'
 let reading = false
 
-export function breakBottle(bottle: SVGSVGElement) {
+// Opening a bottle, drawn or 3D: `smash` takes the bottle away (and, unless
+// motion is reduced, breaks it), `restore` brings a fresh one back once the
+// note is closed.
+export function openBottle(smash: (still: boolean) => void, restore: () => void) {
   if (reading) return
   reading = true
   glassBreak()
   const still = prefersReducedMotion()
+  smash(still)
+  window.setTimeout(
+    () =>
+      showNote(() => {
+        restore()
+        reading = false
+      }),
+    still ? 0 : 650,
+  )
+}
+
+// The drawn bottle.
+export function breakBottle(bottle: SVGSVGElement) {
   const r = bottle.getBoundingClientRect()
-  bottle.style.transition = 'none'
-  bottle.style.opacity = '0'
-  if (!still) shatter(r)
-  window.setTimeout(() => showNote(bottle), still ? 0 : 650)
+  openBottle(
+    (still) => {
+      bottle.style.transition = 'none'
+      bottle.style.opacity = '0'
+      if (!still) shatter(r)
+    },
+    () => {
+      bottle.style.transition = 'opacity 1.2s ease'
+      bottle.style.opacity = '1'
+    },
+  )
 }
 
 // Pieces flying out of the bottle, drawn in a short-lived layer over the page.
@@ -85,7 +108,7 @@ function shatter(r: DOMRect) {
   window.setTimeout(() => layer.remove(), 1600)
 }
 
-function showNote(bottle: SVGSVGElement) {
+function showNote(closed: () => void) {
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text = '') => {
     const node = document.createElement(tag)
     node.className = className
@@ -109,9 +132,7 @@ function showNote(bottle: SVGSVGElement) {
   dialog.addEventListener('click', (e) => e.target === dialog && dialog.close())
   dialog.addEventListener('close', () => {
     dialog.remove()
-    bottle.style.transition = 'opacity 1.2s ease'
-    bottle.style.opacity = '1'
-    reading = false
+    closed()
   })
   document.body.append(dialog)
   dialog.showModal()

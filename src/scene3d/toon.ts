@@ -69,8 +69,9 @@ function smooth(geometry: THREE.BufferGeometry) {
   let g = smoothed.get(geometry)
   if (!g) {
     g = geometry.clone()
-    g.deleteAttribute('normal')
-    g.deleteAttribute('uv')
+    // Only the shape matters, so corners shared by differently coloured
+    // parts are welded too.
+    for (const name of Object.keys(g.attributes)) if (name !== 'position') g.deleteAttribute(name)
     g = mergeVertices(g)
     g.computeVertexNormals()
     smoothed.set(geometry, g)

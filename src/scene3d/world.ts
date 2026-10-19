@@ -9,30 +9,35 @@
 //   football        kicked into the sea, where it bobs
 //   pirate ship     cannon hits; enough of them sink it
 //   Shreyas         jumps
-// The camera drifts a little with the cursor.
+// The camera drifts a little with the cursor, and as the page scrolls it
+// sinks through the surface into the ocean below (ocean.ts).
 import * as THREE from 'three'
 import { isNight, toggleNight } from '../lib/night'
 import { cannonHit, chime, planeCrash, rainfall, sinkingShip, splash, squawk, thud, thunder } from '../lib/sound'
+import { depthPx } from '../lib/world'
 import { Character } from './character'
 import { Fx } from './fx'
 import * as M from './models'
+import { createOcean, FRONT, type View } from './ocean'
 import { inked, outlineUniforms, seeded, toon } from './toon'
+import { setWater, WATER_DEPTHS } from './water'
 
-const DAY = { top: '#f0a865', low: '#fbe2b4', sea: '#35a2b1', hemi: '#fff2dc', ground: '#c9a46a', sun: '#fff1d6', light: 1.9, ambient: 1.35 }
-const NIGHT = { top: '#1d2656', low: '#4f5c9c', sea: '#1d4e74', hemi: '#8090d0', ground: '#2a3050', sun: '#b4c4ff', light: 0.75, ambient: 0.75 }
+const DAY = { top: '#f0a865', low: '#fbe2b4', sea: '#35a2b1', under: '#a9e4e2', hemi: '#fff2dc', ground: '#c9a46a', sun: '#fff1d6', light: 1.9, ambient: 1.35 }
+const NIGHT = { top: '#1d2656', low: '#4f5c9c', sea: '#1d4e74', under: '#3b5f8c', hemi: '#8090d0', ground: '#2a3050', sun: '#b4c4ff', light: 0.75, ambient: 0.75 }
 
 // The view is framed for a 1600×900 screen and cropped to fit, like the drawn
 // scene: narrower screens lose the sides, wider ones the top of the sky.
 const FRAME = { w: 1600, h: 900 }
 const CAMERA = new THREE.Vector3(0, 5.4, 24)
 const TARGET = new THREE.Vector3(0, 3.1, 0)
+// How tall the full frame is in the world, where the camera's looking.
+const FRAME_HEIGHT = 2 * CAMERA.distanceTo(TARGET) * Math.tan(THREE.MathUtils.degToRad(16))
 
 const HITS_TO_SINK = 4
 
-export type Island = {
+export type World = {
   click(x: number, y: number): boolean
   over(x: number, y: number): boolean
-  setActive(on: boolean): void
   dispose(): void
 }
 
@@ -40,11 +45,17 @@ export type Island = {
 // above it the top of his hair is, so his speech balloon can follow him.
 type Options = { still: boolean; flash: (strength: number) => void; onHead: (x: number, y: number, top: number) => void }
 
-export function createIsland(canvas: HTMLCanvasElement, { still, flash, onHead }: Options): Island {
+// `canvas` sits behind the page and draws everything; `front` sits over the
+// page text and draws only the sea creatures swimming in front of it.
+export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement, { still, flash, onHead }: Options): World {
+  const ratio = Math.min(window.devicePixelRatio, 2)
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setPixelRatio(ratio)
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  const overlay = new THREE.WebGLRenderer({ canvas: front, antialias: true, alpha: true })
+  overlay.setPixelRatio(ratio)
+  overlay.setClearColor(0x000000, 0)
 
   const scene = new THREE.Scene()
   scene.fog = new THREE.Fog(DAY.low, 70, 340)
@@ -54,27 +65,35 @@ export function createIsland(canvas: HTMLCanvasElement, { still, flash, onHead }
   const fx = new Fx(scene)
 
   // --- sky, sun, moon, stars ----------------------------------------------------
+  // The sky, and from under the water, the water all round (water.ts).
   const skyUniforms = { top: { value: new THREE.Color(DAY.top) }, low: { value: new THREE.Color(DAY.low) } }
   const sky = new THREE.Mesh(
     new THREE.SphereGeometry(1000, 32, 16),
     new THREE.ShaderMaterial({
-      uniforms: skyUniforms,
+      uniforms: { ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog), ...skyUniforms },
+      defines: { NO_HAZE: '', GLOW: '' },
+      fog: true,
       side: THREE.BackSide,
       depthWrite: false,
       vertexShader: /* glsl */ `
         varying vec3 vDir;
+        #include <fog_pars_vertex>
         void main() {
           vDir = normalize(position);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mvPosition;
+          #include <fog_vertex>
         }`,
       fragmentShader: /* glsl */ `
         uniform vec3 top;
         uniform vec3 low;
         varying vec3 vDir;
+        #include <fog_pars_fragment>
         void main() {
           float h = clamp(vDir.y * 3.2, 0.0, 1.0);
           gl_FragColor = vec4(mix(low, top, pow(h, 0.8)), 1.0);
           #include <colorspace_fragment>
+          #include <fog_fragment>
         }`,
     }),
   )
@@ -127,8 +146,10 @@ export function createIsland(canvas: HTMLCanvasElement, { still, flash, onHead }
 
   // --- light --------------------------------------------------------------------
   const hemi = new THREE.HemisphereLight(DAY.hemi, DAY.ground, DAY.ambient)
+  hemi.layers.enableAll()
   scene.add(hemi)
   const light = new THREE.DirectionalLight(DAY.sun, DAY.light)
+  light.layers.enableAll()
   light.position.set(-14, 22, 16)
   light.target.position.set(0, 0, 1)
   light.castShadow = true
@@ -149,6 +170,9 @@ export function createIsland(canvas: HTMLCanvasElement, { still, flash, onHead }
   const seaBase = Float32Array.from(seaGeo.attributes.position.array)
   const seaMat = new THREE.MeshLambertMaterial({ color: DAY.sea, flatShading: true })
   scene.add(new THREE.Mesh(seaGeo, seaMat))
+  // Its underside, bright with the sky beyond, seen from below.
+  const underMat = new THREE.MeshBasicMaterial({ color: DAY.under, side: THREE.BackSide })
+  scene.add(new THREE.Mesh(seaGeo, underMat))
   const waveAt = (x: number, z: number, t: number) =>
     0.13 * Math.sin(x * 0.33 + t * 1.3) + 0.1 * Math.sin(z * 0.45 + t * 1.05) + 0.05 * Math.sin((x + z) * 0.9 + t * 2.1)
 
@@ -228,18 +252,41 @@ export function createIsland(canvas: HTMLCanvasElement, { still, flash, onHead }
   const move = (e: PointerEvent) => pointer.set(e.clientX, e.clientY)
   window.addEventListener('pointermove', move)
 
+  // Lining the world up with the page: k is world units per screen pixel
+  // where the camera's looking, and the page pixel at `centre` (down from the
+  // top of the screen) is what it's looking at.
+  const frame = { s: 1, k: 0.01, centre: 0 }
   function resize() {
     const w = canvas.clientWidth
     const h = canvas.clientHeight
     if (!w || !h || (w === size.w && h === size.h)) return
     size = { w, h }
     renderer.setSize(w, h, false)
+    overlay.setSize(w, h, false)
     // Scale the 1600×900 frame to cover the canvas, centred, bottom aligned.
     const s = Math.max(w / FRAME.w, h / FRAME.h)
     const [fw, fh] = [FRAME.w * s, FRAME.h * s]
     camera.setViewOffset(fw, fh, (fw - w) / 2, fh - h, w, h)
     outlineUniforms.resolution.value.set(w, h)
+    frame.s = s
+    frame.k = FRAME_HEIGHT / fh
+    frame.centre = h - fh / 2
   }
+
+  // As the page scrolls, the camera sinks by the same distance, so things in
+  // the world keep pace with the page (exactly, where the camera's looking;
+  // nearer things pass faster and further ones slower).
+  const sink = () => window.scrollY * frame.k
+  const view: View = {
+    camera,
+    w: 0,
+    h: 0,
+    s: 1,
+    night: 0,
+    y: (py, z) => CAMERA.y - (py - frame.centre) * frame.k - ((CAMERA.y - TARGET.y) * (CAMERA.z - z)) / (CAMERA.z - TARGET.z),
+    unit: (z) => (frame.k * (CAMERA.z - z)) / (CAMERA.z - TARGET.z),
+  }
+  const ocean = createOcean(scene, fx, still)
 
   // --- picking ------------------------------------------------------------------------
   const ray = new THREE.Raycaster()
@@ -295,6 +342,7 @@ export function createIsland(canvas: HTMLCanvasElement, { still, flash, onHead }
   let t = 0
 
   function click(x: number, y: number) {
+    if (ocean.click(x, y)) return true
     const hit = pick(x, y)
     if (!hit) return false
     switch (hit.kind) {
@@ -643,12 +691,12 @@ export function createIsland(canvas: HTMLCanvasElement, { still, flash, onHead }
   const hair = new THREE.Vector3()
   let start: number | undefined
   let last = 0
-  let frame = 0
-  let active = true
+  let raf = 0
+  let maskKey = ''
+  let wasDeep = false
 
   const tick = (now: number) => {
-    frame = requestAnimationFrame(tick)
-    if (!active) return
+    raf = requestAnimationFrame(tick)
     start ??= now
     t = (now - start) / 1000
     const dt = Math.min(0.05, t - last)
@@ -663,6 +711,7 @@ export function createIsland(canvas: HTMLCanvasElement, { still, flash, onHead }
     skyUniforms.low.value.copy(mix(DAY.low, NIGHT.low, night))
     ;(scene.fog as THREE.Fog).color.copy(skyUniforms.low.value)
     seaMat.color.copy(mix(DAY.sea, NIGHT.sea, night))
+    underMat.color.copy(mix(DAY.under, NIGHT.under, night))
     hemi.color.copy(mix(DAY.hemi, NIGHT.hemi, night))
     hemi.groundColor.copy(mix(DAY.ground, NIGHT.ground, night))
     hemi.intensity = THREE.MathUtils.lerp(DAY.ambient, NIGHT.ambient, night)
@@ -674,10 +723,20 @@ export function createIsland(canvas: HTMLCanvasElement, { still, flash, onHead }
     moon.visible = night > 0.02
     ;(stars.material as THREE.PointsMaterial).opacity = night
 
-    // The sea's swell, and the foam breathing round the island.
-    const pos = seaGeo.attributes.position
-    for (let i = 0; i < pos.count; i++) pos.setY(i, waveAt(seaBase[i * 3], seaBase[i * 3 + 2], at))
-    pos.needsUpdate = true
+    // The sea's swell (while it's in sight), and the foam breathing round the island.
+    const depth = sink()
+    if (depth < 30) {
+      const pos = seaGeo.attributes.position
+      for (let i = 0; i < pos.count; i++) pos.setY(i, waveAt(seaBase[i * 3], seaBase[i * 3 + 2], at))
+      pos.needsUpdate = true
+    }
+    foam.visible = camera.position.y > 0
+    // The sky, and what's in it, can't be seen from deep under the water.
+    const deep = camera.position.y < -3
+    if (deep !== wasDeep) {
+      wasDeep = deep
+      for (const o of [sun, moon, stars, shootingStar, rainbowArcs, plane, ...gulls, ...clouds.map((c) => c.obj)]) o.traverse((c) => c.layers.set(deep ? 2 : 0))
+    }
     foam.scale.setScalar(1 + Math.sin(at * 1.2) * 0.012)
     ;(foam.material as THREE.MeshBasicMaterial).opacity = 0.75 + Math.sin(at * 1.2) * 0.15
 
@@ -801,25 +860,58 @@ export function createIsland(canvas: HTMLCanvasElement, { still, flash, onHead }
       eased.x += ((pointer.x / window.innerWidth - 0.5) - eased.x) * 0.04
       eased.y += ((pointer.y / window.innerHeight - 0.5) - eased.y) * 0.04
     }
-    camera.position.set(CAMERA.x + eased.x * 2.2, CAMERA.y - eased.y * 0.8, CAMERA.z)
-    camera.lookAt(TARGET)
+    camera.position.set(CAMERA.x + eased.x * 2.2, CAMERA.y - eased.y * 0.8 - depth, CAMERA.z)
+    camera.lookAt(TARGET.x, TARGET.y - depth, TARGET.z)
+    camera.updateMatrixWorld()
+
+    // The ocean, and the water's colour from the surface down.
+    view.w = size.w
+    view.h = size.h
+    view.s = frame.s
+    view.night = night
+    ocean.update(t, dt, view)
+    setWater(
+      WATER_DEPTHS.map((d) => view.y(depthPx(d), 0)),
+      night,
+      camera,
+    )
+
+    // Creatures in front of the text fade where they cross the card behind
+    // the block being read (src/lib/focus.ts), so it stays readable.
+    const card = document.querySelector('.reading-card.shown')?.getBoundingClientRect()
+    const key = card ? [card.left, card.top, card.width, card.height].map(Math.round).join() : ''
+    if (key !== maskKey) {
+      maskKey = key
+      const style = front.style
+      if (!card) style.removeProperty('mask-image')
+      else {
+        style.setProperty('mask-image', 'linear-gradient(rgb(0 0 0 / 0.2) 0 0), linear-gradient(#000 0 0), linear-gradient(#000 0 0)')
+        style.setProperty('mask-composite', 'add, exclude, add')
+        style.setProperty('mask-repeat', 'no-repeat')
+        style.setProperty('mask-size', `100% 100%, ${Math.round(card.width)}px ${Math.round(card.height)}px, 100% 100%`)
+        style.setProperty('mask-position', `0 0, ${Math.round(card.left)}px ${Math.round(card.top)}px, 0 0`)
+      }
+    }
 
     fx.step()
+    camera.layers.set(0)
     renderer.render(scene, camera)
+    camera.layers.set(FRONT)
+    overlay.render(scene, camera)
+    camera.layers.set(0)
   }
-  frame = requestAnimationFrame(tick)
+  raf = requestAnimationFrame(tick)
 
   return {
     click,
-    over: (x, y) => !!pick(x, y),
-    setActive(on) {
-      active = on
-    },
+    over: (x, y) => ocean.over(x, y) || !!pick(x, y),
     dispose() {
-      cancelAnimationFrame(frame)
+      cancelAnimationFrame(raf)
       window.removeEventListener('pointermove', move)
       for (const s of storms.values()) s.stop()
+      ocean.dispose()
       renderer.dispose()
+      overlay.dispose()
     },
   }
 }

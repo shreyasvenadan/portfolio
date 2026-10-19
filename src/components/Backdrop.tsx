@@ -1,21 +1,25 @@
-import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { isNight } from '../lib/night'
 import { prefersReducedMotion, sectionProgress } from '../lib/sections'
-import { breakBottle } from '../lib/bottle'
-import { shipHorn } from '../lib/sound'
-import { zap } from '../lib/zap'
-import Island3D from '../world/Island3D'
-import Sealife, { divers, fishing } from '../world/Sealife'
-import Underwater from '../world/Underwater'
-import { wspan, wy } from '../lib/world'
+import { wy } from '../lib/world'
+import World3D, { type WorldHandle } from '../world/World3D'
 
 // The world behind the page: an island at the surface, then the ocean below,
-// getting darker with depth. It sits on the page itself and scrolls with the
-// text, each section in its own depth zone stretched to fit it
-// (src/lib/world.ts).
-const WATER = `linear-gradient(to bottom,
-  transparent 0, transparent ${wy(100)},
-  #2b93a6 ${wy(100)}, #1f7497 ${wy(170)}, #16507c ${wy(250)},
+// getting darker with depth, with each section in its own depth zone
+// (src/lib/world.ts). It's 3D (World3D); without WebGL, the drawn version.
+const Flat = lazy(() => import('../world/Flat'))
+
+const hasWebGL = () => {
+  try {
+    return !!document.createElement('canvas').getContext('webgl2')
+  } catch {
+    return false
+  }
+}
+
+// Behind the 3D world while it loads: the sky's colours, then the water's.
+const PLACEHOLDER = `linear-gradient(to bottom,
+  #f0a865 0, #fbe2b4 ${wy(70)}, #35a2b1 ${wy(100)}, #1f7497 ${wy(170)}, #16507c ${wy(250)},
   #0d2d52 ${wy(340)}, #07162c ${wy(420)}, #040a16 ${wy(500)})`
 
 // Text colours at the surface and in the deep; the page fades from one to the
@@ -36,82 +40,35 @@ function applyTone(t: number) {
 }
 
 export default function Backdrop() {
-  const world = useRef<HTMLDivElement>(null)
-  const [behind, setBehind] = useState<HTMLDivElement | null>(null)
-  const island = useRef<ComponentRef<typeof Island3D>>(null)
+  const [webgl] = useState(hasWebGL)
+  const world = useRef<WorldHandle>(null)
   const still = useMemo(() => prefersReducedMotion(), [])
 
   useEffect(() => {
-    // --s: screen pixels per unit of the 1600×900 surface drawing, so the
-    // island's underwater base can match its width at any screen size.
-    const size = () => world.current?.style.setProperty('--s', String(Math.max(window.innerWidth / 1600, window.innerHeight / 900)))
-    size()
-    window.addEventListener('resize', size)
-
-    // The island and the sea creatures sit behind the page content, so clicks
-    // are hit-tested by position. Touching a jellyfish (tentacles too) stings...
-    const overJelly = (x: number, y: number) => {
-      for (const jelly of world.current?.querySelectorAll('[data-jelly]') ?? []) {
-        const r = jelly.getBoundingClientRect()
-        if (x > r.left - 4 && x < r.right + 4 && y > r.top - 4 && y < r.bottom + 4) return jelly
-      }
-    }
-    // ...as are the shipwreck...
-    const overShip = (x: number, y: number) => {
-      const ship = world.current?.querySelector('[data-ship]')
-      const r = ship?.getBoundingClientRect()
-      return r && x > r.left && x < r.right && y > r.top + r.height * 0.15 && y < r.bottom ? ship : undefined
-    }
-    // ...the message in a bottle on the sea floor (not while it's broken)...
-    const overBottle = (x: number, y: number) => {
-      const bottle = world.current?.querySelector<SVGSVGElement>('[data-bottle]')
-      const r = bottle?.getBoundingClientRect()
-      return r && bottle?.style.opacity !== '0' && x > r.left - 6 && x < r.right + 6 && y > r.top - 6 && y < r.bottom + 6 ? bottle : undefined
+    // The world sits behind the page content, so clicks are hit-tested by
+    // position, and the cursor shows what can be clicked.
+    const ignore = (e: Event) => !!(e.target as Element).closest('a, button, dialog')
+    const point = (e: MouseEvent) => {
+      document.body.style.cursor = world.current?.over(e.clientX, e.clientY) ? 'var(--cursor-pointer)' : ''
     }
     const click = (e: MouseEvent) => {
-      if ((e.target as Element).closest('a, button, dialog')) return
-      const [x, y] = [e.clientX, e.clientY]
-      // Poking a diver (unless there's a fish on the hook to let go) beats
-      // hooking a fish swimming past them; otherwise the hook takes the click.
-      if (!fishing.holding() && divers.click(x, y)) return
-      if (fishing.click(x, y)) {
-        document.body.style.cursor = ''
-        return
-      }
-      const jelly = overJelly(x, y)
-      const ship = overShip(x, y)
-      const bottle = overBottle(x, y)
-      if (bottle) breakBottle(bottle)
-      else if (jelly) zap(x, y, jelly.getAttribute('data-jelly')!, jelly)
-      else if (ship) {
-        shipHorn()
-        ship.classList.remove('honk')
-        void ship.getBoundingClientRect()
-        ship.classList.add('honk')
-      } else island.current?.click(x, y)
+      if (ignore(e)) return
+      world.current?.click(e.clientX, e.clientY)
+      point(e)
     }
     const hover = (e: PointerEvent) => {
-      if ((e.target as Element).closest('a, button, dialog')) return
-      const [x, y] = [e.clientX, e.clientY]
-      document.body.style.cursor = fishing.over(x, y) || divers.over(x, y) || overJelly(x, y) || overShip(x, y) || overBottle(x, y) || island.current?.over(x, y) ? 'var(--cursor-pointer)' : ''
+      if (!ignore(e)) point(e)
     }
-    window.addEventListener('click', click)
-    window.addEventListener('pointermove', hover)
+    if (webgl) {
+      window.addEventListener('click', click)
+      window.addEventListener('pointermove', hover)
+    }
 
     let frame = 0
-    let paused = false
     let tone = -1
     let night = isNight() ? 1 : 0
     const tick = () => {
       const p = sectionProgress()
-
-      // Stop drawing the island once it has scrolled out of view.
-      const offscreen = p > 1.1
-      if (offscreen !== paused) {
-        island.current?.setActive(!offscreen)
-        paused = offscreen
-      }
-
       // Light text once underwater, or all the way up at night (eased when toggled).
       night += ((isNight() ? 1 : 0) - night) * 0.08
       const depth = Math.min(1, Math.max(0, (p - 0.4) / 0.5))
@@ -125,33 +82,21 @@ export default function Backdrop() {
     frame = requestAnimationFrame(tick)
     return () => {
       cancelAnimationFrame(frame)
-      window.removeEventListener('resize', size)
       window.removeEventListener('click', click)
       window.removeEventListener('pointermove', hover)
     }
-  }, [])
+  }, [webgl])
 
+  if (!webgl)
+    return (
+      <Suspense>
+        <Flat />
+      </Suspense>
+    )
   return (
     <>
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden" style={{ height: wy(500) }}>
-        <div ref={world} className="absolute inset-0" style={{ background: WATER }}>
-          <Island3D ref={island} still={still} />
-          <Underwater />
-          {/* Sea creatures that swim behind the page text (the rest are in front). */}
-          <div ref={setBehind} className="absolute inset-x-0 top-0" />
-          {/* At night the shallow water darkens too; the deep is dark already. */}
-          <div
-            className="night-tint absolute inset-x-0"
-            style={{ top: wy(100), height: wspan(100, 350), background: 'linear-gradient(to bottom, #27346e, transparent)' }}
-          />
-        </div>
-      </div>
-      {/* The creatures that swim above the page text, scrolling with the world. */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[15] overflow-hidden" style={{ height: wy(500) }}>
-        <div className="swimmers absolute inset-0">
-          <Sealife back={behind} />
-        </div>
-      </div>
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0" style={{ height: wy(500), background: PLACEHOLDER }} />
+      <World3D ref={world} still={still} />
     </>
   )
 }
