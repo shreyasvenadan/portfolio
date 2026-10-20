@@ -622,132 +622,6 @@ dialog.note::backdrop {
   }
 }
 
-/* --- A project's longer story (ProjectPanel.tsx) ------------------------
-   A sheet of the bottle note's parchment sliding in from the right, or up
-   from the bottom on phones. Fixed colours, like the note, so it reads the
-   same at night. */
-dialog.panel {
-  width: min(34rem, 100vw);
-  max-width: none;
-  height: 100dvh;
-  max-height: none;
-  margin: 0 0 0 auto;
-  padding: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  border: 0;
-  border-left: 3px solid #120d0a;
-  background: #f6ecd2;
-  color: #2a2217;
-  text-align: left;
-  text-shadow: none;
-  box-shadow: -24px 0 60px rgb(0 0 0 / 0.45);
-  animation: panel-in 0.35s cubic-bezier(0.2, 0.8, 0.3, 1) both;
-}
-dialog.panel.closing {
-  animation: panel-out 0.26s ease-in both;
-}
-dialog.panel::backdrop {
-  background: rgb(4 10 22 / 0.55);
-  backdrop-filter: blur(2px);
-}
-@keyframes panel-in {
-  from { translate: 100% 0; }
-}
-@keyframes panel-out {
-  to { translate: 100% 0; }
-}
-@media (max-width: 640px) {
-  dialog.panel {
-    width: 100vw;
-    height: 88dvh;
-    margin: auto 0 0;
-    border-left: 0;
-    border-top: 3px solid #120d0a;
-    border-radius: 1.25rem 1.25rem 0 0;
-    box-shadow: 0 -24px 60px rgb(0 0 0 / 0.45);
-    animation-name: panel-up;
-  }
-  dialog.panel.closing {
-    animation-name: panel-down;
-  }
-}
-@keyframes panel-up {
-  from { translate: 0 100%; }
-}
-@keyframes panel-down {
-  to { translate: 0 100%; }
-}
-.panel-paper {
-  position: relative;
-  padding: 3rem 2rem 2.5rem;
-  font-size: 1.05rem;
-  line-height: 1.65;
-}
-.panel-close {
-  position: absolute;
-  top: 1rem;
-  right: 1.25rem;
-  color: #5a1f2e;
-  font-size: 2rem;
-  line-height: 1;
-}
-.panel-title {
-  margin-bottom: 1rem;
-  color: #5a1f2e;
-  font-size: 2.8rem;
-  line-height: 1.05;
-}
-.panel-lead {
-  font-size: 1.2rem;
-}
-.panel-section {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 2px dashed rgb(42 34 23 / 0.25);
-}
-.panel-heading {
-  margin-bottom: 0.5rem;
-  color: #5a1f2e;
-  font-size: 1.6rem;
-  line-height: 1.1;
-}
-.panel-points {
-  padding-left: 1.2rem;
-  list-style: disc;
-}
-.panel-points li + li {
-  margin-top: 0.5rem;
-}
-.panel-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  margin-top: 2.25rem;
-  font-size: 1.3rem;
-}
-.panel-links a {
-  color: #5a1f2e;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-.panel-close:focus-visible,
-.panel-links a:focus-visible {
-  outline: 3px solid #2b93a6;
-  outline-offset: 3px;
-}
-@media (prefers-reduced-motion: reduce) {
-  dialog.panel,
-  dialog.panel.closing {
-    animation: none;
-  }
-}
-/* Without smooth scrolling (reduced motion) nothing else stops the page
-   scrolling behind the panel. */
-html:has(dialog.panel[open]) {
-  overflow: hidden;
-}
-
 /* --- The hero's speech balloon (Hero.tsx) ------------------------------
    Shreyas says the tagline. The 3D scene publishes where his head is on the
    page (--head-x, --head-y: his face; --head-top: how far above that his hair
@@ -819,5 +693,117 @@ html:has(dialog.panel[open]) {
 @media (prefers-reduced-motion: reduce) {
   .speech {
     animation: none;
+  }
+}
+
+/* --- The SeaLens page (SeaLens.tsx) -------------------------------------
+   The dive scene fills the window behind everything. On wide screens the
+   text sits in a frosted column over the right 60% of it, so the diver has
+   the left to himself; on phones he's at the top and the text scrolls up
+   over him. Fixed colours: it's always underwater here. */
+.dive-scene,
+.dive-boxes {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* Before the scene draws, or without WebGL: the water's colours. */
+.dive-scene {
+  background: linear-gradient(to bottom, #2b93a6, #1f7497 55%, #16507c);
+}
+.dive-boxes {
+  pointer-events: none;
+}
+.dive-back {
+  position: fixed;
+  top: 1.25rem;
+  left: 1.5rem;
+  z-index: 2;
+  color: #f4efe0;
+  font-size: 1.35rem;
+  text-shadow: 0 1px 8px rgb(4 20 34 / 0.7);
+}
+.dive-back:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.dive-copy {
+  position: relative;
+  z-index: 1;
+  min-height: 100svh;
+  margin-left: 40vw;
+  padding: 6rem clamp(2rem, 5vw, 5rem) 5rem;
+  border-left: 3px solid rgb(244 239 224 / 0.25);
+  background: rgb(6 26 44 / 0.62);
+  backdrop-filter: blur(10px);
+  color: #e9f1ef;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+.dive-copy > * {
+  max-width: 40rem;
+}
+.dive-kicker {
+  color: #f2c230;
+  font-size: 1.3rem;
+}
+.dive-title {
+  margin: 0.25rem 0 1.25rem;
+  color: #f4efe0;
+  font-size: clamp(3.5rem, 7vw, 6rem);
+  line-height: 0.95;
+}
+.dive-lead {
+  font-size: 1.3rem;
+  line-height: 1.6;
+  color: #f4efe0;
+}
+.dive-section {
+  margin-top: 2.5rem;
+  padding-top: 1.75rem;
+  border-top: 2px dashed rgb(233 241 239 / 0.2);
+}
+.dive-heading {
+  margin-bottom: 0.6rem;
+  color: #f2c230;
+  font-size: 1.9rem;
+  line-height: 1.1;
+}
+.dive-points {
+  padding-left: 1.2rem;
+  list-style: disc;
+}
+.dive-points li + li {
+  margin-top: 0.6rem;
+}
+.dive-points li::marker {
+  color: #f2c230;
+}
+.dive-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.75rem;
+  margin-top: 2.75rem;
+  font-size: 1.45rem;
+}
+.dive-links a {
+  color: #f2c230;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.dive-copy :focus-visible,
+.dive-back:focus-visible {
+  outline: 3px solid #f2c230;
+  outline-offset: 3px;
+}
+@media (max-width: 767px) {
+  .dive-copy {
+    margin: 58svh 0 0;
+    padding: 2.5rem 1.25rem 4rem;
+    border-left: 0;
+    border-top: 3px solid rgb(244 239 224 / 0.25);
+    border-radius: 1.5rem 1.5rem 0 0;
+    background: rgb(6 26 44 / 0.8);
   }
 }

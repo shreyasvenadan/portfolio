@@ -48,7 +48,7 @@ export type Project = {
   tech: string[]
   repo?: string
   demo?: string
-  // The longer story, shown in a side panel from a "More about" link.
+  // The longer story, on the project's own page (a "More about" link).
   details?: { heading: string; body?: string; points?: string[] }[]
 }
 

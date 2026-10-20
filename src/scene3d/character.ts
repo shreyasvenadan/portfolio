@@ -37,16 +37,114 @@ function blinkAt(t: number) {
 
 export type Gaze = { x: number; y: number; near: number }
 
+// His head, facing +z with its base (the neck) at y = 0: skull with a jaw,
+// ears, nose, eyes, brows and curly hair, but no mouth (the island character
+// smiles; the diver has a regulator in). `faceZ` is how far forward the face
+// comes at (x, y), for putting things on it.
+export function buildHead(skin = toon(SKIN)) {
+  const head = new THREE.Group()
+  const hair = new THREE.Group()
+  const brows = new THREE.Group()
+  const eyes: THREE.Group[] = []
+  const pupils: THREE.Group[] = []
+  // Skull: a sphere whose lower half narrows into a jaw and a flattish
+  // chin, so the face isn't a ball.
+  const jaw = (y: number) => (y < 0 ? 1 - 0.3 * (-y / 0.6) ** 1.6 : 1)
+  let skullGeometry: THREE.BufferGeometry = new THREE.SphereGeometry(0.6, 28, 20)
+  skullGeometry.deleteAttribute('uv')
+  skullGeometry.deleteAttribute('normal')
+  skullGeometry = mergeVertices(skullGeometry)
+  const sp = skullGeometry.attributes.position
+  for (let v = 0; v < sp.count; v++) {
+    const y = sp.getY(v)
+    sp.setX(v, sp.getX(v) * jaw(y))
+    if (y < -0.46) sp.setY(v, -0.46 + (y + 0.46) * 0.45)
+  }
+  skullGeometry.computeVertexNormals()
+  const skull = inked(skullGeometry, skin, 3)
+  skull.scale.set(0.9, 1.02, 0.9)
+  skull.position.y = 0.52
+  head.add(skull)
+  for (const side of [-1, 1]) {
+    const ear = inked(new THREE.SphereGeometry(0.12, 10, 8), skin, 2)
+    ear.scale.set(0.6, 1, 0.8)
+    ear.position.set(side * 0.53, 0.48, -0.02)
+    head.add(ear)
+  }
+  const nose = inked(new THREE.SphereGeometry(0.07, 10, 8), skin, 1.8)
+  nose.scale.set(1, 0.85, 0.9)
+  nose.position.set(0, 0.42, 0.56)
+  head.add(nose)
+
+  // Eyes: dark ovals with a glint, on the front of the face.
+  const ink = new THREE.MeshBasicMaterial({ color: INK })
+  const glint = new THREE.MeshBasicMaterial({ color: '#ffffff' })
+  for (const side of [-1, 1]) {
+    const eye = new THREE.Group()
+    eye.position.set(side * 0.2, 0.55, 0.5)
+    eye.rotation.y = side * 0.32
+    const pupil = new THREE.Group()
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), ink)
+    ball.scale.set(0.85, 1.25, 0.5)
+    const shine = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 6), glint)
+    shine.position.set(0.025, 0.04, 0.035)
+    pupil.add(ball, shine)
+    eye.add(pupil)
+    head.add(eye)
+    eyes.push(eye)
+    pupils.push(pupil)
+  }
+  head.add(brows)
+  for (const side of [-1, 1]) {
+    const brow = inked(new THREE.CapsuleGeometry(0.035, 0.14, 2, 6), toon(HAIR), 1.2)
+    brow.rotation.z = Math.PI / 2 + side * 0.15
+    brow.position.set(side * 0.21, 0.73, 0.485)
+    brow.rotation.y = side * 0.32
+    brows.add(brow)
+  }
+  // Curly hair: a mop of little balls over the top and back of the head,
+  // with a fringe of curls over the forehead.
+  head.add(hair)
+  const rand = seeded(3)
+  const curl = new THREE.IcosahedronGeometry(1, 1)
+  const curls: [number, number, number][] = []
+  for (let lat = 20; lat <= 90; lat += 14) {
+    const ring = Math.max(1, Math.round(Math.cos(rad(lat)) * 16))
+    for (let i = 0; i < ring; i++) {
+      const lon = (i / ring) * 360 + lat * 3
+      // Leave the face clear below the hairline.
+      const front = Math.cos(rad(lon - 90))
+      if (front > 0.35 && lat < 48) continue
+      curls.push([lat, lon, 0.15 + rand() * 0.04])
+    }
+  }
+  for (let i = 0; i < 7; i++) curls.push([50 + rand() * 6, 90 + (i - 3) * 17 + rand() * 4, 0.13 + rand() * 0.03])
+  for (const [lat, lon, r] of curls) {
+    const ball = inked(curl, toon(rand() < 0.3 ? HAIR_LIGHT : HAIR), 1.8)
+    ball.scale.setScalar(r)
+    const d = 0.6
+    ball.position.set(Math.cos(rad(lat)) * Math.cos(rad(lon)) * d * 0.94, 0.56 + Math.sin(rad(lat)) * d * 1.04, Math.cos(rad(lat)) * Math.sin(rad(lon)) * d * 0.92)
+    ball.rotation.set(rand() * 3, rand() * 3, 0)
+    hair.add(ball)
+  }
+
+  const faceZ = (x: number, y: number) => {
+    const ly = (y - 0.52) / 1.02
+    return 0.9 * Math.sqrt(0.36 - (x / 0.9 / jaw(ly)) ** 2 - ly ** 2)
+  }
+  return { head, hair, brows, eyes, pupils, faceZ }
+}
+
 export class Character {
   readonly root = new THREE.Group()
   // Everything that moves when he jumps, leans and breathes.
   private body = new THREE.Group()
   private torso = new THREE.Group()
-  private head = new THREE.Group()
-  private hair = new THREE.Group()
-  private brows = new THREE.Group()
-  private eyes: THREE.Group[] = []
-  private pupils: THREE.Group[] = []
+  private head: THREE.Group
+  private hair: THREE.Group
+  private brows: THREE.Group
+  private eyes: THREE.Group[]
+  private pupils: THREE.Group[]
   private shoulders: THREE.Group[] = []
   private elbows: THREE.Group[] = []
   private mouths: Record<'grin' | 'laugh' | 'oh', THREE.Object3D>
@@ -148,76 +246,20 @@ export class Character {
     }
 
     // --- head
+    const h = buildHead(skin)
+    ;({ head: this.head, hair: this.hair, brows: this.brows, eyes: this.eyes, pupils: this.pupils } = h)
     this.head.position.y = 2.72
     this.torso.add(this.head)
-    // Skull: a sphere whose lower half narrows into a jaw and a flattish
-    // chin, so the face isn't a ball.
-    const jaw = (y: number) => (y < 0 ? 1 - 0.3 * (-y / 0.6) ** 1.6 : 1)
-    let skullGeometry: THREE.BufferGeometry = new THREE.SphereGeometry(0.6, 28, 20)
-    skullGeometry.deleteAttribute('uv')
-    skullGeometry.deleteAttribute('normal')
-    skullGeometry = mergeVertices(skullGeometry)
-    const sp = skullGeometry.attributes.position
-    for (let v = 0; v < sp.count; v++) {
-      const y = sp.getY(v)
-      sp.setX(v, sp.getX(v) * jaw(y))
-      if (y < -0.46) sp.setY(v, -0.46 + (y + 0.46) * 0.45)
-    }
-    skullGeometry.computeVertexNormals()
-    const skull = inked(skullGeometry, skin, 3)
-    skull.scale.set(0.9, 1.02, 0.9)
-    skull.position.y = 0.52
-    this.head.add(skull)
-    for (const side of [-1, 1]) {
-      const ear = inked(new THREE.SphereGeometry(0.12, 10, 8), skin, 2)
-      ear.scale.set(0.6, 1, 0.8)
-      ear.position.set(side * 0.53, 0.48, -0.02)
-      this.head.add(ear)
-    }
-    const nose = inked(new THREE.SphereGeometry(0.07, 10, 8), skin, 1.8)
-    nose.scale.set(1, 0.85, 0.9)
-    nose.position.set(0, 0.42, 0.56)
-    this.head.add(nose)
 
-    // Eyes: dark ovals with a glint, on the front of the face.
-    const ink = new THREE.MeshBasicMaterial({ color: INK })
-    const glint = new THREE.MeshBasicMaterial({ color: '#ffffff' })
-    for (const side of [-1, 1]) {
-      const eye = new THREE.Group()
-      eye.position.set(side * 0.2, 0.55, 0.5)
-      eye.rotation.y = side * 0.32
-      const pupil = new THREE.Group()
-      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), ink)
-      ball.scale.set(0.85, 1.25, 0.5)
-      const shine = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 6), glint)
-      shine.position.set(0.025, 0.04, 0.035)
-      pupil.add(ball, shine)
-      eye.add(pupil)
-      this.head.add(eye)
-      this.eyes.push(eye)
-      this.pupils.push(pupil)
-    }
-    this.head.add(this.brows)
-    for (const side of [-1, 1]) {
-      const brow = inked(new THREE.CapsuleGeometry(0.035, 0.14, 2, 6), toon(HAIR), 1.2)
-      brow.rotation.z = Math.PI / 2 + side * 0.15
-      brow.position.set(side * 0.21, 0.73, 0.485)
-      brow.rotation.y = side * 0.32
-      this.brows.add(brow)
-    }
     // Mouths: a grin, an open laugh and a surprised "oh"; one shows at a time.
     // The grin is a shallow curve that hugs the face, thinning to its corners
     // and a touch higher on one side.
-    const faceZ = (x: number, y: number) => {
-      const ly = (y - 0.52) / 1.02
-      return 0.9 * Math.sqrt(0.36 - (x / 0.9 / jaw(ly)) ** 2 - ly ** 2)
-    }
     const smilePoints = []
     for (let i = 0; i <= 8; i++) {
       const s = i / 4 - 1
       const x = s * 0.13
       const y = 0.3 + 0.024 * s * s + 0.01 * s ** 4 + 0.006 * s
-      smilePoints.push(new THREE.Vector3(x, y, faceZ(x, y) + 0.01))
+      smilePoints.push(new THREE.Vector3(x, y, h.faceZ(x, y) + 0.01))
     }
     const smileCurve = new THREE.CatmullRomCurve3(smilePoints)
     const segments = 24
@@ -245,31 +287,6 @@ export class Character {
     this.mouths = { grin, laugh, oh }
     this.head.add(grin, laugh, oh)
 
-    // Curly hair: a mop of little balls over the top and back of the head,
-    // with a fringe of curls over the forehead.
-    this.head.add(this.hair)
-    const rand = seeded(3)
-    const curl = new THREE.IcosahedronGeometry(1, 1)
-    const curls: [number, number, number][] = []
-    for (let lat = 20; lat <= 90; lat += 14) {
-      const ring = Math.max(1, Math.round(Math.cos(rad(lat)) * 16))
-      for (let i = 0; i < ring; i++) {
-        const lon = (i / ring) * 360 + lat * 3
-        // Leave the face clear below the hairline.
-        const front = Math.cos(rad(lon - 90))
-        if (front > 0.35 && lat < 48) continue
-        curls.push([lat, lon, 0.15 + rand() * 0.04])
-      }
-    }
-    for (let i = 0; i < 7; i++) curls.push([50 + rand() * 6, 90 + (i - 3) * 17 + rand() * 4, 0.13 + rand() * 0.03])
-    for (const [lat, lon, r] of curls) {
-      const ball = inked(curl, toon(rand() < 0.3 ? HAIR_LIGHT : HAIR), 1.8)
-      ball.scale.setScalar(r)
-      const d = 0.6
-      ball.position.set(Math.cos(rad(lat)) * Math.cos(rad(lon)) * d * 0.94, 0.56 + Math.sin(rad(lat)) * d * 1.04, Math.cos(rad(lat)) * Math.sin(rad(lon)) * d * 0.92)
-      ball.rotation.set(rand() * 3, rand() * 3, 0)
-      this.hair.add(ball)
-    }
   }
 
   // Box round his body on screen, for clicks.
