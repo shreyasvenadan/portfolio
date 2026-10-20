@@ -3,6 +3,7 @@
 // Every few seconds he waves, looks around, shrugs or laughs; his eyes and
 // head follow the cursor, and clicking him makes him jump.
 import * as THREE from 'three'
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { INK, inked, seeded, toon } from './toon'
 
 const SKIN = '#c98652'
@@ -58,7 +59,7 @@ export class Character {
 
     // --- legs and shoes
     for (const side of [-1, 1]) {
-      const leg = inked(new THREE.CapsuleGeometry(0.17, 0.85, 3, 10), toon(JEANS), 2.5)
+      const leg = inked(new THREE.CapsuleGeometry(0.15, 0.87, 3, 10), toon(JEANS), 2.5)
       leg.position.set(side * 0.21, 0.72, 0)
       this.body.add(leg)
       const shoe = inked(new THREE.CapsuleGeometry(0.16, 0.26, 3, 10), toon(SHOE), 2.5)
@@ -74,20 +75,30 @@ export class Character {
     // --- torso: blue button-up, tucked into black jeans
     this.body.add(this.torso)
     const hips = inked(new THREE.CapsuleGeometry(0.33, 0.25, 3, 12), toon(JEANS), 2.5)
-    hips.scale.set(1.05, 1, 0.75)
+    hips.scale.set(1, 1, 0.7)
     hips.position.y = 1.3
     this.torso.add(hips)
-    const shirt = inked(new THREE.CapsuleGeometry(0.4, 0.62, 4, 14), toon(TOP), 2.5)
-    shirt.scale.set(1.05, 1, 0.74)
-    shirt.position.y = 1.92
+    // Squared-off shoulders tapering to the waist, rather than a round barrel.
+    const shirtProfile = [
+      [0, 1.45], [0.35, 1.45], [0.36, 1.55], [0.43, 1.9], [0.47, 2.3], [0.43, 2.41], [0.3, 2.48], [0, 2.5],
+    ].map(([r, y]) => new THREE.Vector2(r, y))
+    const shirt = inked(new THREE.LatheGeometry(shirtProfile, 18), toon(TOP), 2.5)
+    shirt.scale.z = 0.68
     this.torso.add(shirt)
     const placket = inked(new THREE.BoxGeometry(0.06, 0.95, 0.03), toon(TOP_DARK), 1.2)
-    placket.position.set(0.02, 1.88, 0.3)
+    // How far the shirt's front sits forward at a given height.
+    const shirtFront = (y: number) => {
+      const i = shirtProfile.findIndex((p) => p.y >= y)
+      const [a, b] = [shirtProfile[i - 1], shirtProfile[i]]
+      return THREE.MathUtils.lerp(a.x, b.x, (y - a.y) / (b.y - a.y)) * shirt.scale.z
+    }
+    placket.position.set(0.02, 1.88, shirtFront(1.88) + 0.008)
+    placket.rotation.x = 0.09
     this.torso.add(placket)
     const button = new THREE.SphereGeometry(0.03, 8, 6)
     for (const y of [2.25, 2.05, 1.85, 1.65, 1.47]) {
       const b = new THREE.Mesh(button, toon('#e8edf3'))
-      b.position.set(0.06, y, 0.31)
+      b.position.set(0.06, y, shirtFront(y) + 0.02)
       this.torso.add(b)
     }
     // Pointed collar, sitting in front of the neck.
@@ -112,16 +123,16 @@ export class Character {
       const shoulder = new THREE.Group()
       shoulder.position.set(side * 0.47, 2.36, 0)
       this.torso.add(shoulder)
-      const upper = inked(new THREE.CapsuleGeometry(0.13, 0.42, 3, 10), toon(TOP), 2.5)
+      const upper = inked(new THREE.CapsuleGeometry(0.11, 0.44, 3, 10), toon(TOP), 2.5)
       upper.position.y = -0.3
       shoulder.add(upper)
       const elbow = new THREE.Group()
       elbow.position.y = -0.58
       shoulder.add(elbow)
-      const fore = inked(new THREE.CapsuleGeometry(0.12, 0.4, 3, 10), toon(TOP), 2.5)
+      const fore = inked(new THREE.CapsuleGeometry(0.1, 0.42, 3, 10), toon(TOP), 2.5)
       fore.position.y = -0.26
       elbow.add(fore)
-      const cuff = inked(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 10), toon(TOP_DARK), 1.5)
+      const cuff = inked(new THREE.CylinderGeometry(0.115, 0.115, 0.08, 10), toon(TOP_DARK), 1.5)
       cuff.position.y = -0.5
       elbow.add(cuff)
       const hand = inked(new THREE.SphereGeometry(0.14, 12, 10), skin, 2.5)
@@ -139,14 +150,28 @@ export class Character {
     // --- head
     this.head.position.y = 2.72
     this.torso.add(this.head)
-    const skull = inked(new THREE.SphereGeometry(0.6, 28, 20), skin, 3)
-    skull.scale.set(1, 0.96, 0.92)
+    // Skull: a sphere whose lower half narrows into a jaw and a flattish
+    // chin, so the face isn't a ball.
+    const jaw = (y: number) => (y < 0 ? 1 - 0.3 * (-y / 0.6) ** 1.6 : 1)
+    let skullGeometry: THREE.BufferGeometry = new THREE.SphereGeometry(0.6, 28, 20)
+    skullGeometry.deleteAttribute('uv')
+    skullGeometry.deleteAttribute('normal')
+    skullGeometry = mergeVertices(skullGeometry)
+    const sp = skullGeometry.attributes.position
+    for (let v = 0; v < sp.count; v++) {
+      const y = sp.getY(v)
+      sp.setX(v, sp.getX(v) * jaw(y))
+      if (y < -0.46) sp.setY(v, -0.46 + (y + 0.46) * 0.45)
+    }
+    skullGeometry.computeVertexNormals()
+    const skull = inked(skullGeometry, skin, 3)
+    skull.scale.set(0.9, 1.02, 0.9)
     skull.position.y = 0.52
     this.head.add(skull)
     for (const side of [-1, 1]) {
       const ear = inked(new THREE.SphereGeometry(0.12, 10, 8), skin, 2)
       ear.scale.set(0.6, 1, 0.8)
-      ear.position.set(side * 0.59, 0.48, -0.02)
+      ear.position.set(side * 0.53, 0.48, -0.02)
       this.head.add(ear)
     }
     const nose = inked(new THREE.SphereGeometry(0.07, 10, 8), skin, 1.8)
@@ -176,22 +201,39 @@ export class Character {
     for (const side of [-1, 1]) {
       const brow = inked(new THREE.CapsuleGeometry(0.035, 0.14, 2, 6), toon(HAIR), 1.2)
       brow.rotation.z = Math.PI / 2 + side * 0.15
-      brow.position.set(side * 0.21, 0.73, 0.5)
+      brow.position.set(side * 0.21, 0.73, 0.485)
       brow.rotation.y = side * 0.32
       this.brows.add(brow)
     }
-    // Rosy cheeks.
-    for (const side of [-1, 1]) {
-      const cheek = new THREE.Mesh(new THREE.CircleGeometry(0.07, 12), new THREE.MeshBasicMaterial({ color: '#d9704f', transparent: true, opacity: 0.45 }))
-      cheek.position.set(side * 0.33, 0.38, 0.49)
-      cheek.rotation.y = side * 0.55
-      this.head.add(cheek)
-    }
-
     // Mouths: a grin, an open laugh and a surprised "oh"; one shows at a time.
-    const grin = inked(new THREE.TorusGeometry(0.11, 0.022, 6, 14, Math.PI), new THREE.MeshBasicMaterial({ color: MOUTH }), 1)
-    grin.rotation.z = Math.PI
-    grin.position.set(0, 0.32, 0.555)
+    // The grin is a shallow curve that hugs the face, thinning to its corners
+    // and a touch higher on one side.
+    const faceZ = (x: number, y: number) => {
+      const ly = (y - 0.52) / 1.02
+      return 0.9 * Math.sqrt(0.36 - (x / 0.9 / jaw(ly)) ** 2 - ly ** 2)
+    }
+    const smilePoints = []
+    for (let i = 0; i <= 8; i++) {
+      const s = i / 4 - 1
+      const x = s * 0.13
+      const y = 0.3 + 0.024 * s * s + 0.01 * s ** 4 + 0.006 * s
+      smilePoints.push(new THREE.Vector3(x, y, faceZ(x, y) + 0.01))
+    }
+    const smileCurve = new THREE.CatmullRomCurve3(smilePoints)
+    const segments = 24
+    const smile = new THREE.TubeGeometry(smileCurve, segments, 0.017, 6, false)
+    const pos = smile.attributes.position
+    const centre = new THREE.Vector3()
+    const p = new THREE.Vector3()
+    for (let v = 0; v < pos.count; v++) {
+      const u = Math.floor(v / 7) / segments
+      smileCurve.getPointAt(u, centre)
+      const taper = 0.25 + 0.75 * Math.sin(u * Math.PI) ** 0.7
+      p.fromBufferAttribute(pos, v).sub(centre).multiplyScalar(taper).add(centre)
+      pos.setXYZ(v, p.x, p.y, p.z)
+    }
+    smile.computeVertexNormals()
+    const grin = inked(smile, new THREE.MeshBasicMaterial({ color: MOUTH }), 1)
     const laughShape = new THREE.Shape()
     laughShape.absarc(0, 0, 0.13, Math.PI, Math.PI * 2, false)
     laughShape.lineTo(-0.13, 0)
@@ -224,7 +266,7 @@ export class Character {
       const ball = inked(curl, toon(rand() < 0.3 ? HAIR_LIGHT : HAIR), 1.8)
       ball.scale.setScalar(r)
       const d = 0.6
-      ball.position.set(Math.cos(rad(lat)) * Math.cos(rad(lon)) * d * 1.02, 0.56 + Math.sin(rad(lat)) * d * 0.98, Math.cos(rad(lat)) * Math.sin(rad(lon)) * d * 0.94)
+      ball.position.set(Math.cos(rad(lat)) * Math.cos(rad(lon)) * d * 0.94, 0.56 + Math.sin(rad(lat)) * d * 1.04, Math.cos(rad(lat)) * Math.sin(rad(lon)) * d * 0.92)
       ball.rotation.set(rand() * 3, rand() * 3, 0)
       this.hair.add(ball)
     }
