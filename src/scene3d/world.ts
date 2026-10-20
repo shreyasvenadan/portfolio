@@ -52,7 +52,7 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
   renderer.setPixelRatio(ratio)
   renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  renderer.shadowMap.type = THREE.PCFShadowMap
   const overlay = new THREE.WebGLRenderer({ canvas: front, antialias: true, alpha: true })
   overlay.setPixelRatio(ratio)
   overlay.setClearColor(0x000000, 0)
@@ -181,6 +181,8 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   light.shadow.camera.far = 70
   light.shadow.bias = -0.0008
   light.shadow.normalBias = 0.02
+  // Soft-edged shadows: each one is blurred over this many shadow-map texels.
+  light.shadow.radius = 5
   scene.add(light, light.target)
   // A soft light from in front that casts no shadows, so the faces turned to
   // the camera aren't all in shade.

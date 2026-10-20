@@ -101,6 +101,21 @@ THREE.ShaderChunk.fog_fragment = /* glsl */ `
   }
 #endif`
 
+// The sun's (and moon's) shadows stop at the surface: under the water, light
+// arrives scattered from all round, so nothing casts a hard shadow there.
+// They soften from just above the waterline and are gone a few metres down.
+const DIR_SHADOW = /directLight\.color \*= \( directLight\.visible && receiveShadow \) \? (getShadow\( directionalShadowMap\[ i \][^;]*\)) : 1\.0;/
+if (!DIR_SHADOW.test(THREE.ShaderChunk.lights_fragment_begin)) throw new Error('three.js shadow chunk changed; update water.ts')
+THREE.ShaderChunk.lights_fragment_begin = THREE.ShaderChunk.lights_fragment_begin.replace(
+  DIR_SHADOW,
+  (line, shadow) => /* glsl */ `
+  #ifdef USE_FOG
+    directLight.color *= ( directLight.visible && receiveShadow ) ? mix( 1.0, ${shadow}, smoothstep( -10.0, 1.2, vFogWorld.y ) ) : 1.0;
+  #else
+    ${line}
+  #endif`,
+)
+
 // Every material is handed the water's uniforms as it's compiled. The objects
 // are shared, not copied, so one update reaches them all.
 THREE.Material.prototype.onBeforeCompile = function (shader) {
