@@ -22,8 +22,8 @@ import { createOcean, FRONT, type View } from './ocean'
 import { inked, outlineUniforms, seeded, toon } from './toon'
 import { setWater, WATER_DEPTHS } from './water'
 
-const DAY = { top: '#f0a865', low: '#fbe2b4', sea: '#35a2b1', under: '#a9e4e2', hemi: '#fff2dc', ground: '#c9a46a', sun: '#fff1d6', light: 1.9, ambient: 1.35 }
-const NIGHT = { top: '#1d2656', low: '#4f5c9c', sea: '#1d4e74', under: '#3b5f8c', hemi: '#8090d0', ground: '#2a3050', sun: '#b4c4ff', light: 0.75, ambient: 0.75 }
+const DAY = { top: '#f0a865', low: '#fbe2b4', sea: '#35a2b1', under: '#a9e4e2', hemi: '#fff2dc', ground: '#c9a46a', sun: '#fff1d6', light: 1.4, fill: 0.9, ambient: 1.35 }
+const NIGHT = { top: '#1d2656', low: '#4f5c9c', sea: '#1d4e74', under: '#3b5f8c', hemi: '#8090d0', ground: '#2a3050', sun: '#b4c4ff', light: 0.55, fill: 0.3, ambient: 0.75 }
 
 // The view is framed for a 1600×900 screen and cropped to fit, like the drawn
 // scene: narrower screens lose the sides, wider ones the top of the sky.
@@ -136,9 +136,12 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   })()
   scene.add(stars)
 
-  // A shooting star streaks across the night sky every so often.
+  // A shooting star streaks across the night sky every so often, down and to
+  // the left. Its head is at its origin and its tail trails off to the right,
+  // tilted up along the path it came from.
+  const STAR_FALL = 0.2
   const shootingStar = new THREE.Mesh(
-    new THREE.PlaneGeometry(1, 1).translate(-0.5, 0, 0),
+    new THREE.PlaneGeometry(1, 1).translate(0.5, 0, 0),
     new THREE.MeshBasicMaterial({ color: '#fff8dc', transparent: true, opacity: 0, fog: false, depthWrite: false }),
   )
   shootingStar.scale.set(28, 0.6, 1)
@@ -148,10 +151,27 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   const hemi = new THREE.HemisphereLight(DAY.hemi, DAY.ground, DAY.ambient)
   hemi.layers.enableAll()
   scene.add(hemi)
+  // Sunlight by day, moonlight by night, from where the sun or moon rests in
+  // the sky: behind the island and to the right, so shadows fall forward and
+  // to the left. The moon sits higher than the sun, so night shadows are
+  // shorter. Both shine from higher than they're drawn, to keep the shadows
+  // short. As day turns to night the shadows fade out, the light moves from
+  // the sun to the moon while they're gone, and they fade back in; moving the
+  // light while they showed would make them crawl.
   const light = new THREE.DirectionalLight(DAY.sun, DAY.light)
   light.layers.enableAll()
-  light.position.set(-14, 22, 16)
   light.target.position.set(0, 0, 1)
+  const SUN_AT = sun.position.clone()
+  // Where the moon ends up once night has fallen (see the moon's rise below).
+  const MOON_AT = moon.position.clone().setY(-30 + 72)
+  const aimLight = (night: number) => {
+    const from = night < 0.5 ? SUN_AT : MOON_AT
+    const out = light.position.copy(from).sub(light.target.position).setY(0).normalize()
+    out.multiplyScalar(23).add(light.target.position).setY(from.y * 0.75 + 3)
+    // Full by day and by night, gone through the middle of the change.
+    light.shadow.intensity = THREE.MathUtils.smoothstep(Math.abs(night - 0.5) * 2, 0.3, 1)
+  }
+  aimLight(0)
   light.castShadow = true
   light.shadow.mapSize.set(2048, 2048)
   light.shadow.camera.left = -14
@@ -162,6 +182,13 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   light.shadow.bias = -0.0008
   light.shadow.normalBias = 0.02
   scene.add(light, light.target)
+  // A soft light from in front that casts no shadows, so the faces turned to
+  // the camera aren't all in shade.
+  const fill = new THREE.DirectionalLight(DAY.sun, DAY.fill)
+  fill.layers.enableAll()
+  fill.position.set(-14, 22, 16)
+  fill.target.position.set(0, 0, 1)
+  scene.add(fill, fill.target)
 
   // --- sea ------------------------------------------------------------------------
   const seaGeo = new THREE.PlaneGeometry(760, 440, 150, 88)
@@ -678,9 +705,9 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     const m = new THREE.Mesh(shootingStar.geometry, new THREE.MeshBasicMaterial({ color: '#fff8dc', transparent: true, fog: false, depthWrite: false }))
     const start = new THREE.Vector3(-60 + Math.random() * 260, 40 + Math.random() * 45, -420)
     m.scale.set(18 + Math.random() * 20, 0.5, 1)
-    m.rotation.z = -0.36
+    m.rotation.z = STAR_FALL
     fx.add(m, (s, age) => {
-      s.position.copy(start).add(new THREE.Vector3(-age * 4.5, -age * 1.6, 0))
+      s.position.copy(start).add(new THREE.Vector3(-age * 4.5, -age * 4.5 * Math.tan(STAR_FALL), 0))
       ;(s.material as THREE.MeshBasicMaterial).opacity = Math.min(1, age / 4, (36 - age) / 10)
       return age < 36
     })
@@ -719,9 +746,12 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     hemi.intensity = THREE.MathUtils.lerp(DAY.ambient, NIGHT.ambient, night)
     light.color.copy(mix(DAY.sun, NIGHT.sun, night))
     light.intensity = THREE.MathUtils.lerp(DAY.light, NIGHT.light, night)
+    fill.color.copy(light.color)
+    fill.intensity = THREE.MathUtils.lerp(DAY.fill, NIGHT.fill, night)
     sun.position.y = 22 - night * 60
     moon.position.y = -30 + night * 72
     sun.visible = night < 0.98
+    aimLight(night)
     moon.visible = night > 0.02
     ;(stars.material as THREE.PointsMaterial).opacity = night
 
@@ -837,8 +867,8 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
       starState.visible = night > 0.5 && f > 0 && f < 1
       const m = shootingStar.material as THREE.MeshBasicMaterial
       m.opacity = starState.visible ? night * Math.min(1, f * 4, (1 - f) * 4) : 0
-      shootingStar.position.set(150 - f * 200, 72 - f * 70 * 0.36, -400)
-      shootingStar.rotation.z = -0.36
+      shootingStar.position.set(150 - f * 200, 72 - f * 200 * Math.tan(STAR_FALL), -400)
+      shootingStar.rotation.z = STAR_FALL
     }
 
     // Shreyas: eyes and head follow the cursor.

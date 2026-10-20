@@ -407,12 +407,34 @@ export function diver(suit = '#23262e', stripe = '#e2553d', gear?: 'camera' | 't
     lights.push(led)
   }
   if (gear === 'torch') {
-    // The beam: a soft cone of light ahead of the torch.
+    // The beam: a soft cone of light ahead of the torch, from its tip at x 100
+    // to its open end at x 260. It fades out with distance from the torch, and
+    // towards its sides, where the eye looks through only a sliver of it.
     const beam = new THREE.Mesh(
       new THREE.ConeGeometry(52, 160, 20, 1, true).rotateZ(Math.PI / 2).translate(180, -13, 9),
-      new THREE.MeshBasicMaterial({ color: '#fff6c8', transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
+      new THREE.MeshBasicMaterial({ color: '#fff6c8', transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
     )
     beam.material.defines = { GLOW: '' }
+    beam.material.customProgramCacheKey = () => 'torch-beam'
+    beam.material.onBeforeCompile = (shader, renderer) => {
+      THREE.Material.prototype.onBeforeCompile.call(beam.material, shader, renderer)
+      shader.vertexShader = shader.vertexShader.replace(
+        'void main() {',
+        /* glsl */ `varying float vAlong;
+        varying float vFacing;
+        void main() {
+          vAlong = ( position.x - 100.0 ) / 160.0;
+          vec4 beamView = modelViewMatrix * vec4( position, 1.0 );
+          vFacing = abs( dot( normalize( normalMatrix * normal ), normalize( - beamView.xyz ) ) );`,
+      )
+      shader.fragmentShader = shader.fragmentShader
+        .replace('void main() {', 'varying float vAlong;\nvarying float vFacing;\nvoid main() {')
+        .replace(
+          '#include <alphamap_fragment>',
+          /* glsl */ `#include <alphamap_fragment>
+          diffuseColor.a *= pow( 1.0 - clamp( vAlong, 0.0, 1.0 ), 1.6 ) * smoothstep( 0.05, 0.7, vFacing );`,
+        )
+    }
     inner.add(beam)
   }
   const legs = [-6, 2].map((y, i) => {

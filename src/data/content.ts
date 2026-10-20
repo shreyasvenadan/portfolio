@@ -6,7 +6,7 @@ export const profile = {
   tagline:
     'Software engineer in Melbourne. I co-founded SeaLens, which uses machine learning to find, track and count fish in underwater reef footage.',
   about: [
-    "I'm a software engineering student at RMIT in Melbourne, graduating in November 2026. I was selected for the inaugural Apple Developer Academy @ BINUS cohort in Bali (top 3% of applicants globally), where I designed, built and shipped apps across iOS, watchOS and macOS in cross-cultural teams.",
+    "I'm a software engineering student at RMIT in Melbourne, graduating in 2026. I was selected for the inaugural Apple Developer Academy @ BINUS cohort in Bali (top 3% of applicants globally), where I designed, built and shipped apps across iOS, watchOS and macOS in cross-cultural teams.",
     "There I co-founded SeaLens, a macOS and web app that helps marine scientists monitor reef biodiversity by detecting, tracking and classifying fish in underwater video with machine learning. SeaLens won 1st place at the EU Conexus Innovation Contest 2025 and was selected for Apple's Developer Institute for Entrepreneurship.",
     'Outside of code I do photography and videography, coach youth football, and have played competitive football for 14+ years.',
   ],
@@ -48,15 +48,43 @@ export type Project = {
   tech: string[]
   repo?: string
   demo?: string
+  // The longer story, shown in a side panel from a "More about" link.
+  details?: { heading: string; body?: string; points?: string[] }[]
 }
 
 export const projects: Project[] = [
   {
     title: 'SeaLens',
     description:
-      'macOS and web app that helps marine scientists analyse reef biodiversity by automatically detecting, tracking and classifying fish in underwater video. 1st place at the EU Conexus Innovation Contest 2025; presented to Apple VP Lisa Jackson.',
+      'macOS and web app that uses machine learning to find, track and count fish in underwater reef video. 1st place at the EU Conexus Innovation Contest 2025.',
     tech: ['SwiftUI', 'SwiftData', 'Tuist', 'React', 'TypeScript', 'Supabase', 'ML'],
     demo: 'https://sealens.app',
+    details: [
+      {
+        heading: 'What it does',
+        body: 'SeaLens helps marine scientists analyse reef biodiversity. It automatically detects, tracks and classifies fish in underwater video, and turns the results into a workflow built for scientists.',
+      },
+      {
+        heading: 'Where it started',
+        body: 'I co-founded SeaLens at the Apple Developer Academy @ BINUS in Bali, and I lead its tech and marketing.',
+      },
+      {
+        heading: 'What I built',
+        points: [
+          'Co-led the production macOS app (SwiftUI, SwiftData, Tuist), bringing the machine-learning output into a workflow scientists can use.',
+          'Led the web app (React, TypeScript, Vite, Supabase), so SeaLens works beyond the Mac.',
+        ],
+      },
+      {
+        heading: 'Recognition',
+        points: [
+          '1st place at the EU Conexus Innovation Contest 2025.',
+          'Spotlight Team: 1 of 4 across all Indonesian Apple Developer Academies.',
+          "Presented to Apple VP Lisa Jackson, three Apple Directors, Indonesian ministers and the Singapore Oceanarium.",
+          "Selected for Apple's Developer Institute for Entrepreneurship.",
+        ],
+      },
+    ],
   },
   {
     title: 'MyKaleidoscope',
@@ -114,7 +142,7 @@ export const experience: Experience[] = [
     role: 'RMIT Industry Project',
     org: 'Spectrum Tuition',
     location: 'Melbourne, VIC',
-    period: '2026 — Present',
+    period: '2026',
     points: [
       'Building MyKaleidoscope in Agile sprints using a full-stack TypeScript monorepo (Next.js, React, Express, Supabase).',
       'Built onboarding and Wheel of Life assessment flows, and Google Calendar integration for goal deadlines.',
@@ -144,7 +172,7 @@ export const experience: Experience[] = [
     role: 'Bachelor of Software Engineering',
     org: 'RMIT University',
     location: 'Melbourne, VIC',
-    period: '2022 — Nov 2026',
+    period: '2022 — 2026',
     points: [],
   },
 ]
