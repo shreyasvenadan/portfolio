@@ -60,7 +60,7 @@ export const projects: Project[] = [
   {
     title: 'SeaLens',
     description:
-      'macOS and web app that uses machine learning to find, track and count fish in underwater reef video. 1st place at the EU Conexus Innovation Contest 2025.',
+      'macOS and web app that uses machine learning to identify, track and count fish populations in underwater reef video.',
     tech: ['SwiftUI', 'SwiftData', 'Tuist', 'React', 'TypeScript', 'Vite', 'Supabase', 'YOLOv12', 'SwiftFormer', 'CPEA'],
     demo: 'https://sealens.app',
     app: 'https://apps.apple.com/au/app/sealens/id6755988477?mt=12',
@@ -157,6 +157,7 @@ export const projects: Project[] = [
     description:
       'Goal-tracking and personal development platform for Spectrum Tuition. Built onboarding and Wheel of Life assessment flows, plus Google Calendar integration to turn goal deadlines into events.',
     tech: ['Next.js', 'React', 'Express', 'Supabase', 'PostgreSQL', 'Tailwind CSS'],
+    logo: `${import.meta.env.BASE_URL}spectrum-tuition-logo.png`,
   },
   {
     title: 'Machine Learning Projects',

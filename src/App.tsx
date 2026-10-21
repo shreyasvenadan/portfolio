@@ -19,6 +19,24 @@ export default function App() {
   useEffect(watchSections, [])
   useEffect(watchWorld, [])
   useEffect(watchFocus, [])
+  // Arriving at a #section (e.g. "back to the sea" from a project's page),
+  // go there. The browser looks before React has drawn it, finds nothing,
+  // and stays at the top.
+  useEffect(() => {
+    document.getElementById(location.hash.slice(1))?.scrollIntoView()
+  }, [])
+  // Coming back (the back button, or "back to the sea"), pick up where they
+  // left off. Safari reloads the page rather than keeping it, and puts the
+  // scroll back before React has drawn anything, so it lands at the top;
+  // leaving, the page notes the spot on its history entry instead.
+  useEffect(() => {
+    const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+    const y = history.state?.scrollY
+    if (nav?.type === 'back_forward' && typeof y === 'number') window.scrollTo(0, y)
+    const note = () => history.replaceState({ ...history.state, scrollY: window.scrollY }, '')
+    window.addEventListener('pagehide', note)
+    return () => window.removeEventListener('pagehide', note)
+  }, [])
 
   return (
     <>

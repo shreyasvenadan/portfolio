@@ -5,7 +5,7 @@ export default function Contact() {
     <section id="contact" className="flex min-h-svh flex-col items-center justify-end pt-28 pb-16">
       <h2 className="display text-5xl font-extrabold md:text-7xl">Get in touch</h2>
       <p data-focus className="mt-6 max-w-md text-xl leading-relaxed text-ink/85">
-        I’m graduating in November 2026 and looking for software engineering roles. Email is the fastest way to reach me.
+        I’m graduating in 2026 and looking for software engineering roles. Email is the fastest way to reach me.
       </p>
       <a
         href={`mailto:${links.email}`}
