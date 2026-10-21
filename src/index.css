@@ -754,6 +754,17 @@ dialog.note::backdrop {
   font-size: clamp(3.5rem, 7vw, 6rem);
   line-height: 0.95;
 }
+.dive-title {
+  display: flex;
+  align-items: center;
+  gap: 0.2em;
+}
+.dive-logo {
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 0.24em;
+  box-shadow: 0 6px 24px rgb(4 20 34 / 0.45);
+}
 .dive-lead {
   font-size: 1.3rem;
   line-height: 1.6;
@@ -787,10 +798,14 @@ dialog.note::backdrop {
   margin-top: 2.75rem;
   font-size: 1.45rem;
 }
-.dive-links a {
+.dive-links a,
+.dive-link {
   color: #f2c230;
   text-decoration: underline;
   text-underline-offset: 4px;
+}
+.dive-lead + .dive-links {
+  margin-top: 1.5rem;
 }
 .dive-copy :focus-visible,
 .dive-back:focus-visible {
@@ -806,4 +821,51 @@ dialog.note::backdrop {
     border-radius: 1.5rem 1.5rem 0 0;
     background: rgb(6 26 44 / 0.8);
   }
+}
+
+/* --- SeaLens locking on, on the way to a project's page (src/lib/lockOn.ts) */
+.lock {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+.lock-fill {
+  position: absolute;
+  inset: 0;
+  background: #061a2c;
+  opacity: 0;
+}
+.lock-box {
+  position: absolute;
+}
+.lock-c {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 3px solid #f2c230;
+  filter: drop-shadow(0 0 6px rgb(242 194 48 / 0.45));
+}
+.lock-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+.lock-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+.lock-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+.lock-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+.lock-label {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+  background: rgb(8 22 34 / 0.85);
+  color: #f2c230;
+  font: 600 13px/1.5 var(--font-sans);
+  white-space: pre;
+}
+/* Arriving by lock-on, the page is in deep water from its first paint until
+   the viewfinder is drawn and clears. */
+html[data-lock] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #061a2c;
 }

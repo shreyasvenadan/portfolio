@@ -77,7 +77,12 @@ type School = { fish: Fish[]; kind: Kind; x: number; y: number; z: number; dir: 
 
 export type Dive = { dispose(): void }
 
-export function createDive(canvas: HTMLCanvasElement, boxes: HTMLCanvasElement, { still, night }: { still: boolean; night: boolean }): Dive {
+// `onReady` is called once the scene has drawn its first frame.
+export function createDive(
+  canvas: HTMLCanvasElement,
+  boxes: HTMLCanvasElement,
+  { still, night, onReady }: { still: boolean; night: boolean; onReady?: () => void },
+): Dive {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   const ctx = boxes.getContext('2d')!
@@ -278,6 +283,10 @@ export function createDive(canvas: HTMLCanvasElement, boxes: HTMLCanvasElement, 
     setWater(WATER, night ? 1 : 0, camera)
     renderer.render(scene, camera)
     drawBoxes(dt)
+    if (onReady) {
+      onReady()
+      onReady = undefined
+    }
     if (!still) raf = requestAnimationFrame(tick)
   }
 
@@ -335,12 +344,21 @@ export function createDive(canvas: HTMLCanvasElement, boxes: HTMLCanvasElement, 
     ctx.globalAlpha = 1
   }
 
-  raf = requestAnimationFrame(tick)
+  // Compile the shaders before the first frame, off the main thread where
+  // the GPU driver allows, so starting up doesn't freeze the page.
+  let disposed = false
+  renderer
+    .compileAsync(scene, camera)
+    .catch(() => {})
+    .then(() => {
+      if (!disposed) raf = requestAnimationFrame(tick)
+    })
   const onResize = () => still && requestAnimationFrame(tick)
   window.addEventListener('resize', onResize)
 
   return {
     dispose() {
+      disposed = true
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', onResize)
       renderer.dispose()

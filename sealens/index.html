@@ -13,6 +13,20 @@
     href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400..700;1,400..700&display=swap"
     rel="stylesheet" />
   <title>sealens — shreyas venadan</title>
+  <!-- Arriving by SeaLens lock-on (src/lib/lockOn.ts), the page opens in its
+       viewfinder. -->
+  <script>
+    function lockIn() {
+      try {
+        var lock = JSON.parse(sessionStorage.getItem('lock-on') || 'null')
+        sessionStorage.removeItem('lock-on')
+        if (lock && Date.now() - lock.at < 8000) document.documentElement.dataset.lock = lock.name
+      } catch (e) {}
+    }
+    // Built ahead of time (index.html's speculation rules), check once it's shown.
+    if (document.prerendering) document.addEventListener('prerenderingchange', lockIn, { once: true })
+    else lockIn()
+  </script>
 </head>
 
 <body>

@@ -13,6 +13,11 @@
     href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400..700;1,400..700&display=swap"
     rel="stylesheet" />
   <title>shreyas venadan</title>
+  <!-- Browsers that can build the SeaLens page in the background once the
+       link is hovered or pressed, so it's ready when SeaLens has locked on. -->
+  <script type="speculationrules">
+    { "prerender": [{ "where": { "href_matches": "/portfolio/sealens/" }, "eagerness": "moderate" }] }
+  </script>
 </head>
 
 <body>/
