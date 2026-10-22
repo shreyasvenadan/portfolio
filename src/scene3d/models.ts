@@ -524,7 +524,8 @@ export function pirateShip() {
   return group
 }
 
-// A little shore crab, facing +z: a wide shell, eyes on stalks, a claw each
+// A little shore crab, facing +z: a wide shell, eyes on stalks (userData.eyes,
+// which fold back), a claw each
 // side (whose top pincer opens, userData.pincers) and three legs a side
 // (userData.legs, for scuttling).
 export function crab() {
@@ -538,14 +539,22 @@ export function crab() {
   top.scale.set(1, 0.42, 0.78)
   top.position.y = 0.16
   body.add(top)
+  // Each eye and its stalk, hinged where the stalk meets the shell, so they
+  // can fold back flat when it sleeps (userData.eyes).
+  const eyes: THREE.Object3D[] = []
   for (const side of [-1, 1]) {
+    const hinge = new THREE.Group()
+    hinge.position.set(side * 0.08, 0.2, 0.15)
     const stalk = inked(new THREE.CylinderGeometry(0.018, 0.018, 0.14, 5), dark, 1.2)
-    stalk.position.set(side * 0.08, 0.27, 0.15)
-    body.add(stalk)
+    stalk.position.y = 0.07
+    hinge.add(stalk)
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), new THREE.MeshBasicMaterial({ color: '#120d0a' }))
-    eye.position.set(side * 0.08, 0.35, 0.15)
-    body.add(eye)
+    eye.position.y = 0.15
+    hinge.add(eye)
+    body.add(hinge)
+    eyes.push(hinge)
   }
+  group.userData.eyes = eyes
   const legs: THREE.Object3D[] = []
   // Each leg rises out to a knee, then reaches down to the sand: the hip is
   // 0.14 up, the knee 0.09 above that, and the foot back on the ground.

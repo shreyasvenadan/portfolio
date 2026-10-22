@@ -10,7 +10,7 @@
 //   pirate ship     cannon hits; it fires back; enough hits sink it, and a
 //                   treasure chest washes up (click it to open it)
 //   Shreyas         jumps
-//   crab            flips over; corner it and it pinches
+//   crab            flips over; corner it and it pinches; asleep at night
 //   turtles         (night) hatch on the beach; click one to help it along
 //   the sand        drag across it to write in it
 // Shreyas reacts to all of it (cheers, points, ducks, runs after the ball)
@@ -358,7 +358,29 @@ ${shader.fragmentShader}`.replace(
   // Where it may go: the front of the beach, on dry sand.
   const CRAB_X = 4.6
   const CRAB_Z = [7, 8.4] as const
-  const crabState = { x: 3.4, z: 7.6, goal: new THREE.Vector2(3.4, 7.6), nextGoal: 2, flipAt: -100, pinchAt: -100, cornered: 0, phase: 0 }
+  const crabState = { x: 3.4, z: 7.6, goal: new THREE.Vector2(3.4, 7.6), nextGoal: 2, flipAt: -100, pinchAt: -100, cornered: 0, phase: 0, sleep: 0 }
+  // Asleep at night, it breathes out little "z"s that drift up and fade.
+  const zzz = (() => {
+    const c = document.createElement('canvas')
+    c.width = c.height = 64
+    const g = c.getContext('2d')!
+    g.font = 'bold 52px sans-serif'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.lineWidth = 7
+    g.strokeStyle = '#120d0a'
+    g.strokeText('z', 32, 30)
+    g.fillStyle = '#fffbe8'
+    g.fillText('z', 32, 30)
+    const map = new THREE.CanvasTexture(c)
+    map.colorSpace = THREE.SRGBColorSpace
+    return Array.from({ length: 3 }, () => {
+      const z = new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, opacity: 0 }))
+      z.visible = false
+      scene.add(z)
+      return z
+    })
+  })()
   const onSand = (x: number, z: number) => Math.abs(x) < CRAB_X && z > CRAB_Z[0] && z < CRAB_Z[1] && M.groundAt(x, z) > 0.12
 
   type Hatchling = { obj: THREE.Group; bornAt: number; heading: number; phase: number; boostUntil: number }
@@ -979,10 +1001,14 @@ ${shader.fragmentShader}`.replace(
     const body = crab.userData.body as THREE.Object3D
     const legs = crab.userData.legs as THREE.Object3D[]
     const pincers = crab.userData.pincers as THREE.Object3D[]
+    const eyes = crab.userData.eyes as THREE.Object3D[]
     const flipped = t - s.flipAt
     const pinching = t - s.pinchAt
+    // At night it settles down to sleep; flipped, it's up for a while after.
+    s.sleep += ((night > 0.5 && flipped > 8 ? 1 : 0) - s.sleep) * (1 - Math.exp(-dt * 1.5))
+    const asleep = s.sleep > 0.1
     let speed = 0
-    if (flipped > 2.6 && pinching > 0.9 && !still) {
+    if (flipped > 2.6 && pinching > 0.9 && !still && !asleep) {
       const p = toScreen(crab.position)
       const near = Math.hypot(p.x - pointer.x, p.y - pointer.y)
       if (near < 130) {
@@ -1022,17 +1048,28 @@ ${shader.fragmentShader}`.replace(
     const over = flipped < 0.3 ? flipped / 0.3 : flipped < 2.2 ? 1 : Math.max(0, 1 - (flipped - 2.2) / 0.4)
     const roll = smooth(over) * Math.PI
     body.rotation.z = roll
-    body.position.y = ((1 - Math.cos(roll)) / 2) * 0.36 + (flipped < 0.3 ? Math.sin(over * Math.PI) * 0.5 : 0)
+    body.position.y = ((1 - Math.cos(roll)) / 2) * 0.36 + (flipped < 0.3 ? Math.sin(over * Math.PI) * 0.5 : 0) - s.sleep * 0.07
+    // Asleep: sunk down on the sand, legs drawn up, eyes folded back, breathing slowly.
+    body.scale.y = 1 + s.sleep * Math.sin(t * 1.6) * 0.05
+    for (const eye of eyes) eye.rotation.x = -s.sleep * 1.4
     // Lunging, it jumps at the cursor and snaps.
     const lunge = pinching < 0.9 ? Math.sin((pinching / 0.9) * Math.PI) : 0
     body.position.z = lunge * 0.25
     legs.forEach((leg, i) => {
       const wiggle = over > 0.5 ? Math.sin(t * 30 + i) * 0.5 : Math.sin(s.phase + i * 1.3) * 0.45 * speed
       leg.rotation.x = wiggle
+      leg.rotation.z = leg.userData.side * s.sleep * 0.4
     })
-    const snap = pinching < 0.9 ? Math.abs(Math.sin(pinching * 22)) * 0.7 : 0.15 + Math.sin(t * 2) * 0.1
+    const snap = pinching < 0.9 ? Math.abs(Math.sin(pinching * 22)) * 0.7 : (0.15 + Math.sin(t * 2) * 0.1) * (1 - s.sleep)
     for (const pincer of pincers) pincer.rotation.x = -snap
-    crab.rotation.y = Math.sin(t * 0.7) * 0.15
+    crab.rotation.y = Math.sin(t * 0.7) * 0.15 * (1 - s.sleep)
+    zzz.forEach((z, i) => {
+      const k = (t * 0.35 + i / zzz.length) % 1
+      z.visible = s.sleep > 0.5
+      z.position.set(crab.position.x + 0.15 + k * 0.35 + Math.sin(k * 6 + i) * 0.06, crab.position.y + 0.45 + k * 0.9, crab.position.z)
+      z.scale.setScalar(0.16 + k * 0.14)
+      z.material.opacity = (s.sleep - 0.5) * 2 * Math.min(1, k * 5, (1 - k) * 3)
+    })
   }
 
   // --- turtles -----------------------------------------------------------------------------
