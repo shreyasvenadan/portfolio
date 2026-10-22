@@ -669,6 +669,11 @@ dialog.note::backdrop {
   animation-delay: 0s;
   animation-duration: 0.3s;
 }
+/* ...except his hello, which pops in with the balloon as the page opens. */
+.speech.quip.greeting {
+  animation-delay: 1.2s;
+  animation-duration: 0.45s;
+}
 /* The tail: a filled curve whose outline shows only on its two long sides,
    tucked under the balloon's edge so it joins without a seam. */
 .speech-tail {

@@ -32,8 +32,8 @@ import { SandMarks } from './sand'
 import { inked, outlineUniforms, seeded, toon } from './toon'
 import { setWater, WATER_DEPTHS } from './water'
 
-const DAY = { top: '#f0a865', low: '#fbe2b4', sea: '#35a2b1', under: '#a9e4e2', hemi: '#fff2dc', ground: '#c9a46a', sun: '#fff1d6', light: 1.4, fill: 0.9, ambient: 1.35 }
-const NIGHT = { top: '#1d2656', low: '#4f5c9c', sea: '#1d4e74', under: '#3b5f8c', hemi: '#8090d0', ground: '#2a3050', sun: '#b4c4ff', light: 0.55, fill: 0.3, ambient: 0.75 }
+const DAY = { top: '#f0a865', low: '#fbe2b4', sea: '#35a2b1', seaDeep: '#1a6492', seaLight: '#62c6cc', seaFoam: '#eef9f5', under: '#a9e4e2', hemi: '#fff2dc', ground: '#c9a46a', sun: '#fff1d6', light: 1.4, fill: 0.9, ambient: 1.35 }
+const NIGHT = { top: '#1d2656', low: '#4f5c9c', sea: '#1d4e74', seaDeep: '#152a5c', seaLight: '#3f86b8', seaFoam: '#d4e2ff', under: '#3b5f8c', hemi: '#8090d0', ground: '#2a3050', sun: '#b4c4ff', light: 0.55, fill: 0.3, ambient: 0.75 }
 
 // The view is framed for a 1600×900 screen and cropped to fit, like the drawn
 // scene: narrower screens lose the sides, wider ones the top of the sky.
@@ -210,18 +210,18 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   seaGeo.translate(0, 0, -150)
   const seaBase = Float32Array.from(seaGeo.attributes.position.array)
   const seaMat = new THREE.MeshLambertMaterial({ color: DAY.sea, flatShading: true })
-  // The swell barely tilts each facet, which the moon's low light shows up but
-  // the bright day washes out. So by day (`shimmer`) the sea is painted in
-  // drifting patches, banded like the toon shading: dark blue troughs, the sea's
-  // own blue, lighter water, and white foam where a patch peaks on a facet
-  // turned to the sun.
+  // The swell barely tilts each facet, which flat lighting washes out. So the
+  // sea is painted in drifting patches, banded like the toon shading: dark
+  // troughs, the sea's own blue, lighter water, and foam where a patch peaks on
+  // a facet turned to the sun. By night they're moonlit: indigo troughs, and
+  // silvery glints.
   const seaShimmer = {
     shimmer: { value: 0 },
     sunDir: { value: new THREE.Vector3() },
     seaTime: { value: 0 },
-    seaDeep: { value: new THREE.Color('#1a6492') },
-    seaLight: { value: new THREE.Color('#62c6cc') },
-    seaFoam: { value: new THREE.Color('#eef9f5') },
+    seaDeep: { value: new THREE.Color(DAY.seaDeep) },
+    seaLight: { value: new THREE.Color(DAY.seaLight) },
+    seaFoam: { value: new THREE.Color(DAY.seaFoam) },
   }
   const seaWater = seaMat.onBeforeCompile
   seaMat.onBeforeCompile = (shader, renderer) => {
@@ -524,8 +524,8 @@ ${shader.fragmentShader}`.replace(
   // --- clicks -----------------------------------------------------------------------------
   let t = 0
 
-  // He says hello as the page opens, then, while the island's in view and
-  // he's nothing else to say, now and then nudges towards something that
+  // After his hello (lib/quip.ts), while the island's in view and he's
+  // nothing else to say, he now and then nudges towards something that
   // hasn't been found yet. Playing with the island puts the nudges off.
   const NUDGES: [DiscoveryId, string][] = [
     ['jump', 'psst, you can click on me'],
@@ -541,15 +541,8 @@ ${shader.fragmentShader}`.replace(
     ['wish', 'catch a shooting star!'],
     ['turtles', 'something’s hatching on the beach…'],
   ]
-  let greeted = false
   let nextNudge = 25
   function chatter() {
-    if (!greeted) {
-      if (t < 1.2) return
-      greeted = true
-      say("hi, my name's Shreyas Venadan!", 4.5)
-      return
-    }
     if (t < nextNudge) return
     nextNudge = t + 25
     if (camera.position.y < 0 || currentQuip() || document.hidden) return
@@ -1282,6 +1275,9 @@ ${shader.fragmentShader}`.replace(
     skyUniforms.low.value.copy(mix(DAY.low, NIGHT.low, night))
     ;(scene.fog as THREE.Fog).color.copy(skyUniforms.low.value)
     seaMat.color.copy(mix(DAY.sea, NIGHT.sea, night))
+    seaShimmer.seaDeep.value.copy(mix(DAY.seaDeep, NIGHT.seaDeep, night))
+    seaShimmer.seaLight.value.copy(mix(DAY.seaLight, NIGHT.seaLight, night))
+    seaShimmer.seaFoam.value.copy(mix(DAY.seaFoam, NIGHT.seaFoam, night))
     underMat.color.copy(mix(DAY.under, NIGHT.under, night))
     hemi.color.copy(mix(DAY.hemi, NIGHT.hemi, night))
     hemi.groundColor.copy(mix(DAY.ground, NIGHT.ground, night))
@@ -1495,7 +1491,7 @@ ${shader.fragmentShader}`.replace(
     camera.lookAt(TARGET.x, TARGET.y - depth, TARGET.z)
     camera.updateMatrixWorld()
     // Which way, level with the sea, the sun shines from, as the view sees it.
-    seaShimmer.shimmer.value = 0.6 * (1 - night)
+    seaShimmer.shimmer.value = 0.6
     seaShimmer.seaTime.value = at
     seaShimmer.sunDir.value.copy(light.position).sub(light.target.position).setY(0).normalize().transformDirection(camera.matrixWorldInverse)
 

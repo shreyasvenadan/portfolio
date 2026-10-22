@@ -11,7 +11,7 @@ export default function Hero() {
       <h1 className="sr-only">{profile.name}</h1>
       {/* The tagline, said by Shreyas standing on the island (src/scene3d), in a
           speech balloon that follows his head. */}
-      <p key={quip?.id ?? 0} className={quip ? 'speech quip' : 'speech'}>
+      <p key={quip?.id ?? 0} className={quip ? (quip.greeting ? 'speech quip greeting' : 'speech quip') : 'speech'}>
         {quip ? (
           <>
             <span aria-hidden>{quip.text}</span>
