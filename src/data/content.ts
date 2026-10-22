@@ -4,7 +4,7 @@ export const profile = {
   name: 'Shreyas Venadan',
   role: 'Software Engineer',
   tagline:
-    'Software engineer in Melbourne. I co-founded SeaLens, which uses machine learning to find, track and count fish in underwater reef footage.',
+    'I\'m a Software engineer in Melbourne. I co-founded SeaLens, which uses machine learning to find, track and count fish in underwater reef footage.',
   about: [
     "I'm a software engineering student at RMIT in Melbourne, graduating in 2026. I was selected for the inaugural Apple Developer Academy @ BINUS cohort in Bali (top 3% of applicants globally), where I designed, built and shipped apps across iOS, watchOS and macOS in cross-cultural teams.",
     "There I co-founded SeaLens, a macOS and web app that helps marine scientists monitor reef biodiversity by detecting, tracking and classifying fish in underwater video with machine learning. SeaLens won 1st place at the EU Conexus Innovation Contest 2025 and was selected for Apple's Developer Institute for Entrepreneurship.",

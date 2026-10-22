@@ -5,7 +5,7 @@
 // and sizes them.
 import * as THREE from 'three'
 import { ISLAND } from './models'
-import { ball, bead, cached, curve, glowing, hose, paint, rod, slab, solid, type Part } from './shapes'
+import { ball, bead, cached, curve, glowing, hose, paint, rod, slab, solid, type Part, type V3 } from './shapes'
 import { inked, jitter, seeded } from './toon'
 
 const quiet = <T extends THREE.Object3D>(o: T) => {
@@ -117,6 +117,7 @@ export function seamount() {
   g.computeVertexNormals()
   const mesh = inked(g, paint, 2.5)
   mesh.castShadow = false
+  mesh.receiveShadow = false
   return mesh
 }
 
@@ -239,6 +240,101 @@ export function branchCoral(color: string) {
       [94, 72, -10, 114, 56, -18],
     ]
     return segs.flatMap(([x0, y0, z0, x1, y1, z1]) => [rod(color, [x0 - 60, y0 - 200, z0], [x1 - 60, y1 - 200, z1], 7, 7)])
+  })
+}
+
+// Antlers that fork and fork again, pale at the growing tips.
+export function staghornCoral(color: string, tip: string) {
+  return piece(`stag:${color}`, 160, () => {
+    const rand = seeded(color.length * 13 + 5)
+    const parts: Part[] = []
+    const grow = (from: V3, angle: number, lean: number, len: number, r: number, forks: number) => {
+      const to: V3 = [from[0] + Math.sin(angle) * len, from[1] - Math.cos(angle) * len, from[2] + lean * len]
+      parts.push(rod(color, from, to, r, 6))
+      if (!forks) {
+        parts.push({ g: bead, c: tip, at: to, size: r * 1.15 })
+        return
+      }
+      for (const side of [-1, 1]) grow(to, angle + side * (0.35 + rand() * 0.3), (rand() - 0.5) * 0.6, len * 0.75, r * 0.78, forks - 1)
+    }
+    for (const a of [-0.75, -0.25, 0.25, 0.75]) grow([a * 30, 0, (rand() - 0.5) * 20], a, (rand() - 0.5) * 0.5, 48, 8, 2)
+    return parts
+  })
+}
+
+// A vase sponge, open at the top and dark inside.
+export function barrelSponge(color: string) {
+  return piece(`sponge:${color}`, 110, () => {
+    const lathe = (pts: number[][]) => new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), 18)
+    return [
+      { g: lathe([[0, 0], [36, 0], [46, 36], [52, 92], [47, 98]]), c: color },
+      { g: lathe([[47, 98], [41, 92], [36, 40], [0, 30]]), c: new THREE.Color(color).multiplyScalar(0.45).getStyle() },
+    ]
+  })
+}
+
+// Fat, round-tipped fingers huddled together.
+export function fingerCoral(color: string) {
+  return piece(`finger:${color}`, 120, () =>
+    [
+      [-38, 58, -0.35, 6],
+      [-18, 86, -0.12, -8],
+      [2, 104, 0.05, 4],
+      [22, 80, 0.2, -6],
+      [40, 56, 0.4, 8],
+      [-4, 64, -0.05, 14],
+    ].map(([x, h, lean, z]): Part => ({ g: new THREE.CapsuleGeometry(11, h, 3, 10).translate(0, h / 2, 0), c: color, at: [x, 0, z], rot: [0, 0, -lean] })),
+  )
+}
+
+// Shelves stacked up a stalk, each with a paler growing rim.
+export function plateCoral(color: string) {
+  return piece(`plate:${color}`, 130, () => {
+    const rim = new THREE.Color(color).lerp(new THREE.Color('#ffffff'), 0.35).getStyle()
+    return [
+      rod(new THREE.Color(color).multiplyScalar(0.7).getStyle(), [0, 0, -6], [-4, -92, -6], 9),
+      ...[
+        [-22, 24, 46, 0.12],
+        [18, 58, 40, -0.1],
+        [-6, 92, 30, 0.08],
+      ].flatMap(([x, y, r, tilt], i): Part[] => [
+        { g: jitter(new THREE.CylinderGeometry(r, r * 0.8, 7, 16, 1), 2.5, i + 3), c: color, at: [x, -y, 8], rot: [0.25, 0, tilt] },
+        { g: new THREE.TorusGeometry(r, 2.6, 4, 18).rotateX(Math.PI / 2), c: rim, at: [x, -y - 3, 8], rot: [0.25, 0, tilt] },
+      ]),
+    ]
+  })
+}
+
+// Long thin whips from one holdfast, swaying.
+export function seaWhip(color: string) {
+  const root = piece(`whip:${color}`, 100, () => [
+    hose(color, [0, 0, 0], [-30, -80, 4], [-22, -170, 0], 3.4),
+    hose(color, [4, 0, 0], [10, -90, -6], [-2, -200, -4], 3.6),
+    hose(color, [8, 0, 0], [36, -70, 6], [40, -150, 8], 3.2),
+    hose(color, [2, 0, 0], [-8, -50, 10], [-44, -110, 10], 3),
+    { g: ball, c: new THREE.Color(color).multiplyScalar(0.6).getStyle(), at: [3, -4, 0], size: [12, 8, 10] },
+  ])
+  root.userData.sway = 0.07
+  return root
+}
+
+// A patch of zoanthid polyps: short stalks, each with a flared crown and a
+// bright mouth.
+export function polyps(color: string, mouth: string) {
+  return piece(`polyps:${color}`, 100, () => {
+    const rand = seeded(color.length * 3 + 1)
+    return Array.from({ length: 11 }, (_, i): Part[] => {
+      const a = i * 2.4
+      const d = 12 + Math.sqrt(i) * 11
+      const x = Math.cos(a) * d
+      const z = Math.sin(a) * d * 0.6
+      const h = 10 + rand() * 14
+      return [
+        { g: new THREE.CylinderGeometry(9, 6, h, 10), c: color, at: [x, -h / 2, z] },
+        { g: new THREE.CylinderGeometry(12, 9, 3, 10), c: color, at: [x, -h, z] },
+        { g: new THREE.CircleGeometry(5, 10).rotateX(-Math.PI / 2), c: mouth, at: [x, -h - 1.6, z] },
+      ]
+    }).flat()
   })
 }
 
@@ -625,6 +721,9 @@ export function halo(color: string, size: number, opacity = 0.5) {
     new THREE.SpriteMaterial({ map: haloTexture(), color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending }),
   )
   s.material.defines = { GLOW: '' }
+  // Drawn after the marine snow, so the glow lights the specks drifting
+  // through it rather than the specks blotting it out.
+  s.renderOrder = 1
   s.scale.setScalar(size)
   return s
 }

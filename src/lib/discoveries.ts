@@ -16,7 +16,7 @@ export const DISCOVERIES = [
   { id: 'crab', name: 'Flipped', hint: 'Something scuttles on the sand.' },
   { id: 'pinch', name: 'Snip snip', hint: 'Corner the crab.' },
   { id: 'sand', name: 'Sand scribbles', hint: 'Drag across the beach.' },
-  { id: 'wish', name: 'Make a wish', hint: 'Watch the night sky.' },
+  { id: 'wish', name: 'Make a wish', hint: 'Catch a shooting star.' },
   { id: 'turtles', name: 'Hatchlings', hint: 'Stay on the beach after dark.' },
 ] as const
 

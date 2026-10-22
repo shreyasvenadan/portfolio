@@ -123,6 +123,34 @@ const REEF: [number, number, number, number, () => THREE.Group][] = [
   [64, 37, 8, 100, () => R.seaFan('#e0566b')],
   [66, 80, 9, 110, () => R.tableCoral('#e7c35a')],
   [70, 93, 7, 90, () => R.seaweed('#4aa060')],
+  // Filling in between, so there's hardly any bare rock.
+  [12, 45, 8, 100, () => R.staghornCoral('#e98fb0', '#ffd6e4')],
+  [14, 54, 5, 64, () => R.polyps('#7ee0c3', '#f7fff2')],
+  [12, 10, 7, 90, () => R.plateCoral('#d98a5a')],
+  [20, 6, 6, 80, () => R.seaWhip('#e0566b')],
+  [13, 90, 7, 90, () => R.barrelSponge('#c8743c')],
+  [20, 38, 5, 64, () => R.fingerCoral('#ffd23f')],
+  [24, 92, 6, 80, () => R.fingerCoral('#f2b8d8')],
+  [26, 47, 6, 72, () => R.polyps('#ff9fb8', '#ffe9a8')],
+  [30, 64, 8, 100, () => R.staghornCoral('#9fd6ff', '#e8f6ff')],
+  [32, 12, 9, 110, () => R.barrelSponge('#9b6fd0')],
+  [36, 52, 6, 80, () => R.plateCoral('#f2c46a')],
+  [36, 90, 5, 64, () => R.polyps('#b4f07a', '#fff6c8')],
+  [44, 6, 6, 80, () => R.fingerCoral('#ffb36b')],
+  [44, 26, 6, 80, () => R.seaWhip('#ffcf5c')],
+  [46, 66, 7, 90, () => R.barrelSponge('#e0566b')],
+  [50, 88, 8, 100, () => R.staghornCoral('#c79bff', '#f0e2ff')],
+  [54, 72, 6, 72, () => R.fingerCoral('#7ee0c3')],
+  [58, 54, 6, 72, () => R.polyps('#ff8fc8', '#fff2f8')],
+  [60, 92, 6, 80, () => R.plateCoral('#7fb3a8')],
+  [62, 26, 8, 100, () => R.staghornCoral('#f5a55a', '#ffe2b8')],
+  [66, 52, 9, 110, () => R.barrelSponge('#c8743c')],
+  [68, 12, 6, 80, () => R.fingerCoral('#d26a8a')],
+  [70, 44, 6, 80, () => R.seaWhip('#9b6fd0')],
+  [72, 70, 7, 90, () => R.brainCoral('#c9a0e8')],
+  [74, 26, 5, 64, () => R.polyps('#ffd166', '#ffffff')],
+  [76, 60, 6, 80, () => R.plateCoral('#e07a5f')],
+  [76, 86, 5, 64, () => R.polyps('#7af0d0', '#eaffff')],
 ]
 
 // Sunbeams either side of the island: [x in design px from the middle,
@@ -198,7 +226,7 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
     const piece = make()
     piece.rotation.y = (((i * 37) % 11) / 11 - 0.5) * 0.8
     group.add(piece)
-    return { piece, top, left, vw, px, base: { x: 0, z: 0 } }
+    return { piece, top, left, vw, px, base: { x: 0, z: 0 }, lean: 0 }
   })
 
   const beams = BEAMS.map(([x, lean, width], i) => {
@@ -377,11 +405,24 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
       const py = depthPx(100) + (r.top / 100 + 0.06) * 460 * vw.s
       let z = 7.5
       const x = across(r.left / 100, z)
-      for (let k = 0; k < 2; k++) z = R.rockFace(x, vw.y(py, z)) - 0.15
+      for (let k = 0; k < 2; k++) z = R.rockFace(x, vw.y(py, z))
+      const y = vw.y(py, z)
       const width = cssWidth(r.vw, r.px) * vw.unit(z)
-      r.piece.position.set(x, vw.y(py, z), z)
+      // It grows out of the rock rather than standing up against it: leaning
+      // out along the face's slope, its foot rooted just inside the face.
+      const e = 0.4
+      const out = new THREE.Vector3(
+        -(R.rockFace(x + e, y) - R.rockFace(x - e, y)) / (2 * e),
+        -(R.rockFace(x, y + e) - R.rockFace(x, y - e)) / (2 * e),
+        1,
+      ).normalize()
+      if (!Number.isFinite(out.x + out.y)) out.set(0, 0, 1)
+      const grow = out.clone().multiplyScalar(0.9).add(new THREE.Vector3(0, 1, 0)).normalize()
+      r.piece.position.set(x, y, z).addScaledVector(out, width * 0.12 - 0.1)
       r.piece.scale.setScalar(width)
-      r.piece.rotation.x = 0.12
+      r.piece.rotation.x = Math.atan2(grow.z, grow.y)
+      r.lean = -Math.atan2(grow.x, grow.y)
+      r.piece.rotation.z = r.lean
     }
     // The sea floor and what's on it.
     floorY = at(473, 0)
@@ -459,7 +500,7 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
     // Reef and weed sway; the anemones' arms wave.
     for (const [i, r] of reef.entries()) {
       const sway = r.piece.userData.sway as number | undefined
-      if (sway) r.piece.rotation.z = Math.sin(at2 * 0.63 + i) * sway
+      if (sway) r.piece.rotation.z = r.lean + Math.sin(at2 * 0.63 + i) * sway
       const arms = r.piece.userData.arms as THREE.Group | undefined
       if (arms) arms.children.forEach((a, k) => (a.rotation.z = Math.sin(at2 * 1.3 + k) * 0.18))
     }

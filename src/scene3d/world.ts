@@ -19,9 +19,9 @@
 // The camera drifts a little with the cursor, and as the page scrolls it
 // sinks through the surface into the ocean below (ocean.ts).
 import * as THREE from 'three'
-import { discover } from '../lib/discoveries'
+import { discover, foundDiscoveries, type DiscoveryId } from '../lib/discoveries'
 import { isNight, toggleNight } from '../lib/night'
-import { say } from '../lib/quip'
+import { currentQuip, say } from '../lib/quip'
 import { cannonHit, chime, planeCrash, rainfall, sinkingShip, snip, splash, squawk, thud, thunder, whistle } from '../lib/sound'
 import { depthPx } from '../lib/world'
 import { Character } from './character'
@@ -211,22 +211,55 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   const seaBase = Float32Array.from(seaGeo.attributes.position.array)
   const seaMat = new THREE.MeshLambertMaterial({ color: DAY.sea, flatShading: true })
   // The swell barely tilts each facet, which the moon's low light shows up but
-  // the bright day washes out. So the facets turned towards the sun are lit up
-  // and those turned away darkened, by `shimmer`: strong by day, none at night.
-  const seaShimmer = { shimmer: { value: 0 }, sunDir: { value: new THREE.Vector3() } }
+  // the bright day washes out. So by day (`shimmer`) the sea is painted in
+  // drifting patches, banded like the toon shading: dark blue troughs, the sea's
+  // own blue, lighter water, and white foam where a patch peaks on a facet
+  // turned to the sun.
+  const seaShimmer = {
+    shimmer: { value: 0 },
+    sunDir: { value: new THREE.Vector3() },
+    seaTime: { value: 0 },
+    seaDeep: { value: new THREE.Color('#1a6492') },
+    seaLight: { value: new THREE.Color('#62c6cc') },
+    seaFoam: { value: new THREE.Color('#eef9f5') },
+  }
   const seaWater = seaMat.onBeforeCompile
   seaMat.onBeforeCompile = (shader, renderer) => {
     seaWater.call(seaMat, shader, renderer)
     Object.assign(shader.uniforms, seaShimmer)
-    shader.fragmentShader = `uniform float shimmer;\nuniform vec3 sunDir;\n${shader.fragmentShader}`.replace(
+    shader.fragmentShader = /* glsl */ `
+uniform float shimmer;
+uniform vec3 sunDir;
+uniform float seaTime;
+uniform vec3 seaDeep;
+uniform vec3 seaLight;
+uniform vec3 seaFoam;
+float seaHash( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
+float seaNoise( vec2 p ) {
+  vec2 i = floor( p );
+  vec2 f = fract( p );
+  f = f * f * ( 3.0 - 2.0 * f );
+  return mix( mix( seaHash( i ), seaHash( i + vec2( 1.0, 0.0 ) ), f.x ), mix( seaHash( i + vec2( 0.0, 1.0 ) ), seaHash( i + vec2( 1.0, 1.0 ) ), f.x ), f.y );
+}
+${shader.fragmentShader}`.replace(
       '#include <opaque_fragment>',
       /* glsl */ `
-  {
+  #ifdef USE_FOG
+  if ( shimmer > 0.0 ) {
     // The facet's tilt away from level, in the view's space.
     vec3 up = normalize( ( viewMatrix * vec4( 0.0, 1.0, 0.0, 0.0 ) ).xyz );
     vec3 tilt = normal - up * dot( normal, up );
-    outgoingLight *= clamp( 1.0 + shimmer * dot( tilt, sunDir ), 0.6, 1.5 );
+    // Two layers of patches drifting different ways, so nothing lines up.
+    vec2 p = vFogWorld.xz;
+    float v = seaNoise( p * 0.11 + vec2( 0.05, 0.03 ) * seaTime ) * 0.6
+      + seaNoise( mat2( 0.8, -0.6, 0.6, 0.8 ) * p * 0.29 - vec2( 0.07, -0.05 ) * seaTime ) * 0.4
+      + dot( tilt, sunDir ) * 3.0;
+    // How lit the sea is here, to light the band colours the same.
+    vec3 lit = outgoingLight / max( diffuseColor.rgb, vec3( 0.001 ) );
+    vec3 band = v < 0.4 ? seaDeep : v < 0.6 ? diffuseColor.rgb : v < 0.76 ? seaLight : seaFoam;
+    outgoingLight = mix( outgoingLight, band * lit, shimmer );
   }
+  #endif
   #include <opaque_fragment>`,
     )
   }
@@ -235,7 +268,12 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   const underMat = new THREE.MeshBasicMaterial({ color: DAY.under, side: THREE.BackSide })
   scene.add(new THREE.Mesh(seaGeo, underMat))
   const waveAt = (x: number, z: number, t: number) =>
-    0.13 * Math.sin(x * 0.33 + t * 1.3) + 0.1 * Math.sin(z * 0.45 + t * 1.05) + 0.05 * Math.sin((x + z) * 0.9 + t * 2.1)
+    0.13 * Math.sin(x * 0.33 + t * 1.3) +
+    0.1 * Math.sin(z * 0.45 + t * 1.05) +
+    0.05 * Math.sin((x + z) * 0.9 + t * 2.1) +
+    // Crossing swells at odd angles, so the sea doesn't fall into rows.
+    0.07 * Math.sin(x * 0.29 - z * 0.38 + t * 1.6) +
+    0.05 * Math.sin(-x * 0.52 - z * 0.21 + t * 1.9)
 
   // --- the island and everything on it ---------------------------------------------
   const marks = new SandMarks()
@@ -431,11 +469,14 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   function pick(x: number, y: number) {
     const r = canvas.getBoundingClientRect()
     if (x < r.left || x > r.right || y < r.top || y > r.bottom) return
-    // The shooting star is only there for a moment, so it wins over anything behind it.
+    // The shooting star is only there for a moment, so it wins over anything
+    // behind it, and anywhere along its streak catches it, not just its head.
     if (night > 0.5 && starState.visible) {
       const head = shootingStar.getWorldPosition(new THREE.Vector3())
-      const p = toScreen(head)
-      if (Math.hypot(p.x - x, p.y - y) < 40) return { kind: 'star', obj: shootingStar, point: head, distance: 0 }
+      const a = toScreen(head)
+      const b = toScreen(shootingStar.localToWorld(new THREE.Vector3(1, 0, 0)))
+      const k = THREE.MathUtils.clamp(((x - a.x) * (b.x - a.x) + (y - a.y) * (b.y - a.y)) / Math.max((b.x - a.x) ** 2 + (b.y - a.y) ** 2, 1), 0, 1)
+      if (Math.hypot(a.x + (b.x - a.x) * k - x, a.y + (b.y - a.y) * k - y) < 48) return { kind: 'star', obj: shootingStar, point: head, distance: 0 }
     }
     ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1)
     ray.setFromCamera(ndc, camera)
@@ -483,7 +524,42 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   // --- clicks -----------------------------------------------------------------------------
   let t = 0
 
+  // He says hello as the page opens, then, while the island's in view and
+  // he's nothing else to say, now and then nudges towards something that
+  // hasn't been found yet. Playing with the island puts the nudges off.
+  const NUDGES: [DiscoveryId, string][] = [
+    ['jump', 'psst, you can click on me'],
+    ['night', 'try clicking the sun'],
+    ['rain', 'go on, poke a cloud'],
+    ['coconut', 'those coconuts look ripe…'],
+    ['football', 'fancy a kickabout? click the ball'],
+    ['gull', 'watch out for the gulls'],
+    ['plane', 'click the plane when it flies over'],
+    ['ship', 'pirates! fire at their ship'],
+    ['crab', "there's a crab on the beach"],
+    ['sand', 'try drawing in the sand'],
+    ['wish', 'catch a shooting star!'],
+    ['turtles', 'something’s hatching on the beach…'],
+  ]
+  let greeted = false
+  let nextNudge = 25
+  function chatter() {
+    if (!greeted) {
+      if (t < 1.2) return
+      greeted = true
+      say("hi, my name's Shreyas Venadan!", 4.5)
+      return
+    }
+    if (t < nextNudge) return
+    nextNudge = t + 25
+    if (camera.position.y < 0 || currentQuip() || document.hidden) return
+    const found = foundDiscoveries()
+    const ideas = NUDGES.filter(([id]) => !found.has(id) && ((id !== 'wish' && id !== 'turtles') || night > 0.5))
+    if (ideas.length) say(ideas[Math.floor(Math.random() * ideas.length)][1], 3.5)
+  }
+
   function click(x: number, y: number) {
+    nextNudge = t + 25
     if (drawing.drew) {
       drawing.drew = false
       return true
@@ -1198,6 +1274,7 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     // Ambient motion stops when reduced motion is asked for.
     const at = still ? 24 : t
     resize()
+    chatter()
 
     // Day and night ease into each other over a second or two.
     night += ((isNight() ? 1 : 0) - night) * (1 - Math.exp(-dt * 2.5))
@@ -1328,7 +1405,7 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     // The shooting star, at night.
     {
       const k = (at % 11) / 11
-      const f = (k - 0.02) / 0.12
+      const f = (k - 0.02) / 0.2
       starState.visible = night > 0.5 && f > 0 && f < 1
       const m = shootingStar.material as THREE.MeshBasicMaterial
       m.opacity = starState.visible ? night * Math.min(1, f * 4, (1 - f) * 4) : 0
@@ -1418,7 +1495,8 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     camera.lookAt(TARGET.x, TARGET.y - depth, TARGET.z)
     camera.updateMatrixWorld()
     // Which way, level with the sea, the sun shines from, as the view sees it.
-    seaShimmer.shimmer.value = 6 * (1 - night)
+    seaShimmer.shimmer.value = 0.6 * (1 - night)
+    seaShimmer.seaTime.value = at
     seaShimmer.sunDir.value.copy(light.position).sub(light.target.position).setY(0).normalize().transformDirection(camera.matrixWorldInverse)
 
     // The ocean, and the water's colour from the surface down.

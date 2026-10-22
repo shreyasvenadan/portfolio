@@ -103,14 +103,15 @@ THREE.ShaderChunk.fog_fragment = /* glsl */ `
 
 // The sun's (and moon's) shadows stop at the surface: under the water, light
 // arrives scattered from all round, so nothing casts a hard shadow there.
-// They soften from just above the waterline and are gone a few metres down.
+// They fade out across the waterline itself (the swell lifts the surface up
+// to about half a unit) and are gone just under it.
 const DIR_SHADOW = /directLight\.color \*= \( directLight\.visible && receiveShadow \) \? (getShadow\( directionalShadowMap\[ i \][^;]*\)) : 1\.0;/
 if (!DIR_SHADOW.test(THREE.ShaderChunk.lights_fragment_begin)) throw new Error('three.js shadow chunk changed; update water.ts')
 THREE.ShaderChunk.lights_fragment_begin = THREE.ShaderChunk.lights_fragment_begin.replace(
   DIR_SHADOW,
   (line, shadow) => /* glsl */ `
   #ifdef USE_FOG
-    directLight.color *= ( directLight.visible && receiveShadow ) ? mix( 1.0, ${shadow}, smoothstep( -10.0, 1.2, vFogWorld.y ) ) : 1.0;
+    directLight.color *= ( directLight.visible && receiveShadow ) ? mix( 1.0, ${shadow}, smoothstep( -0.8, 0.4, vFogWorld.y ) ) : 1.0;
   #else
     ${line}
   #endif`,

@@ -468,10 +468,10 @@ export class Character {
     // Shrugging, the forearms turn out, palms up.
     elL.rotation.x = -shrug * 0.6 - run * 0.9
     elR.rotation.x = -shrug * 0.6 - run * 0.9
-    // The umbrella stays upright, leaning over his head, and pops open.
+    // The umbrella stays straight up, whatever his arm's doing, and pops open.
     this.umbrella.visible = shelter > 0.02
     this.umbrella.scale.set(shelter, 1, shelter)
-    this.umbrella.rotation.z = rad(20) - shR.rotation.z - elR.rotation.z
+    this.umbrella.quaternion.copy(shR.quaternion).multiply(elR.quaternion).invert()
 
     // --- Head, hair, face.
     const tilt = lx * 4 + shrug * 7 - laugh * 4 + Math.sin(t * 0.8) * (still ? 0 : 1)
