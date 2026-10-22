@@ -82,6 +82,14 @@ export function rockFace(x: number, y: number) {
   return THREE.MathUtils.lerp(front(LEVELS[i]), front(LEVELS[i + 1]), f)
 }
 
+// How far the rock reaches either side at height y.
+export function rockHalfWidth(y: number) {
+  let i = 0
+  while (i < LEVELS.length - 2 && LEVELS[i + 1][0] > y) i++
+  const f = THREE.MathUtils.clamp((LEVELS[i][0] - y) / (LEVELS[i][0] - LEVELS[i + 1][0]), 0, 1)
+  return shore(0)[0] * THREE.MathUtils.lerp(LEVELS[i][1], LEVELS[i + 1][1], f)
+}
+
 export function seamount() {
   const pos: number[] = []
   const colors: number[] = []

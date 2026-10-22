@@ -1,4 +1,4 @@
-// Shreyas in 3D: curly black hair, a long-sleeve blue button-up, black jeans
+// Shreyas in 3D: a curly top with faded sides, a long-sleeve blue button-up, black jeans
 // and black shoes. Stands with his feet at the origin, facing +z (the camera).
 // Every few seconds he waves, looks around, shrugs or laughs; his eyes and
 // head follow the cursor, and clicking him makes him jump. He reacts to what
@@ -7,7 +7,7 @@ import * as THREE from 'three'
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { INK, inked, seeded, toon } from './toon'
 
-const SKIN = '#c98652'
+export const SKIN = '#b97848'
 const HAIR = '#1b120d'
 const HAIR_LIGHT = '#33231a'
 const TOP = '#2f62a3'
@@ -109,13 +109,19 @@ export function buildHead(skin = toon(SKIN)) {
     brow.rotation.y = side * 0.32
     brows.add(brow)
   }
-  // Curly hair: a mop of little balls over the top and back of the head,
-  // with a fringe of curls over the forehead.
+  // A curly top: a mop of little balls over the crown, with a fringe of curls
+  // over the forehead, and the back and sides cut short in a fade (a shell
+  // over the skull, tipped back so it comes down lower behind).
   head.add(hair)
+  const fade = inked(new THREE.SphereGeometry(0.6, 28, 14, 0, Math.PI * 2, 0, 1.4), toon(HAIR), 2)
+  fade.scale.set(0.9 * 1.02, 1.02 * 1.02, 0.9 * 1.02)
+  fade.position.y = 0.52
+  fade.rotation.x = -0.5
+  hair.add(fade)
   const rand = seeded(3)
   const curl = new THREE.IcosahedronGeometry(1, 1)
   const curls: [number, number, number][] = []
-  for (let lat = 20; lat <= 90; lat += 14) {
+  for (let lat = 34; lat <= 90; lat += 14) {
     const ring = Math.max(1, Math.round(Math.cos(rad(lat)) * 16))
     for (let i = 0; i < ring; i++) {
       const lon = (i / ring) * 360 + lat * 3
@@ -126,17 +132,6 @@ export function buildHead(skin = toon(SKIN)) {
     }
   }
   for (let i = 0; i < 7; i++) curls.push([50 + rand() * 6, 90 + (i - 3) * 17 + rand() * 4, 0.13 + rand() * 0.03])
-  // Down the back of the head to the nape, coming down only as far as the
-  // tops of the ears at the sides, and a little smaller towards the neck.
-  for (let lat = 8; lat >= -32; lat -= 13) {
-    const ring = Math.round(Math.cos(rad(lat)) * 16)
-    for (let i = 0; i < ring; i++) {
-      const lon = (i / ring) * 360 + lat * 3
-      const back = -Math.sin(rad(lon))
-      if (back < -0.3 || lat < 8 - 42 * Math.max(0, back)) continue
-      curls.push([lat, lon, 0.15 + (lat - 8) * 0.0008 + rand() * 0.035])
-    }
-  }
   for (const [lat, lon, r] of curls) {
     const ball = inked(curl, toon(rand() < 0.3 ? HAIR_LIGHT : HAIR), 1.8)
     ball.scale.setScalar(r)
@@ -290,7 +285,7 @@ export class Character {
       const s = i / 4 - 1
       const x = s * 0.13
       const y = 0.3 + 0.024 * s * s + 0.01 * s ** 4 + 0.006 * s
-      smilePoints.push(new THREE.Vector3(x, y, h.faceZ(x, y) + 0.01))
+      smilePoints.push(new THREE.Vector3(x, y, h.faceZ(x, y) + 0.004))
     }
     const smileCurve = new THREE.CatmullRomCurve3(smilePoints)
     const segments = 24
@@ -310,11 +305,18 @@ export class Character {
     const laughShape = new THREE.Shape()
     laughShape.absarc(0, 0, 0.13, Math.PI, Math.PI * 2, false)
     laughShape.lineTo(-0.13, 0)
-    const laugh = inked(new THREE.ExtrudeGeometry(laughShape, { depth: 0.03, bevelEnabled: false }), toon(MOUTH), 1.8)
-    laugh.position.set(0, 0.33, 0.53)
-    const oh = inked(new THREE.SphereGeometry(0.06, 10, 8), toon(MOUTH), 1.8)
-    oh.scale.set(1, 1.2, 0.4)
-    oh.position.set(0, 0.29, 0.55)
+    // The open mouths are bent round onto the face, so they sit on it
+    // from the side too, just proud of the skin.
+    const onFace = (g: THREE.BufferGeometry, x0: number, y0: number, z0: number) => {
+      const q = g.attributes.position
+      for (let v = 0; v < q.count; v++) q.setZ(v, h.faceZ(x0 + q.getX(v), y0 + q.getY(v)) + z0 + q.getZ(v))
+      g.computeVertexNormals()
+      return g
+    }
+    const laugh = inked(onFace(new THREE.ExtrudeGeometry(laughShape, { depth: 0.03, curveSegments: 16, bevelEnabled: false }), 0, 0.33, -0.018), toon(MOUTH), 1.8)
+    laugh.position.y = 0.33
+    const oh = inked(onFace(new THREE.SphereGeometry(0.06, 10, 8).scale(1, 1.2, 0.4), 0, 0.29, 0.004), toon(MOUTH), 1.8)
+    oh.position.y = 0.29
     this.mouths = { grin, laugh, oh }
     this.head.add(grin, laugh, oh)
 

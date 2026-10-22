@@ -20,7 +20,7 @@ import { zap } from '../lib/zap'
 import * as C from './creatures'
 import type { Fx } from './fx'
 import * as R from './reef'
-import { inked, toon } from './toon'
+import { inked, seeded, toon } from './toon'
 
 // How the world lines up with the page this frame (set by world.ts).
 export type View = {
@@ -98,59 +98,32 @@ const KINDS: Kind[] = [
   { make: () => C.eel('#4b4560'), size: 200, zone: [430, 458], speed: 0.3 },
 ]
 
-// The reef on the rock's face: [top % of the reef band, left % of the
-// screen, width as min(vw, px), piece], as laid out in the drawn version.
-const REEF: [number, number, number, number, () => THREE.Group][] = [
-  [16, 31, 5, 64, () => R.rock(2, '#7d8a77')],
-  [18, 21, 12, 150, () => R.tableCoral('#5cc6b5')],
-  [16, 79, 7, 90, () => R.anemone('#ffa25c', '#c75a3a')],
-  [24, 57, 7, 90, () => R.brainCoral('#8fcf6a')],
-  [22, 67, 11, 140, () => R.seaFan('#9b6fd0')],
-  [28, 38, 7, 88, () => R.tubeCoral('#f2694c', '#7a2618')],
-  [30, 84, 10, 130, () => R.rock(1, '#6d7f86')],
-  [34, 27, 9, 110, () => R.branchCoral('#f07c8c')],
-  [38, 70, 4, 50, () => R.starfish('#ff8a5b')],
-  [40, 75, 8, 100, () => R.branchCoral('#ffcf5c')],
-  [42, 35, 12, 150, () => R.brainCoral('#f5a55a')],
-  [48, 80, 6, 72, () => R.tubeCoral('#b48cf0', '#4b2f7a')],
-  [48, 58, 9, 110, () => R.anemone('#ff8fc8', '#8c3d6b')],
-  [50, 14, 6, 80, () => R.seaweed('#4aa060')],
-  [52, 45, 16, 200, () => R.rock(0, '#5c6b78')],
-  [56, 30, 4, 48, () => R.starfish('#ffd166')],
-  [58, 18, 7, 80, () => R.branchCoral('#9fb8ff')],
-  [60, 9, 7, 90, () => R.seaweed()],
-  [62, 64, 7, 90, () => R.rock(2, '#6d7f86')],
-  [64, 37, 8, 100, () => R.seaFan('#e0566b')],
-  [66, 80, 9, 110, () => R.tableCoral('#e7c35a')],
-  [70, 93, 7, 90, () => R.seaweed('#4aa060')],
-  // Filling in between, so there's hardly any bare rock.
-  [12, 45, 8, 100, () => R.staghornCoral('#e98fb0', '#ffd6e4')],
-  [14, 54, 5, 64, () => R.polyps('#7ee0c3', '#f7fff2')],
-  [12, 10, 7, 90, () => R.plateCoral('#d98a5a')],
-  [20, 6, 6, 80, () => R.seaWhip('#e0566b')],
-  [13, 90, 7, 90, () => R.barrelSponge('#c8743c')],
-  [20, 38, 5, 64, () => R.fingerCoral('#ffd23f')],
-  [24, 92, 6, 80, () => R.fingerCoral('#f2b8d8')],
-  [26, 47, 6, 72, () => R.polyps('#ff9fb8', '#ffe9a8')],
-  [30, 64, 8, 100, () => R.staghornCoral('#9fd6ff', '#e8f6ff')],
-  [32, 12, 9, 110, () => R.barrelSponge('#9b6fd0')],
-  [36, 52, 6, 80, () => R.plateCoral('#f2c46a')],
-  [36, 90, 5, 64, () => R.polyps('#b4f07a', '#fff6c8')],
-  [44, 6, 6, 80, () => R.fingerCoral('#ffb36b')],
-  [44, 26, 6, 80, () => R.seaWhip('#ffcf5c')],
-  [46, 66, 7, 90, () => R.barrelSponge('#e0566b')],
-  [50, 88, 8, 100, () => R.staghornCoral('#c79bff', '#f0e2ff')],
-  [54, 72, 6, 72, () => R.fingerCoral('#7ee0c3')],
-  [58, 54, 6, 72, () => R.polyps('#ff8fc8', '#fff2f8')],
-  [60, 92, 6, 80, () => R.plateCoral('#7fb3a8')],
-  [62, 26, 8, 100, () => R.staghornCoral('#f5a55a', '#ffe2b8')],
-  [66, 52, 9, 110, () => R.barrelSponge('#c8743c')],
-  [68, 12, 6, 80, () => R.fingerCoral('#d26a8a')],
-  [70, 44, 6, 80, () => R.seaWhip('#9b6fd0')],
-  [72, 70, 7, 90, () => R.brainCoral('#c9a0e8')],
-  [74, 26, 5, 64, () => R.polyps('#ffd166', '#ffffff')],
-  [76, 60, 6, 80, () => R.plateCoral('#e07a5f')],
-  [76, 86, 5, 64, () => R.polyps('#7af0d0', '#eaffff')],
+// The reef covers the rock's face from just under the water down to where
+// the face turns away: a piece in each cell of a grid (in world units), nudged
+// off it, picked at random and sized on screen like the drawn version's
+// pieces (64-150px, or as a share of a narrow screen's width). Those behind the text column are hidden
+// as the page is laid out, so the reef frames the text rather than sitting
+// behind it. (No anemones: their arms are drawn one by one, too many for a
+// whole reef of them.)
+const REEF_TOP = -1.8
+const REEF_BOTTOM = -19
+const REEF_STEP = 1.3
+const pick = <T,>(rand: () => number, list: T[]) => list[Math.floor(rand() * list.length)]
+const CORALS: ((rand: () => number) => THREE.Group)[] = [
+  (rand) => R.branchCoral(pick(rand, ['#f07c8c', '#ffcf5c', '#9fb8ff', '#e07a5f'])),
+  (rand) => R.staghornCoral(...pick(rand, [['#e98fb0', '#ffd6e4'], ['#9fd6ff', '#e8f6ff'], ['#c79bff', '#f0e2ff'], ['#f5a55a', '#ffe2b8']] as [string, string][])),
+  (rand) => R.brainCoral(pick(rand, ['#8fcf6a', '#f5a55a', '#c9a0e8', '#c77d5a'])),
+  (rand) => R.tableCoral(pick(rand, ['#5cc6b5', '#e7c35a', '#7fb3a8'])),
+  (rand) => R.tubeCoral(...pick(rand, [['#f2694c', '#7a2618'], ['#b48cf0', '#4b2f7a'], ['#e2a33d', '#7a3b1c']] as [string, string][])),
+  (rand) => R.seaFan(pick(rand, ['#9b6fd0', '#e0566b', '#d9566b'])),
+  (rand) => R.barrelSponge(pick(rand, ['#c8743c', '#9b6fd0', '#e0566b'])),
+  (rand) => R.fingerCoral(pick(rand, ['#ffd23f', '#f2b8d8', '#ffb36b', '#7ee0c3', '#d26a8a'])),
+  (rand) => R.plateCoral(pick(rand, ['#d98a5a', '#f2c46a', '#7fb3a8', '#e07a5f'])),
+  (rand) => R.seaWhip(pick(rand, ['#e0566b', '#ffcf5c', '#9b6fd0'])),
+  (rand) => R.polyps(...pick(rand, [['#7ee0c3', '#f7fff2'], ['#ff9fb8', '#ffe9a8'], ['#b4f07a', '#fff6c8'], ['#ffd166', '#ffffff']] as [string, string][])),
+  (rand) => R.seaweed(pick(rand, ['#4aa060', '#3e8f55'])),
+  (rand) => R.starfish(pick(rand, ['#ff8a5b', '#ffd166'])),
+  (rand) => R.rock(Math.floor(rand() * 3), pick(rand, ['#6d7f86', '#5c6b78', '#7d8a77'])),
 ]
 
 // Sunbeams either side of the island: [x in design px from the middle,
@@ -222,12 +195,21 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
 
   // --- the rock and the reef --------------------------------------------------------
   group.add(R.seamount())
-  const reef = REEF.map(([top, left, vw, px, make], i) => {
-    const piece = make()
-    piece.rotation.y = (((i * 37) % 11) / 11 - 0.5) * 0.8
-    group.add(piece)
-    return { piece, top, left, vw, px, base: { x: 0, z: 0 }, lean: 0 }
-  })
+  const reef: { piece: THREE.Group; x: number; y: number; px: number; lean: number }[] = []
+  {
+    const rand = seeded(41)
+    for (let row = 0, y = REEF_TOP; y > REEF_BOTTOM; row++, y -= REEF_STEP * 0.8) {
+      const half = R.rockHalfWidth(y) - 0.8
+      for (let x = -half + (row % 2) * REEF_STEP * 0.5; x < half; x += REEF_STEP) {
+        const jx = x + (rand() - 0.5) * 0.9
+        const jy = y + (rand() - 0.5) * 0.9
+        const piece = pick(rand, CORALS)(rand)
+        piece.rotation.y = (rand() - 0.5) * 0.8
+        group.add(piece)
+        reef.push({ piece, x: jx, y: jy, px: 64 + rand() * 86, lean: 0 })
+      }
+    }
+  }
 
   const beams = BEAMS.map(([x, lean, width], i) => {
     const beam = R.sunbeam()
@@ -400,14 +382,17 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
     if (key === laidOut) return
     const first = !laidOut
     laidOut = key
-    // The reef: each piece on the rock's face, across the screen as drawn.
+    // The reef: each piece on the rock's face, those behind the text column
+    // hidden. On narrow screens the text fills the width, so only the middle
+    // is kept clear.
+    const clear = Math.min(336 + 40, vw.w * 0.3)
     for (const r of reef) {
-      const py = depthPx(100) + (r.top / 100 + 0.06) * 460 * vw.s
-      let z = 7.5
-      const x = across(r.left / 100, z)
-      for (let k = 0; k < 2; k++) z = R.rockFace(x, vw.y(py, z))
-      const y = vw.y(py, z)
-      const width = cssWidth(r.vw, r.px) * vw.unit(z)
+      const { x, y } = r
+      const z = R.rockFace(x, y)
+      // Near the top, small enough to stay under the water.
+      const size = Math.min(cssWidth(r.px / 12.5, r.px) * vw.unit(z), (-0.7 - y) / 0.75)
+      r.piece.visible = Number.isFinite(z) && Math.abs(x) - size * 0.4 > clear * vw.unit(z)
+      if (!r.piece.visible) continue
       // It grows out of the rock rather than standing up against it: leaning
       // out along the face's slope, its foot rooted just inside the face.
       const e = 0.4
@@ -418,8 +403,8 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
       ).normalize()
       if (!Number.isFinite(out.x + out.y)) out.set(0, 0, 1)
       const grow = out.clone().multiplyScalar(0.9).add(new THREE.Vector3(0, 1, 0)).normalize()
-      r.piece.position.set(x, y, z).addScaledVector(out, width * 0.12 - 0.1)
-      r.piece.scale.setScalar(width)
+      r.piece.position.set(x, y, z).addScaledVector(out, size * 0.12 - 0.1)
+      r.piece.scale.setScalar(size)
       r.piece.rotation.x = Math.atan2(grow.z, grow.y)
       r.lean = -Math.atan2(grow.x, grow.y)
       r.piece.rotation.z = r.lean

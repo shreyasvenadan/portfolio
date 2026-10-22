@@ -4,7 +4,7 @@ import Section from './Section'
 export default function About() {
   return (
     <Section id="about" title="About">
-      <div className="space-y-6 text-xl leading-[1.7] text-ink/90">
+      <div className="space-y-6 text-xl leading-[1.7] text-ink">
         {profile.about.map((paragraph) => (
           <p key={paragraph} data-focus>
             {paragraph}

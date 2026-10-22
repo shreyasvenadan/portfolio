@@ -1,13 +1,16 @@
 // Reading focus: as the page scrolls, the text block on the reading line sits
-// on a soft card that glides from block to block, and the others fade back
-// with distance, so it's easy to keep your place. Blocks opt in with a
-// data-focus attribute. The reading line sits a little above the middle of
-// the screen, sliding down as the page bottoms out so the last blocks, which
-// can't scroll up that far, get their turn too.
+// on an (invisible) card that glides from block to block, which the sea
+// creatures make way for. Text is fully lit, fading only as it nears the top
+// or bottom edge of the screen. Blocks opt in with a data-focus attribute. The
+// reading line sits a little above the middle of the screen, sliding down as
+// the page bottoms out so the last blocks, which can't scroll up that far, get
+// their turn too.
 
-// Fully lit within this many screen heights of the line; dimmest beyond it.
+// Which block is being read: the nearest within this many screen heights of the line.
 const REACH = 0.25
-const DIMMEST = 0.45
+// Text fades over this many screen heights from each edge, down to DIMMEST.
+const EDGE = 0.12
+const DIMMEST = 0.35
 // How far the card reaches past the block's edges, in px.
 const PAD_X = 28
 const PAD_Y = 20
@@ -31,7 +34,10 @@ export function watchFocus() {
     for (const el of document.querySelectorAll<HTMLElement>('[data-focus]')) {
       const r = el.getBoundingClientRect()
       const gap = Math.max(0, r.top - line, line - r.bottom)
-      el.style.opacity = (DIMMEST + (1 - DIMMEST) * Math.max(0, 1 - gap / (vh * REACH))).toFixed(3)
+      // How far its nearer edge is into the screen, measured from whichever
+      // screen edge it's closest to (a tall block on screen stays lit).
+      const inside = Math.min(r.bottom, vh - r.top)
+      el.style.opacity = (DIMMEST + (1 - DIMMEST) * Math.min(1, Math.max(0, inside / (vh * EDGE)))).toFixed(3)
       if (gap < closest) [active, closest] = [r, gap]
     }
     // The card sits behind the nearest block, if any is close to the line.

@@ -4,10 +4,9 @@
 // hovers leaning into the shot, kicking slowly, filming whatever is in front
 // of the lens. Built standing at the origin, facing +z, like the character.
 import * as THREE from 'three'
-import { buildHead } from './character'
+import { buildHead, SKIN } from './character'
 import { inked, toon } from './toon'
 
-const SKIN = '#c98652'
 const SUIT = '#1f232b'
 const PANEL = '#2f62a3'
 const FIN = '#f2c230'
