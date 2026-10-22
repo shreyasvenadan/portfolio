@@ -40,11 +40,16 @@ export class Fx {
   }
 
   step() {
-    this.live = this.live.filter((l) => {
+    // Effects started by others as they update (a splash when something
+    // lands) are added to a fresh list, so they aren't lost.
+    const live = this.live
+    this.live = []
+    const kept = live.filter((l) => {
       if (l.update(l.obj, l.age++)) return true
       l.obj.removeFromParent()
       return false
     })
+    this.live = kept.concat(this.live)
   }
 
   // Rings spreading out on the water, and a spray of droplets.
@@ -112,6 +117,22 @@ export class Fx {
         p.rotation.x += spin.x
         p.rotation.y += spin.y
         return p.position.y > 0
+      })
+    }
+  }
+
+  // Sand thrown up where something lands, falling back.
+  sandBurst(at: THREE.Vector3, size = 1) {
+    for (let i = 0; i < 18 * size; i++) {
+      const a = Math.random() * Math.PI * 2
+      const v = new THREE.Vector3(Math.cos(a) * 0.05, 0.08 + Math.random() * 0.12, Math.sin(a) * 0.05).multiplyScalar(size)
+      const grain = new THREE.Mesh(ball, fading(i % 3 ? '#e7c88c' : '#c9a46a'))
+      grain.scale.setScalar((0.05 + Math.random() * 0.05) * size)
+      grain.position.copy(at)
+      this.add(grain, (g, age) => {
+        v.y -= 0.01
+        g.position.add(v)
+        return age < 90 && g.position.y > at.y - 0.05
       })
     }
   }

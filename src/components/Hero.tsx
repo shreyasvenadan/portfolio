@@ -1,14 +1,25 @@
+import { useSyncExternalStore } from 'react'
 import { profile } from '../data/content'
+import { currentQuip, subscribeQuip } from '../lib/quip'
 
 export default function Hero() {
+  // Now and then he says something about what's going on (src/lib/quip.ts).
+  const quip = useSyncExternalStore(subscribeQuip, currentQuip)
   return (
     <section id="top" className="flex min-h-svh flex-col justify-end pt-28 pb-10 md:pb-14">
       {/* Kept for screen readers and search engines; the name shows in the header. */}
       <h1 className="sr-only">{profile.name}</h1>
       {/* The tagline, said by Shreyas standing on the island (src/scene3d), in a
           speech balloon that follows his head. */}
-      <p className="speech">
-        {profile.tagline}
+      <p key={quip?.id ?? 0} className={quip ? 'speech quip' : 'speech'}>
+        {quip ? (
+          <>
+            <span aria-hidden>{quip.text}</span>
+            <span className="sr-only">{profile.tagline}</span>
+          </>
+        ) : (
+          profile.tagline
+        )}
         <svg aria-hidden viewBox="0 0 40 40" className="speech-tail">
           <path d="M40 2 Q18 12 2 36 Q20 24 40 20" />
         </svg>

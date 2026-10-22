@@ -1,8 +1,11 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import nightPoster from '../assets/island-night.webp'
+import dayPoster from '../assets/island-day.webp'
 import { isNight } from '../lib/night'
 import { prefersReducedMotion, sectionProgress } from '../lib/sections'
 import { wy } from '../lib/world'
 import World3D, { type WorldHandle } from '../world/World3D'
+import Discoveries from './Discoveries'
 
 // The world behind the page: an island at the surface, then the ocean below,
 // getting darker with depth, with each section in its own depth zone
@@ -17,7 +20,8 @@ const hasWebGL = () => {
   }
 }
 
-// Behind the 3D world while it loads: the sky's colours, then the water's.
+// Behind the 3D world while it loads: the sky's colours, then the water's,
+// with a picture of the island on top (fading out as the scene takes over).
 const PLACEHOLDER = `linear-gradient(to bottom,
   #f0a865 0, #fbe2b4 ${wy(70)}, #35a2b1 ${wy(100)}, #1f7497 ${wy(170)}, #16507c ${wy(250)},
   #0d2d52 ${wy(340)}, #07162c ${wy(420)}, #040a16 ${wy(500)})`
@@ -43,11 +47,17 @@ export default function Backdrop() {
   const [webgl] = useState(hasWebGL)
   const world = useRef<WorldHandle>(null)
   const still = useMemo(() => prefersReducedMotion(), [])
+  // The picture of the island shown until the scene is drawn: as it is by
+  // day or by night, whichever it is when the page loads.
+  const [poster] = useState(() => (isNight() ? nightPoster : dayPoster))
+  const [ready, setReady] = useState(false)
+  const [posterGone, setPosterGone] = useState(false)
+  const onReady = useCallback(() => setReady(true), [])
 
   useEffect(() => {
     // The world sits behind the page content, so clicks are hit-tested by
     // position, and the cursor shows what can be clicked.
-    const ignore = (e: Event) => !!(e.target as Element).closest('a, button, dialog')
+    const ignore = (e: Event) => !!(e.target as Element).closest('a, button, dialog, [data-ui]')
     const point = (e: MouseEvent) => {
       document.body.style.cursor = world.current?.over(e.clientX, e.clientY) ? 'var(--cursor-pointer)' : ''
     }
@@ -96,7 +106,19 @@ export default function Backdrop() {
   return (
     <>
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0" style={{ height: wy(500), background: PLACEHOLDER }} />
-      <World3D ref={world} still={still} />
+      <World3D ref={world} still={still} onReady={onReady} />
+      {!posterGone && (
+        <img
+          src={poster}
+          alt=""
+          aria-hidden
+          fetchPriority="high"
+          onTransitionEnd={() => setPosterGone(true)}
+          // Cropped like the scene: covering the screen, bottom aligned.
+          className={`pointer-events-none absolute inset-x-0 top-0 h-lvh w-full object-cover object-bottom transition-opacity duration-700 ${ready ? 'opacity-0' : ''}`}
+        />
+      )}
+      <Discoveries />
     </>
   )
 }

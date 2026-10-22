@@ -7,18 +7,28 @@
 //   gull            squawks and steals a coconut
 //   coconut         falls, bounces and rolls; grows back
 //   football        kicked into the sea, where it bobs
-//   pirate ship     cannon hits; enough of them sink it
+//   pirate ship     cannon hits; it fires back; enough hits sink it, and a
+//                   treasure chest washes up (click it to open it)
 //   Shreyas         jumps
+//   crab            flips over; corner it and it pinches
+//   turtles         (night) hatch on the beach; click one to help it along
+//   the sand        drag across it to write in it
+// Shreyas reacts to all of it (cheers, points, ducks, runs after the ball)
+// and says so in his speech balloon (lib/quip.ts), and each is counted as
+// it's found (lib/discoveries.ts).
 // The camera drifts a little with the cursor, and as the page scrolls it
 // sinks through the surface into the ocean below (ocean.ts).
 import * as THREE from 'three'
+import { discover } from '../lib/discoveries'
 import { isNight, toggleNight } from '../lib/night'
-import { cannonHit, chime, planeCrash, rainfall, sinkingShip, splash, squawk, thud, thunder } from '../lib/sound'
+import { say } from '../lib/quip'
+import { cannonHit, chime, planeCrash, rainfall, sinkingShip, snip, splash, squawk, thud, thunder, whistle } from '../lib/sound'
 import { depthPx } from '../lib/world'
 import { Character } from './character'
 import { Fx } from './fx'
 import * as M from './models'
 import { createOcean, FRONT, type View } from './ocean'
+import { SandMarks } from './sand'
 import { inked, outlineUniforms, seeded, toon } from './toon'
 import { setWater, WATER_DEPTHS } from './water'
 
@@ -34,6 +44,7 @@ const TARGET = new THREE.Vector3(0, 3.1, 0)
 const FRAME_HEIGHT = 2 * CAMERA.distanceTo(TARGET) * Math.tan(THREE.MathUtils.degToRad(16))
 
 const HITS_TO_SINK = 4
+const smooth = (x: number) => x * x * (3 - 2 * x)
 
 export type World = {
   click(x: number, y: number): boolean
@@ -43,11 +54,12 @@ export type World = {
 
 // `onHead` hears where his face is on the page (in page pixels) and how far
 // above it the top of his hair is, so his speech balloon can follow him.
-type Options = { still: boolean; flash: (strength: number) => void; onHead: (x: number, y: number, top: number) => void }
+// `onReady` hears when the first frame has been drawn.
+type Options = { still: boolean; flash: (strength: number) => void; onHead: (x: number, y: number, top: number) => void; onReady: () => void }
 
 // `canvas` sits behind the page and draws everything; `front` sits over the
 // page text and draws only the sea creatures swimming in front of it.
-export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement, { still, flash, onHead }: Options): World {
+export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement, { still, flash, onHead, onReady }: Options): World {
   const ratio = Math.min(window.devicePixelRatio, 2)
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
   renderer.setPixelRatio(ratio)
@@ -206,8 +218,10 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     0.13 * Math.sin(x * 0.33 + t * 1.3) + 0.1 * Math.sin(z * 0.45 + t * 1.05) + 0.05 * Math.sin((x + z) * 0.9 + t * 2.1)
 
   // --- the island and everything on it ---------------------------------------------
-  const land = M.island()
+  const marks = new SandMarks()
+  const land = M.island(marks)
   scene.add(land)
+  const sand = land.getObjectByName('island')!
   const shore = land.getObjectByName('shore')!
   const foam = M.foam()
   scene.add(foam)
@@ -237,7 +251,8 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   scene.add(ball)
 
   const shreyas = new Character()
-  shreyas.root.position.set(-0.2, M.groundAt(-0.2, 5), 5)
+  const HOME = new THREE.Vector3(-0.2, M.groundAt(-0.2, 5), 5)
+  shreyas.root.position.copy(HOME)
   // He casts a shadow on the sand, but not on himself.
   shreyas.root.traverse((o) => (o.receiveShadow = false))
   scene.add(shreyas.root)
@@ -269,7 +284,28 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   const ship = M.pirateShip()
   ship.scale.setScalar(1.25)
   scene.add(ship)
-  const voyage = { hits: 0, sinking: -1, sunkCycle: -1, holes: [] as THREE.Object3D[] }
+  const voyage = { hits: 0, sinking: -1, sunkCycle: -1, holes: [] as THREE.Object3D[], firedAt: -100 }
+
+  // What a sunk ship leaves behind: a chest that floats in and washes up.
+  const chest = M.treasureChest()
+  chest.visible = false
+  scene.add(chest)
+  type Treasure = { phase: 'none' | 'float' | 'beach' | 'beached' | 'open'; at: number; side: number; from: THREE.Vector3; via: THREE.Vector3; to: THREE.Vector3; glint: number }
+  const treasure: Treasure = { phase: 'none', at: 0, side: 1, from: new THREE.Vector3(), via: new THREE.Vector3(), to: new THREE.Vector3(), glint: 0 }
+
+  // --- living on the beach: a crab, and at night, turtles hatching -------------------
+  const crab = M.crab()
+  crab.scale.setScalar(1.3)
+  scene.add(crab)
+  // Where it may go: the front of the beach, on dry sand.
+  const CRAB_X = 4.6
+  const CRAB_Z = [7, 8.4] as const
+  const crabState = { x: 3.4, z: 7.6, goal: new THREE.Vector2(3.4, 7.6), nextGoal: 2, flipAt: -100, pinchAt: -100, cornered: 0, phase: 0 }
+  const onSand = (x: number, z: number) => Math.abs(x) < CRAB_X && z > CRAB_Z[0] && z < CRAB_Z[1] && M.groundAt(x, z) > 0.12
+
+  type Hatchling = { obj: THREE.Group; bornAt: number; heading: number; phase: number; boostUntil: number }
+  const turtles: Hatchling[] = []
+  const nest = { nextAt: -1, side: 1 }
 
   // --- state shared with the frame loop --------------------------------------------
   const pointer = new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 3)
@@ -282,6 +318,51 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
 
   const move = (e: PointerEvent) => pointer.set(e.clientX, e.clientY)
   window.addEventListener('pointermove', move)
+
+  // Writing in the sand: press on the beach and drag. (Not by touch, where
+  // dragging scrolls the page.) The click that ends a drag isn't a click.
+  const drawing = { down: false, active: false, from: null as THREE.Vector3 | null, x: 0, y: 0, length: 0, drew: false }
+  const sandAt = (x: number, y: number) => {
+    const r = canvas.getBoundingClientRect()
+    ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1)
+    ray.setFromCamera(ndc, camera)
+    const hit = ray.intersectObject(sand, false)[0]
+    return hit && hit.point.y > 0.12 ? hit.point : null
+  }
+  const press = (e: PointerEvent) => {
+    drawing.drew = false
+    if (e.button !== 0 || e.pointerType === 'touch' || sink() > 2) return
+    if ((e.target as Element).closest('a, button, dialog, p, h1, h2, h3, li, [data-ui]')) return
+    if (pick(e.clientX, e.clientY)) return
+    const at = sandAt(e.clientX, e.clientY)
+    if (!at) return
+    // Otherwise the drag would select text.
+    e.preventDefault()
+    Object.assign(drawing, { down: true, active: false, from: at, x: e.clientX, y: e.clientY })
+  }
+  const drag = (e: PointerEvent) => {
+    if (!drawing.down) return
+    if (!drawing.active && Math.hypot(e.clientX - drawing.x, e.clientY - drawing.y) < 4) return
+    drawing.active = true
+    const at = sandAt(e.clientX, e.clientY)
+    // Off the sand, the line lifts, and starts again where it comes back.
+    if (!at) return void (drawing.from = null)
+    if (!drawing.from) return void (drawing.from = at)
+    const d = at.distanceTo(drawing.from)
+    if (d < 0.04) return
+    marks.line(drawing.from, at)
+    drawing.from = at
+    drawing.length += d
+    if (drawing.length > 3) discover('sand')
+  }
+  const lift = () => {
+    if (drawing.active) drawing.drew = true
+    drawing.down = drawing.active = false
+  }
+  window.addEventListener('pointerdown', press)
+  window.addEventListener('pointermove', drag)
+  window.addEventListener('pointerup', lift)
+  window.addEventListener('pointercancel', lift)
 
   // Lining the world up with the page: k is world units per screen pixel
   // where the camera's looking, and the page pixel at `centre` (down from the
@@ -339,6 +420,9 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
       [ball, 'ball'],
       ...nuts.filter((n) => n.visible && !n.userData.falling).map((n): [THREE.Object3D, string] => [n, 'nut']),
       ...gulls.filter((g, i) => g.visible && gullState[i].goneUntil === 0).map((g): [THREE.Object3D, string] => [g, 'gull']),
+      [crab, 'crab'],
+      ...turtles.filter((h) => h.obj.visible).map((h): [THREE.Object3D, string] => [h.obj, 'turtle']),
+      ...(treasure.phase === 'beached' ? [[chest, 'chest'] as [THREE.Object3D, string]] : []),
       [plane, 'plane'],
       [ship, 'ship'],
       ...clouds.map((c): [THREE.Object3D, string] => [c.obj, 'cloud']),
@@ -355,6 +439,8 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
       for (const [obj, kind, px] of [
         ...gulls.map((g, i): [THREE.Object3D, string, number] => [g, gullState[i].goneUntil === 0 && g.visible ? 'gull' : '', 26]),
         ...nuts.map((n): [THREE.Object3D, string, number] => [n, n.visible && !n.userData.falling ? 'nut' : '', 12]),
+        [crab, 'crab', 24] as [THREE.Object3D, string, number],
+        ...turtles.map((h): [THREE.Object3D, string, number] => [h.obj, h.obj.visible ? 'turtle' : '', 22]),
       ]) {
         if (!kind) continue
         const p = toScreen(obj.getWorldPosition(new THREE.Vector3()))
@@ -374,12 +460,26 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   let t = 0
 
   function click(x: number, y: number) {
+    if (drawing.drew) {
+      drawing.drew = false
+      return true
+    }
     if (ocean.click(x, y)) return true
     const hit = pick(x, y)
     if (!hit) return false
     switch (hit.kind) {
       case 'shreyas':
         shreyas.jump()
+        discover('jump')
+        break
+      case 'crab':
+        flipCrab()
+        break
+      case 'turtle':
+        nudgeTurtle(turtles.find((h) => h.obj === hit.obj)!)
+        break
+      case 'chest':
+        openChest()
         break
       case 'ball':
         kickBall(x)
@@ -404,6 +504,7 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
         break
       case 'sky':
         toggleNight()
+        discover('night')
         break
     }
     return true
@@ -411,6 +512,7 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
 
   // Coconuts drop, bounce and roll to a stop; a new one grows back later.
   function dropCoconut(nut: THREE.Mesh) {
+    discover('coconut')
     nut.userData.falling = true
     const at = nut.getWorldPosition(new THREE.Vector3())
     const fallen = nut.clone()
@@ -456,9 +558,12 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   function kickBall(clientX: number) {
     if (ball.userData.kicked) return
     thud()
+    discover('football')
     if (still) return
     ball.userData.kicked = true
     const dir = clientX < toScreen(ball.position).x ? 1 : -1
+    // Shreyas runs after it, as far as the water.
+    if (errand.phase === 'none') Object.assign(errand, { phase: 'wait', until: t + 0.35, side: dir })
     const FLIGHT = 64
     const land = new THREE.Vector3(dir * (11.5 + Math.random() * 3), 0, 2 + Math.random() * 4)
     const v = new THREE.Vector3().subVectors(land, ball.position).divideScalar(FLIGHT)
@@ -532,6 +637,8 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
       if (age < DIVE) gull.position.copy(curve(from, mid1, to.clone().add(new THREE.Vector3(0, 0.6, 0)), age / DIVE))
       else {
         if (age === DIVE && target) {
+          discover('gull')
+          say('hey, my coconut!', 2.5)
           target.visible = false
           carried = target.clone()
           carried.position.set(0, -0.35, 0)
@@ -556,6 +663,9 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   function crashPlane() {
     if (still || t - flight.crashedAt < 20) return
     flight.crashedAt = t
+    discover('plane')
+    say('mayday!', 2.5)
+    shreyas.react('point', 2.6, towards(plane.position))
     const wreck = plane.clone()
     wreck.position.copy(plane.position)
     wreck.rotation.copy(plane.rotation)
@@ -600,9 +710,285 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     if (voyage.hits >= HITS_TO_SINK) {
       voyage.sinking = t + 0.75
       window.setTimeout(() => sinkingShip(4), 750)
+      discover('ship')
+      say('nice shot!', 3)
+      shreyas.react('cheer', 2.6)
+      const x = ship.position.x
+      if (!still) window.setTimeout(() => washUp(x), 4500)
+    } else if (!still && t - voyage.firedAt > 2.5) {
+      // Hit, it fires back.
+      voyage.firedAt = t
+      window.setTimeout(fireBack, 900)
     }
   }
   let lurchAt = -100
+
+  // From the ship, a cannonball lobbed at the island, landing near Shreyas
+  // (never on him): he ducks, and it leaves a crater in the sand.
+  function fireBack() {
+    if (voyage.sinking >= 0 || !ship.visible) return
+    const port = ship.localToWorld(new THREE.Vector3([-1.6, -0.4, 0.8, 2][Math.floor(Math.random() * 4)], 0.35, 1.3))
+    cannonHit(0.22)
+    fx.burst(port, 1)
+    fx.smoke(port, 2.2, 50)
+    const me = shreyas.root.position
+    let land = new THREE.Vector3(me.x + 2, 0, me.z)
+    for (let i = 0; i < 12; i++) {
+      const a = Math.random() * Math.PI * 2
+      const d = 1.6 + Math.random() * 1.4
+      const x = me.x + Math.cos(a) * d
+      const z = me.z + Math.sin(a) * d * 0.7
+      if (M.groundAt(x, z) > 0.25) {
+        land = new THREE.Vector3(x, 0, z)
+        break
+      }
+    }
+    land.y = M.groundAt(land.x, land.z)
+    const FLIGHT = 100
+    const g = 0.006
+    const v = new THREE.Vector3().subVectors(land, port).divideScalar(FLIGHT)
+    v.y = (land.y - port.y + (g * FLIGHT * FLIGHT) / 2) / FLIGHT
+    whistle(FLIGHT / 60)
+    fx.add(M.cannonball(), (b, age) => {
+      if (age === 0) b.position.copy(port)
+      v.y -= g
+      b.position.add(v)
+      if (age === FLIGHT - 35) shreyas.react('duck', 1.5)
+      if (age < FLIGHT) return true
+      thud()
+      cannonHit(0.3)
+      fx.sandBurst(land, 1.2)
+      fx.smoke(land.clone().setY(land.y + 0.3), 1.6, 40)
+      marks.crater(land, 0.45)
+      say(['hey!', 'missed me!', 'rude!'][Math.floor(Math.random() * 3)], 2)
+      if (Math.hypot(crabState.x - land.x, crabState.z - land.z) < 2) flipCrab(true)
+      return false
+    })
+  }
+
+  // The chest bobs in from where the ship went down, round the island to the
+  // beach on that side, and up onto the sand.
+  function washUp(x: number) {
+    if (treasure.phase !== 'none') return
+    const side = x < 0 ? -1 : 1
+    Object.assign(treasure, { phase: 'float', at: t, side, glint: t })
+    treasure.from.set(x, 0, -68)
+    treasure.via.set(side * 22, 0, -8)
+    treasure.to.set(side * 8.6, 0, 7.4)
+    chest.position.copy(treasure.from)
+    chest.rotation.set(0, 0, 0)
+    chest.scale.setScalar(1)
+    ;(chest.userData.lid as THREE.Object3D).rotation.x = 0
+    chest.visible = true
+  }
+
+  function openChest() {
+    treasure.phase = 'open'
+    treasure.at = t
+    chime()
+    discover('treasure')
+    say('finders keepers!', 3)
+    shreyas.react('cheer', 2)
+    const top = chest.localToWorld(new THREE.Vector3(0, 0.7, 0))
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2
+      fx.sparkle(top, new THREE.Vector3(Math.cos(a) * 0.3, 0.5 + Math.abs(Math.sin(a)) * 0.5, 0).normalize().multiplyScalar(0.25), camera, 0.35)
+    }
+  }
+
+  // Which way something is from Shreyas, on screen (x right, y up).
+  function towards(v: THREE.Vector3) {
+    const a = toScreen(shreyas.faceAt(new THREE.Vector3()))
+    const b = toScreen(v)
+    return { x: b.x - a.x, y: a.y - b.y }
+  }
+
+  // --- Shreyas running after the football ---------------------------------------------
+  type Errand = { phase: 'none' | 'wait' | 'out' | 'look' | 'back'; until: number; side: number }
+  const errand: Errand = { phase: 'none', until: 0, side: 1 }
+  const RUN_TO = new THREE.Vector3(5.4, 0, 4.8)
+  function runErrand(dt: number) {
+    const me = shreyas.root.position
+    let goal: THREE.Vector3 | null = null
+    let speed = 0
+    let face = 0
+    switch (errand.phase) {
+      case 'wait':
+        if (t > errand.until) {
+          errand.phase = 'out'
+          say('my ball!', 2)
+        }
+        break
+      case 'out': {
+        // As far as the water, or the edge of the screen on narrow ones.
+        const seen = (CAMERA.z - RUN_TO.z) * Math.tan(THREE.MathUtils.degToRad(16)) * (FRAME.w / FRAME.h) * (size.w / (FRAME.w * frame.s))
+        goal = RUN_TO.clone().setX(Math.min(RUN_TO.x, seen - 1) * errand.side)
+        speed = 3.4
+        break
+      }
+      case 'look':
+        // Gazing out to sea after it.
+        face = errand.side * 0.7
+        if (t > errand.until) errand.phase = 'back'
+        break
+      case 'back':
+        goal = HOME
+        speed = 2.2
+        break
+    }
+    let running = 0
+    if (goal) {
+      const to = new THREE.Vector3(goal.x - me.x, 0, goal.z - me.z)
+      const d = to.length()
+      if (d < 0.08) {
+        if (errand.phase === 'out') {
+          Object.assign(errand, { phase: 'look', until: t + 2.2 })
+          shreyas.react('shrug', 1.8)
+          say("…I'll get another one", 2.4)
+        } else errand.phase = 'none'
+      } else {
+        const step = Math.min(d, speed * dt)
+        me.addScaledVector(to.normalize(), step)
+        me.y = M.groundAt(me.x, me.z)
+        face = Math.atan2(to.x, to.z)
+        running = speed / 3.4
+      }
+    }
+    // Turn smoothly to face where he's going (or back to the camera).
+    const turn = Math.atan2(Math.sin(face - shreyas.root.rotation.y), Math.cos(face - shreyas.root.rotation.y))
+    shreyas.root.rotation.y += turn * Math.min(1, dt * 10)
+    shreyas.stride += (running - shreyas.stride) * Math.min(1, dt * 10)
+  }
+
+  // --- the crab ----------------------------------------------------------------------------
+  // Clicked (or a cannonball lands by it), it's thrown on its back for a moment.
+  function flipCrab(blast = false) {
+    if (t - crabState.flipAt < 2.6) return
+    crabState.flipAt = t
+    if (!blast) {
+      snip()
+      discover('crab')
+    }
+  }
+
+  // Cornered by the cursor, it lunges and snaps at it.
+  function pinch() {
+    crabState.pinchAt = t
+    crabState.cornered = 0
+    snip()
+    window.setTimeout(snip, 220)
+    discover('pinch')
+    say('careful, he pinches!', 2.5)
+  }
+
+  function moveCrab(dt: number) {
+    const s = crabState
+    const body = crab.userData.body as THREE.Object3D
+    const legs = crab.userData.legs as THREE.Object3D[]
+    const pincers = crab.userData.pincers as THREE.Object3D[]
+    const flipped = t - s.flipAt
+    const pinching = t - s.pinchAt
+    let speed = 0
+    if (flipped > 2.6 && pinching > 0.9 && !still) {
+      const p = toScreen(crab.position)
+      const near = Math.hypot(p.x - pointer.x, p.y - pointer.y)
+      if (near < 130) {
+        // Run from the cursor; screen-down is towards us (+z).
+        const dir = new THREE.Vector2(Math.sign(p.x - pointer.x) || 1, Math.sign(p.y - pointer.y) * 0.5).normalize()
+        const step = 3.2 * dt
+        const tries = [dir, new THREE.Vector2(dir.x, 0), new THREE.Vector2(0, dir.y)]
+        const ok = tries.find((d) => d.lengthSq() > 0 && onSand(s.x + d.x * step, s.z + d.y * step))
+        if (ok) {
+          s.x += ok.x * step
+          s.z += ok.y * step
+          s.cornered = 0
+          speed = 1
+        } else if ((s.cornered += dt) > 0.5 && near < 90) pinch()
+        s.goal.set(s.x, s.z)
+        s.nextGoal = t + 1.5
+      } else {
+        s.cornered = 0
+        if (t > s.nextGoal) {
+          s.goal.set((Math.random() * 2 - 1) * (CRAB_X - 0.6), THREE.MathUtils.lerp(CRAB_Z[0], CRAB_Z[1], Math.random()))
+          if (!onSand(s.goal.x, s.goal.y)) s.goal.set(s.x, s.z)
+          s.nextGoal = t + 2 + Math.random() * 3
+        }
+        const to = new THREE.Vector2(s.goal.x - s.x, s.goal.y - s.z)
+        const d = to.length()
+        if (d > 0.05) {
+          const step = Math.min(d, 1.1 * dt)
+          s.x += (to.x / d) * step
+          s.z += (to.y / d) * step
+          speed = 0.5
+        }
+      }
+    }
+    s.phase += dt * 16 * speed
+    crab.position.set(s.x, M.groundAt(s.x, s.z) - 0.02, s.z)
+    // On its back: up and over, legs waving, then back over.
+    const over = flipped < 0.3 ? flipped / 0.3 : flipped < 2.2 ? 1 : Math.max(0, 1 - (flipped - 2.2) / 0.4)
+    const roll = smooth(over) * Math.PI
+    body.rotation.z = roll
+    body.position.y = ((1 - Math.cos(roll)) / 2) * 0.36 + (flipped < 0.3 ? Math.sin(over * Math.PI) * 0.5 : 0)
+    // Lunging, it jumps at the cursor and snaps.
+    const lunge = pinching < 0.9 ? Math.sin((pinching / 0.9) * Math.PI) : 0
+    body.position.z = lunge * 0.25
+    legs.forEach((leg, i) => {
+      const wiggle = over > 0.5 ? Math.sin(t * 30 + i) * 0.5 : Math.sin(s.phase + i * 1.3) * 0.45 * speed
+      leg.rotation.x = wiggle
+    })
+    const snap = pinching < 0.9 ? Math.abs(Math.sin(pinching * 22)) * 0.7 : 0.15 + Math.sin(t * 2) * 0.1
+    for (const pincer of pincers) pincer.rotation.x = -snap
+    crab.rotation.y = Math.sin(t * 0.7) * 0.15
+  }
+
+  // --- turtles -----------------------------------------------------------------------------
+  // At night, every so often, a nest on the beach hatches and the babies
+  // scurry for the sea on that side.
+  function hatch() {
+    nest.side = -nest.side
+    const at = new THREE.Vector3(nest.side * 4.8, 0, 7)
+    at.y = M.groundAt(at.x, at.z)
+    fx.sandBurst(at, 0.6)
+    discover('turtles')
+    say('baby turtles!', 2.5)
+    shreyas.react('point', 2, towards(at))
+    for (let i = 0; i < 5; i++) {
+      const obj = M.hatchling()
+      obj.position.set(at.x + (Math.random() - 0.5) * 0.5, at.y, at.z + (Math.random() - 0.5) * 0.4)
+      obj.visible = false
+      scene.add(obj)
+      turtles.push({ obj, bornAt: t + i * 0.45, heading: Math.atan2(nest.side, 0.45) + (Math.random() - 0.5) * 0.5, phase: Math.random() * 6, boostUntil: 0 })
+    }
+  }
+
+  function nudgeTurtle(h: Hatchling) {
+    h.boostUntil = t + 1.2
+    chime()
+  }
+
+  function crawl(dt: number) {
+    for (const h of [...turtles]) {
+      const age = t - h.bornAt
+      h.obj.visible = age > 0
+      if (age < 0) continue
+      const boost = t < h.boostUntil ? 2.6 : 1
+      h.phase += dt * 9 * boost
+      const step = 0.42 * boost * dt
+      h.obj.position.x += Math.sin(h.heading) * step
+      h.obj.position.z += Math.cos(h.heading) * step
+      const ground = M.groundAt(h.obj.position.x, h.obj.position.z)
+      h.obj.position.y = ground + (t < h.boostUntil ? Math.abs(Math.sin(h.phase)) * 0.08 : 0)
+      h.obj.rotation.y = h.heading + Math.sin(h.phase) * 0.25
+      // Popping up out of the sand.
+      h.obj.scale.setScalar(Math.min(1, age / 0.35))
+      for (const f of h.obj.userData.flippers as THREE.Object3D[]) f.rotation.y = Math.sin(h.phase) * 0.6 * f.userData.side
+      if (ground > 0) continue
+      fx.splash(h.obj.position.x, h.obj.position.z, 0.35)
+      h.obj.removeFromParent()
+      turtles.splice(turtles.indexOf(h), 1)
+    }
+  }
 
   // Clouds: rain, then lightning; a rainbow when the rain stops in daylight.
   type Storm = { until: number; stop: () => void }
@@ -620,6 +1006,9 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
       if (o.userData.puff) (o as THREE.Mesh).material = grey
     })
     storms.set(c, { until: t + 10, stop: rainfall() })
+    discover('rain')
+    if (errand.phase !== 'out' && errand.phase !== 'back') shreyas.react('shelter', 10.5)
+    say('ugh, rain', 2.2)
   }
 
   function rainFrom(c: Drifter) {
@@ -647,6 +1036,9 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
 
   function lightning(c: Drifter) {
     thunder()
+    discover('lightning')
+    shreyas.react('shelter', storms.get(c)!.until - t + 0.4)
+    say('whoa!', 1.6)
     const box = new THREE.Box3().setFromObject(c.obj)
     const bolt = new THREE.Group()
     let p = new THREE.Vector3(THREE.MathUtils.lerp(box.min.x + 2, box.max.x - 2, Math.random()), box.min.y + 1, (box.min.z + box.max.z) / 2)
@@ -685,7 +1077,11 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   rainbowArcs.visible = false
   scene.add(rainbowArcs)
   function rainbow() {
-    if (t - rainbowAt > 10) rainbowAt = t
+    if (t - rainbowAt < 10) return
+    rainbowAt = t
+    discover('rainbow')
+    say('ooh, a rainbow', 2.6)
+    shreyas.react('point', 2.4, towards(rainbowArcs.localToWorld(new THREE.Vector3(0, 150, 0))))
   }
 
   // Wishing on the shooting star: sparkles, then a meteor shower.
@@ -695,6 +1091,8 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     if (t - wishAt < 4) return
     wishAt = t
     chime()
+    discover('wish')
+    say('made a wish ✨', 2.6)
     const head = shootingStar.getWorldPosition(new THREE.Vector3())
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2
@@ -873,6 +1271,61 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
       shootingStar.rotation.z = STAR_FALL
     }
 
+    // The chest: bobbing in, washing up, opened, then sinking into the sand.
+    if (treasure.phase !== 'none') {
+      const age = t - treasure.at
+      if (treasure.phase === 'float') {
+        const k = THREE.MathUtils.smootherstep(Math.min(1, age / 11), 0, 1)
+        const a = treasure.from
+        const b = treasure.via
+        const c = treasure.to
+        chest.position.set(
+          (1 - k) ** 2 * a.x + 2 * (1 - k) * k * b.x + k * k * c.x,
+          waveAt(chest.position.x, chest.position.z, at) - 0.15,
+          (1 - k) ** 2 * a.z + 2 * (1 - k) * k * b.z + k * k * c.z,
+        )
+        chest.rotation.set(Math.sin(at * 1.7) * 0.12, at * 0.2, Math.sin(at * 1.3) * 0.1)
+        if (k >= 1) Object.assign(treasure, { phase: 'beach', at: t })
+      } else if (treasure.phase === 'beach') {
+        // Pushed up the sand by a wave.
+        const k = THREE.MathUtils.smoothstep(age / 1.4, 0, 1)
+        const x = THREE.MathUtils.lerp(treasure.to.x, treasure.side * 5.6, k)
+        const z = THREE.MathUtils.lerp(treasure.to.z, 6.5, k)
+        chest.position.set(x, Math.max(M.groundAt(x, z), waveAt(x, z, at) - 0.15), z)
+        chest.rotation.set(chest.rotation.x * 0.9, THREE.MathUtils.lerp(chest.rotation.y % (Math.PI * 2), -treasure.side * 0.5, k), chest.rotation.z * 0.9)
+        if (k >= 1) {
+          treasure.phase = 'beached'
+          say('ooh, treasure!', 2.6)
+          shreyas.react('point', 2.2, towards(chest.position))
+        }
+      } else if (treasure.phase === 'open') {
+        ;(chest.userData.lid as THREE.Object3D).rotation.x = -1.9 * THREE.MathUtils.smoothstep(age / 0.5, 0, 1)
+        if (age > 8) chest.position.y = M.groundAt(chest.position.x, chest.position.z) - (age - 8) * 0.6
+        if (age > 9.5) {
+          chest.visible = false
+          treasure.phase = 'none'
+        }
+      }
+      // A glint now and then, so it's noticed.
+      if (treasure.phase !== 'open' && t - treasure.glint > 1.6) {
+        treasure.glint = t
+        fx.sparkle(chest.localToWorld(new THREE.Vector3(0.3, 0.75, 0.3)), new THREE.Vector3(0, 0.02, 0), camera, treasure.phase === 'float' ? 1.2 : 0.4)
+      }
+    }
+
+    // The crab, the turtles, Shreyas's errands and the sand.
+    moveCrab(dt)
+    if (night > 0.9 && !still && depth < 3) {
+      if (nest.nextAt < 0) nest.nextAt = t + 8
+      if (t > nest.nextAt && turtles.length === 0) {
+        hatch()
+        nest.nextAt = t + 35
+      }
+    } else if (night < 0.5) nest.nextAt = -1
+    crawl(dt)
+    runErrand(dt)
+    marks.step()
+
     // Shreyas: eyes and head follow the cursor.
     const head = toScreen(shreyas.faceAt(face))
     const top = toScreen(shreyas.topAt(hair))
@@ -919,7 +1372,13 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     camera.layers.set(FRONT)
     overlay.render(scene, camera)
     camera.layers.set(0)
+    if (!ready) {
+      ready = true
+      onReady()
+    }
   }
+  let ready = false
+
   raf = requestAnimationFrame(tick)
 
   return {
@@ -928,6 +1387,10 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     dispose() {
       cancelAnimationFrame(raf)
       window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerdown', press)
+      window.removeEventListener('pointermove', drag)
+      window.removeEventListener('pointerup', lift)
+      window.removeEventListener('pointercancel', lift)
       for (const s of storms.values()) s.stop()
       ocean.dispose()
       renderer.dispose()

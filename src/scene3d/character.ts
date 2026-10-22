@@ -1,7 +1,8 @@
 // Shreyas in 3D: curly black hair, a long-sleeve blue button-up, black jeans
 // and black shoes. Stands with his feet at the origin, facing +z (the camera).
 // Every few seconds he waves, looks around, shrugs or laughs; his eyes and
-// head follow the cursor, and clicking him makes him jump.
+// head follow the cursor, and clicking him makes him jump. He reacts to what
+// happens round him (react()), and can run about (stride, set by world.ts).
 import * as THREE from 'three'
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { INK, inked, seeded, toon } from './toon'
@@ -20,6 +21,12 @@ type Action = 'wave' | 'look' | 'shrug' | 'laugh'
 const ACTIONS: Action[] = ['wave', 'look', 'shrug', 'laugh']
 const DURATION: Record<Action | 'jump', number> = { wave: 2.8, look: 3, shrug: 2, laugh: 2.2, jump: 0.95 }
 const ACTION_GAP = 6.5
+
+// Things he does in response to what happens on the island:
+//   cheer    arms up, hopping       point    an arm out at something
+//   duck     crouched, arms up      shelter  under an umbrella
+//   shrug    as when idle
+export type Reaction = 'cheer' | 'point' | 'duck' | 'shelter' | 'shrug'
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x))
 const smooth = (x: number) => x * x * (3 - 2 * x)
@@ -147,27 +154,38 @@ export class Character {
   private pupils: THREE.Group[]
   private shoulders: THREE.Group[] = []
   private elbows: THREE.Group[] = []
+  private hips: THREE.Group[] = []
+  private umbrella: THREE.Group
   private mouths: Record<'grin' | 'laugh' | 'oh', THREE.Object3D>
   private jumpAt = -10
   private t = 0
+  private reaction = { kind: 'shrug' as Reaction, at: -100, dur: 0, dir: new THREE.Vector2() }
+  // How fast he's running, 0 (standing) to 1, and where in his stride he is.
+  stride = 0
+  private phase = 0
 
   constructor() {
     this.root.add(this.body)
     const skin = toon(SKIN)
 
-    // --- legs and shoes
+    // --- legs and shoes, swinging from the hip
+    const HIP = 1.25
     for (const side of [-1, 1]) {
+      const hip = new THREE.Group()
+      hip.position.set(side * 0.21, HIP, 0)
+      this.body.add(hip)
+      this.hips.push(hip)
       const leg = inked(new THREE.CapsuleGeometry(0.15, 0.87, 3, 10), toon(JEANS), 2.5)
-      leg.position.set(side * 0.21, 0.72, 0)
-      this.body.add(leg)
+      leg.position.set(0, 0.72 - HIP, 0)
+      hip.add(leg)
       const shoe = inked(new THREE.CapsuleGeometry(0.16, 0.26, 3, 10), toon(SHOE), 2.5)
       shoe.rotation.x = Math.PI / 2
       shoe.scale.set(1.1, 1, 0.75)
-      shoe.position.set(side * 0.22, 0.14, 0.1)
-      this.body.add(shoe)
+      shoe.position.set(side * 0.01, 0.14 - HIP, 0.1)
+      hip.add(shoe)
       const trim = inked(new THREE.BoxGeometry(0.34, 0.05, 0.6), toon(SHOE_TRIM), 1.5)
-      trim.position.set(side * 0.22, 0.03, 0.1)
-      this.body.add(trim)
+      trim.position.set(side * 0.01, 0.03 - HIP, 0.1)
+      hip.add(trim)
     }
 
     // --- torso: blue button-up, tucked into black jeans
@@ -287,6 +305,31 @@ export class Character {
     this.mouths = { grin, laugh, oh }
     this.head.add(grin, laugh, oh)
 
+    // A red umbrella in his right hand, for the rain; hidden until then.
+    this.umbrella = new THREE.Group()
+    const shaft = inked(new THREE.CylinderGeometry(0.03, 0.03, 2.3, 6), toon('#2a2320'), 1.5)
+    shaft.position.y = 1.15
+    const canopy = inked(new THREE.SphereGeometry(1.15, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2), toon('#d64541', { side: THREE.DoubleSide }), 2.5)
+    canopy.scale.y = 0.55
+    canopy.position.y = 2.2
+    const knob = inked(new THREE.SphereGeometry(0.07, 8, 6), toon('#2a2320'), 1.5)
+    knob.position.y = 2.85
+    this.umbrella.add(shaft, canopy, knob)
+    this.umbrella.position.y = -0.66
+    this.umbrella.visible = false
+    this.elbows[1].add(this.umbrella)
+  }
+
+  // Do something about what just happened, for `seconds`. `dir` is which way
+  // to point, as seen on screen (x right, y up).
+  react(kind: Reaction, seconds: number, dir?: { x: number; y: number }) {
+    const r = this.reaction
+    const d = new THREE.Vector2(dir?.x ?? 1, dir?.y ?? 0).normalize()
+    // Already doing it: just keep it up for longer.
+    if (r.kind === kind && this.t - r.at > 0.25 && this.t - r.at < r.dur - 0.35) {
+      r.dur = this.t - r.at + seconds
+      r.dir.copy(d)
+    } else this.reaction = { kind, at: this.t, dur: seconds, dir: d }
   }
 
   // Box round his body on screen, for clicks.
@@ -299,26 +342,43 @@ export class Character {
   }
 
   update(t: number, gaze: Gaze, lean: number, still: boolean) {
+    const dt = Math.max(0, Math.min(0.05, t - this.t))
     this.t = t
+    // --- What he's reacting to, if anything: in quickly, out a little slower.
+    const r = this.reaction
+    const age = t - r.at
+    const w = age < 0 || age > r.dur ? 0 : still ? 1 : smooth(clamp(Math.min(age / 0.25, (r.dur - age) / 0.35), 0, 1))
+    const as = (kind: Reaction) => (r.kind === kind ? w : 0)
+    const cheer = as('cheer')
+    const point = as('point')
+    const duck = as('duck')
+    const shelter = as('shelter')
+    // Running, he doesn't stop for idle actions.
+    const run = still ? 0 : this.stride
+    this.phase += dt * 11 * run
+    const busy = Math.max(w, run)
+
     // --- Idle actions, one every few seconds, plus click-to-jump.
     const since = t - 1.5
     const slot = Math.floor(since / ACTION_GAP)
     const action = ACTIONS[((slot % ACTIONS.length) + ACTIONS.length) % ACTIONS.length]
     const ax = since >= 0 ? (since - slot * ACTION_GAP) / DURATION[action] : -1
-    const e = still ? 0 : envelope(ax)
+    const e = still ? 0 : envelope(ax) * (1 - busy)
     const on = (name: Action) => (action === name ? e : 0)
     const jx = (t - this.jumpAt) / DURATION.jump
     const jumping = !still && jx >= 0 && jx < 1
 
     const wave = on('wave')
-    const shrug = on('shrug')
+    const shrug = Math.max(on('shrug'), as('shrug'))
     const laugh = on('laugh')
     const lookAround = on('look')
 
-    // Look-around overrides the cursor: glance left, then right.
+    // Look-around overrides the cursor: glance left, then right. Pointing,
+    // he looks where he's pointing; cheering, up at the sky.
     const glance = Math.sin(clamp(ax, 0, 1) * Math.PI * 2)
-    const lx = gaze.x * (1 - lookAround) + glance * lookAround
-    const ly = gaze.y * (1 - lookAround) - 0.2 * lookAround
+    const free = (1 - lookAround) * (1 - point) * (1 - cheer * 0.6)
+    const lx = gaze.x * free + glance * lookAround + r.dir.x * 0.9 * point
+    const ly = gaze.y * free - 0.2 * lookAround - r.dir.y * 0.7 * point - 0.5 * cheer - 0.3 * shelter
 
     // Jump: crouch, launch, land with a squash.
     let jumpY = 0
@@ -330,33 +390,75 @@ export class Character {
     }
     const stretch = jumping && jx >= 0.15 && jx < 0.45 ? 0.05 : 0
     const airborne = jumping ? envelope(jx) : 0
+    // Cheering, little hops; ducking, a crouch.
+    const hop = still ? 0 : Math.abs(Math.sin(age * 9)) * 0.16 * cheer
+    squash = Math.max(squash, duck * 0.16)
 
-    // --- Body: breathing bob, gentle sway, scroll lean, jump.
+    // --- Body: breathing bob, gentle sway, scroll lean, jump, running bounce.
     const bob = still ? 0 : Math.sin(t * 1.7) * 0.012 + Math.sin(t * 14) * 0.008 * laugh
-    const sway = still ? 0 : Math.sin(t * 0.55) * 1.2
+    const sway = still ? 0 : Math.sin(t * 0.55) * 1.2 * (1 - run)
+    const bounce = Math.abs(Math.sin(this.phase)) * 0.09 * run
     const intro = still ? 1 : clamp(t / 0.9, 0, 1)
     const introY = -(1 - smooth(intro)) * 0.3 + Math.sin(intro * Math.PI) * 0.05
-    this.body.position.y = bob + jumpY + introY
+    this.body.position.y = bob + jumpY + introY + hop + bounce
     this.body.rotation.z = -rad(sway + lean)
+    this.body.rotation.x = rad(8 * run + 10 * duck)
     this.body.scale.set(1 + squash * 0.8 - stretch * 0.6, 1 - squash + stretch, 1 + squash * 0.8 - stretch * 0.6)
     this.torso.scale.y = 1 + (still ? 0 : Math.sin(t * 1.7) * 0.006)
+
+    // --- Legs swing as he runs.
+    const swing = Math.sin(this.phase) * 0.75 * run
+    this.hips[0].rotation.x = swing
+    this.hips[1].rotation.x = -swing
 
     // --- Arms (angles as in the drawn version; screen-clockwise is -z here).
     const lift = (shrug * 10 + airborne * 4) * 0.0045
     const waveSwing = Math.sin(t * 10) * 22
+    const pump = Math.sin(age * 12) * 14
     const [shL, shR] = this.shoulders
     const [elL, elR] = this.elbows
     shL.position.y = 2.36 + lift
     shR.position.y = 2.36 + lift
-    shL.rotation.z = -rad(8 + shrug * 16 + airborne * 60)
-    shR.rotation.z = rad(8 + wave * 142 + shrug * 16 + airborne * 60)
-    // Waving, the forearm comes forward a little, towards whoever he's waving at.
-    shR.rotation.x = -wave * 0.25
-    elL.rotation.z = -rad(shrug * 75 + airborne * 20 + laugh * 10)
-    elR.rotation.z = -rad(wave * (-35 + waveSwing) - shrug * 75 - airborne * 20 - laugh * 10)
+    // Pointing: the arm on that side, straight out along the direction.
+    const aim = Math.atan2(r.dir.x, -r.dir.y)
+    const pointL = r.dir.x < 0 ? point : 0
+    const pointR = r.dir.x < 0 ? 0 : point
+    const restL = -rad(8 + shrug * 16 + airborne * 60)
+    const restR = rad(8 + wave * 142 + shrug * 16 + airborne * 60)
+    const blend = (rest: number, poses: [number, number][]) => poses.reduce((v, [k, angle]) => v + (angle - v) * k, rest)
+    shL.rotation.z = blend(restL, [
+      [pointL, aim],
+      [cheer, -rad(150 + pump)],
+      [duck, -rad(160)],
+    ])
+    shR.rotation.z = blend(restR, [
+      [pointR, aim],
+      [cheer, rad(150 - pump)],
+      [duck, rad(160)],
+      [shelter, rad(20)],
+    ])
+    // Waving, the forearm comes forward a little, towards whoever he's waving
+    // at; running, the arms swing against the legs.
+    shR.rotation.x = -wave * 0.25 - duck * 0.35 + swing * 0.8
+    shL.rotation.x = -duck * 0.35 - swing * 0.8
+    elL.rotation.z = blend(-rad(shrug * 75 + airborne * 20 + laugh * 10), [
+      [pointL, 0],
+      [cheer, -rad(15)],
+      [duck, -rad(100)],
+    ])
+    elR.rotation.z = blend(-rad(wave * (-35 + waveSwing) - shrug * 75 - airborne * 20 - laugh * 10), [
+      [pointR, 0],
+      [cheer, rad(15)],
+      [duck, rad(100)],
+      [shelter, rad(120)],
+    ])
     // Shrugging, the forearms turn out, palms up.
-    elL.rotation.x = -shrug * 0.6
-    elR.rotation.x = -shrug * 0.6
+    elL.rotation.x = -shrug * 0.6 - run * 0.9
+    elR.rotation.x = -shrug * 0.6 - run * 0.9
+    // The umbrella stays upright, leaning over his head, and pops open.
+    this.umbrella.visible = shelter > 0.02
+    this.umbrella.scale.set(shelter, 1, shelter)
+    this.umbrella.rotation.z = rad(20) - shR.rotation.z - elR.rotation.z
 
     // --- Head, hair, face.
     const tilt = lx * 4 + shrug * 7 - laugh * 4 + Math.sin(t * 0.8) * (still ? 0 : 1)
@@ -364,13 +466,13 @@ export class Character {
     const hairLag = still ? 0 : Math.sin(t * 1.7 - 0.9) * 0.008 - (jumping ? Math.cos(((jx - 0.15) / 0.65) * Math.PI) * 0.03 * airborne : 0)
     this.hair.position.y = hairLag
 
-    this.brows.position.y = (3 * gaze.near + 5 * wave + 8 * shrug + 4 * lookAround + 9 * (jumping && jx < 0.5 ? airborne : 0)) * 0.006
+    this.brows.position.y = (3 * gaze.near + 5 * wave + 8 * shrug + 4 * lookAround + 9 * (jumping && jx < 0.5 ? airborne : 0) + 8 * Math.max(cheer, point, duck)) * 0.006
 
-    const shut = Math.max(blinkAt(t), laugh * 0.6)
+    const shut = Math.max(blinkAt(t), laugh * 0.6, cheer * 0.5, duck * 0.9)
     for (const eye of this.eyes) eye.scale.y = 1 - shut * 0.88
     for (const pupil of this.pupils) pupil.position.set(lx * 0.025, -ly * 0.025, 0)
 
-    const mouth = jumping ? (jx < 0.4 ? 'oh' : 'laugh') : laugh > 0.1 ? 'laugh' : 'grin'
+    const mouth = jumping ? (jx < 0.4 ? 'oh' : 'laugh') : cheer > 0.1 || laugh > 0.1 || run > 0.1 ? 'laugh' : point > 0.1 || duck > 0.1 ? 'oh' : 'grin'
     for (const [name, m] of Object.entries(this.mouths)) m.visible = name === mouth
   }
 

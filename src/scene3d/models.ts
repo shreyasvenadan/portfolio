@@ -1,6 +1,7 @@
 // The things on and around the island, built from simple shapes. Units are
 // roughly metres; the sea is at y = 0 and the island sits around the origin.
 import * as THREE from 'three'
+import type { SandMarks } from './sand'
 import { inked, jitter, plain, ramp, seeded, toon } from './toon'
 
 export const SAND = '#f1d69e'
@@ -30,7 +31,8 @@ export function groundAt(x: number, z: number) {
   return ISLAND.height * (1 - r) - ISLAND.sink
 }
 
-export function island() {
+// `marks` is what's been drawn in the sand (sand.ts), darkening it.
+export function island(marks: SandMarks) {
   const g = new THREE.PlaneGeometry(ISLAND.rx * 2.4, (ISLAND.back + ISLAND.front) * 1.2, 34, 32)
   g.rotateX(-Math.PI / 2)
   g.translate(0, 0, ISLAND.cz + ((ISLAND.front - ISLAND.back) * 1.2) / 2)
@@ -60,9 +62,18 @@ export function island() {
   const water = material.onBeforeCompile
   material.onBeforeCompile = (shader, renderer) => {
     water.call(material, shader, renderer)
-    shader.fragmentShader = shader.fragmentShader.replace(
+    shader.uniforms.marks = { value: marks.texture }
+    shader.uniforms.marksArea = { value: marks.area }
+    shader.fragmentShader = `uniform sampler2D marks;\nuniform vec4 marksArea;\n${shader.fragmentShader}`.replace(
       '#include <fog_fragment>',
-      '#include <fog_fragment>\n  if ( cameraPosition.y < 0.0 && vFogWorld.y < 0.35 ) discard;',
+      /* glsl */ `
+  {
+    // Marks in dry sand: black is a groove, white its lit lip.
+    vec4 m = texture2D( marks, ( vFogWorld.xz - marksArea.xy ) / marksArea.zw );
+    gl_FragColor.rgb *= mix( 1.0, mix( 0.68, 1.1, m.r ), m.a * smoothstep( 0.05, 0.2, vFogWorld.y ) );
+  }
+  #include <fog_fragment>
+  if ( cameraPosition.y < 0.0 && vFogWorld.y < 0.35 ) discard;`,
     )
   }
   const mesh = plain(flat, material)
@@ -511,6 +522,162 @@ export function pirateShip() {
   target.position.y = 2.9
   group.add(target)
   return group
+}
+
+// A little shore crab, facing +z: a wide shell, eyes on stalks, a claw each
+// side (whose top pincer opens, userData.pincers) and three legs a side
+// (userData.legs, for scuttling).
+export function crab() {
+  const group = new THREE.Group()
+  const body = new THREE.Group()
+  group.add(body)
+  group.userData.body = body
+  const shell = toon('#d9532f')
+  const dark = toon('#a83a20')
+  const top = inked(new THREE.SphereGeometry(0.3, 14, 10), shell, 2)
+  top.scale.set(1, 0.42, 0.78)
+  top.position.y = 0.16
+  body.add(top)
+  for (const side of [-1, 1]) {
+    const stalk = inked(new THREE.CylinderGeometry(0.018, 0.018, 0.14, 5), dark, 1.2)
+    stalk.position.set(side * 0.08, 0.27, 0.15)
+    body.add(stalk)
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), new THREE.MeshBasicMaterial({ color: '#120d0a' }))
+    eye.position.set(side * 0.08, 0.35, 0.15)
+    body.add(eye)
+  }
+  const legs: THREE.Object3D[] = []
+  // Each leg rises out to a knee, then reaches down to the sand: the hip is
+  // 0.14 up, the knee 0.09 above that, and the foot back on the ground.
+  const UPPER = 0.18
+  const LOWER = 0.25
+  const upperLeg = new THREE.CapsuleGeometry(0.025, UPPER, 2, 5).rotateZ(Math.PI / 2).translate(UPPER / 2, 0, 0)
+  const lowerLeg = new THREE.CapsuleGeometry(0.022, LOWER, 2, 5).rotateZ(Math.PI / 2).translate(LOWER / 2, 0, 0)
+  const rise = Math.asin(0.09 / UPPER)
+  const drop = Math.asin((0.14 + 0.09) / LOWER)
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 3; i++) {
+      const hip = new THREE.Group()
+      hip.position.set(side * 0.22, 0.14, 0.08 - i * 0.1)
+      // Mirrored for the left side, so +x always runs out from the shell.
+      hip.scale.x = side
+      hip.rotation.y = side * (0.2 - i * 0.25)
+      const upper = inked(upperLeg, dark, 1.2)
+      upper.rotation.z = rise
+      hip.add(upper)
+      const knee = new THREE.Group()
+      knee.position.set(Math.cos(rise) * UPPER, 0.09, 0)
+      knee.rotation.z = -drop
+      knee.add(inked(lowerLeg, dark, 1.2))
+      hip.add(knee)
+      hip.userData.side = side
+      body.add(hip)
+      legs.push(hip)
+    }
+  }
+  const pincers: THREE.Object3D[] = []
+  for (const side of [-1, 1]) {
+    const arm = new THREE.Group()
+    arm.position.set(side * 0.24, 0.17, 0.18)
+    arm.rotation.y = -side * 0.5
+    const upper = inked(new THREE.CapsuleGeometry(0.035, 0.12, 2, 6), shell, 1.2)
+    upper.rotation.x = Math.PI / 2
+    upper.position.z = 0.08
+    arm.add(upper)
+    const claw = inked(new THREE.SphereGeometry(0.08, 10, 8), shell, 1.5)
+    claw.scale.set(0.8, 0.6, 1.2)
+    claw.position.z = 0.22
+    arm.add(claw)
+    const pincer = new THREE.Group()
+    pincer.position.set(0, 0.03, 0.27)
+    const jaw = inked(new THREE.CapsuleGeometry(0.025, 0.08, 2, 5), shell, 1.2)
+    jaw.rotation.x = Math.PI / 2
+    jaw.position.z = 0.05
+    pincer.add(jaw)
+    arm.add(pincer)
+    body.add(arm)
+    pincers.push(pincer)
+  }
+  group.userData.legs = legs
+  group.userData.pincers = pincers
+  // An unseen box round it, since it's small.
+  const target = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.8), new THREE.MeshBasicMaterial({ visible: false }))
+  target.position.y = 0.2
+  group.add(target)
+  return group
+}
+
+// A baby turtle, facing +z, with flippers that row (userData.flippers).
+export function hatchling() {
+  const group = new THREE.Group()
+  const shell = inked(new THREE.SphereGeometry(0.2, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), toon('#5f9a52'), 1.5)
+  shell.scale.set(0.85, 0.6, 1)
+  shell.position.y = 0.06
+  group.add(shell)
+  const skin = toon('#a9c98a')
+  const head = inked(new THREE.SphereGeometry(0.07, 10, 8), skin, 1.2)
+  head.position.set(0, 0.09, 0.23)
+  group.add(head)
+  const flippers: THREE.Object3D[] = []
+  for (const [x, z] of [
+    [-1, 1],
+    [1, 1],
+    [-1, -1],
+    [1, -1],
+  ]) {
+    const pivot = new THREE.Group()
+    pivot.position.set(x * 0.15, 0.05, z * 0.1)
+    const f = inked(new THREE.SphereGeometry(1, 8, 6), skin, 1.2)
+    f.scale.set(z > 0 ? 0.11 : 0.07, 0.02, 0.05)
+    f.position.x = x * (z > 0 ? 0.08 : 0.05)
+    pivot.add(f)
+    pivot.userData.side = x
+    group.add(pivot)
+    flippers.push(pivot)
+  }
+  group.userData.flippers = flippers
+  return group
+}
+
+// A small sea chest with its lid shut (userData.lid, hinged at the back) and
+// gold inside (userData.gold), for when it's opened.
+export function treasureChest() {
+  const group = new THREE.Group()
+  const wood = toon('#7a4a24')
+  const band = toon('#e9b949')
+  const box = inked(new THREE.BoxGeometry(0.9, 0.5, 0.56), wood, 2)
+  box.position.y = 0.25
+  group.add(box)
+  for (const x of [-0.3, 0.3]) {
+    const strap = inked(new THREE.BoxGeometry(0.08, 0.52, 0.58), band, 1.2)
+    strap.position.set(x, 0.25, 0)
+    group.add(strap)
+  }
+  const gold = new THREE.Group()
+  const coin = new THREE.SphereGeometry(0.07, 8, 6)
+  const shine = new THREE.MeshBasicMaterial({ color: '#ffd166' })
+  for (let i = 0; i < 9; i++) {
+    const c = new THREE.Mesh(coin, shine)
+    c.position.set(-0.3 + (i % 5) * 0.15, 0.48 + (i % 2) * 0.04, i < 5 ? -0.08 : 0.1)
+    gold.add(c)
+  }
+  group.add(gold)
+  group.userData.gold = gold
+  const lid = new THREE.Group()
+  lid.position.set(0, 0.5, -0.28)
+  const top = inked(new THREE.CylinderGeometry(0.28, 0.28, 0.9, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2), toon('#8f5a2c'), 2)
+  top.position.z = 0.28
+  lid.add(top)
+  const lock = inked(new THREE.BoxGeometry(0.14, 0.16, 0.05), band, 1.2)
+  lock.position.set(0, -0.02, 0.57)
+  lid.add(lock)
+  group.add(lid)
+  group.userData.lid = lid
+  return group
+}
+
+export function cannonball() {
+  return inked(new THREE.SphereGeometry(0.22, 12, 8), toon('#2a2a2e'), 2)
 }
 
 function sailTexture() {

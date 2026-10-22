@@ -135,11 +135,12 @@ export function splash() {
 }
 
 // A cannonball striking timber: a deep boom under a sharp splintering crack.
-export function cannonHit() {
+// Quieter, it's the ship's cannon going off out at sea.
+export function cannonHit(volume = 0.6) {
   const a = audio()
   const t = a.currentTime
   const out = a.createGain()
-  out.gain.setValueAtTime(0.6, t)
+  out.gain.setValueAtTime(volume, t)
   out.gain.exponentialRampToValueAtTime(0.001, t + 0.7)
   out.connect(a.destination)
   const boom = a.createOscillator()
@@ -327,4 +328,42 @@ export function squawk() {
     wobble.start(at)
     wobble.stop(at + 0.22)
   }
+}
+
+// A crab's claws: two quick, dry clicks.
+export function snip() {
+  const a = audio()
+  const t = a.currentTime
+  for (const at of [t, t + 0.09]) {
+    const click = a.createBufferSource()
+    click.buffer = a.createBuffer(1, a.sampleRate * 0.03, a.sampleRate)
+    const data = click.buffer.getChannelData(0)
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length) ** 4
+    const bandpass = a.createBiquadFilter()
+    bandpass.type = 'bandpass'
+    bandpass.frequency.value = 3200
+    bandpass.Q.value = 3
+    const env = a.createGain()
+    env.gain.value = 0.5
+    click.connect(bandpass).connect(env).connect(a.destination)
+    click.start(at)
+  }
+}
+
+// A cannonball whistling down, falling in pitch over `seconds`.
+export function whistle(seconds: number) {
+  const a = audio()
+  const t = a.currentTime
+  const env = a.createGain()
+  env.gain.setValueAtTime(0, t)
+  env.gain.linearRampToValueAtTime(0.06, t + seconds * 0.4)
+  env.gain.linearRampToValueAtTime(0, t + seconds)
+  env.connect(a.destination)
+  const osc = a.createOscillator()
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(1800, t)
+  osc.frequency.exponentialRampToValueAtTime(500, t + seconds)
+  osc.connect(env)
+  osc.start(t)
+  osc.stop(t + seconds)
 }

@@ -9,7 +9,8 @@ import type { World } from '../scene3d/world'
 
 export type WorldHandle = Pick<World, 'click' | 'over'>
 
-const World3D = forwardRef<WorldHandle, { still: boolean }>(function World3D({ still }, ref) {
+// `onReady` hears when the scene has drawn its first frame.
+const World3D = forwardRef<WorldHandle, { still: boolean; onReady: () => void }>(function World3D({ still, onReady }, ref) {
   const back = useRef<HTMLCanvasElement>(null)
   const front = useRef<HTMLCanvasElement>(null)
   const flash = useRef<HTMLDivElement>(null)
@@ -39,6 +40,7 @@ const World3D = forwardRef<WorldHandle, { still: boolean }>(function World3D({ s
           set('--head-y', y)
           set('--head-top', top)
         },
+        onReady,
       })
     })
     return () => {
@@ -46,7 +48,7 @@ const World3D = forwardRef<WorldHandle, { still: boolean }>(function World3D({ s
       world.current?.dispose()
       world.current = null
     }
-  }, [still])
+  }, [still, onReady])
 
   // Sized to the largest the viewport gets, so phones' toolbars sliding away
   // don't resize (and rescale) the scene.

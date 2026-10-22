@@ -72,6 +72,8 @@ html {
 
 body {
   @apply bg-paper font-sans text-ink antialiased;
+  /* Shreyas runs to the edge of the beach, and his speech balloon with him. */
+  overflow-x: clip;
 }
 
 :focus-visible {
@@ -659,6 +661,14 @@ dialog.note::backdrop {
   transform-origin: 0 70%;
   animation: speech-in 0.45s cubic-bezier(0.3, 1.5, 0.5, 1) 1.2s both;
 }
+/* Something he says about what just happened: straight away, and big. */
+.speech.quip {
+  width: auto;
+  max-width: clamp(8rem, calc(100vw - var(--head-x, 50vw) - var(--head-top, 60px) - 48px), 22rem);
+  font-size: 1.35rem;
+  animation-delay: 0s;
+  animation-duration: 0.3s;
+}
 /* The tail: a filled curve whose outline shows only on its two long sides,
    tucked under the balloon's edge so it joins without a seam. */
 .speech-tail {
@@ -694,6 +704,10 @@ dialog.note::backdrop {
     text-align: center;
     transform-origin: 50% 100%;
   }
+  .speech.quip {
+    max-width: min(21rem, calc(100vw - 2.5rem));
+    font-size: 1.2rem;
+  }
   .speech-tail {
     left: calc(50% - 14px);
     top: 100%;
@@ -703,6 +717,17 @@ dialog.note::backdrop {
 }
 @media (prefers-reduced-motion: reduce) {
   .speech {
+    animation: none;
+  }
+}
+
+/* "found: …" popping up over the discoveries counter (Discoveries.tsx). */
+.discovery-toast {
+  transform-origin: 100% 100%;
+  animation: speech-in 0.3s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .discovery-toast {
     animation: none;
   }
 }
