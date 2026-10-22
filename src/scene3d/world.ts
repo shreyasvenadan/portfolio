@@ -210,6 +210,26 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
   seaGeo.translate(0, 0, -150)
   const seaBase = Float32Array.from(seaGeo.attributes.position.array)
   const seaMat = new THREE.MeshLambertMaterial({ color: DAY.sea, flatShading: true })
+  // The swell barely tilts each facet, which the moon's low light shows up but
+  // the bright day washes out. So the facets turned towards the sun are lit up
+  // and those turned away darkened, by `shimmer`: strong by day, none at night.
+  const seaShimmer = { shimmer: { value: 0 }, sunDir: { value: new THREE.Vector3() } }
+  const seaWater = seaMat.onBeforeCompile
+  seaMat.onBeforeCompile = (shader, renderer) => {
+    seaWater.call(seaMat, shader, renderer)
+    Object.assign(shader.uniforms, seaShimmer)
+    shader.fragmentShader = `uniform float shimmer;\nuniform vec3 sunDir;\n${shader.fragmentShader}`.replace(
+      '#include <opaque_fragment>',
+      /* glsl */ `
+  {
+    // The facet's tilt away from level, in the view's space.
+    vec3 up = normalize( ( viewMatrix * vec4( 0.0, 1.0, 0.0, 0.0 ) ).xyz );
+    vec3 tilt = normal - up * dot( normal, up );
+    outgoingLight *= clamp( 1.0 + shimmer * dot( tilt, sunDir ), 0.6, 1.5 );
+  }
+  #include <opaque_fragment>`,
+    )
+  }
   scene.add(new THREE.Mesh(seaGeo, seaMat))
   // Its underside, bright with the sky beyond, seen from below.
   const underMat = new THREE.MeshBasicMaterial({ color: DAY.under, side: THREE.BackSide })
@@ -305,6 +325,10 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
 
   type Hatchling = { obj: THREE.Group; bornAt: number; heading: number; phase: number; boostUntil: number }
   const turtles: Hatchling[] = []
+  // The eggs they hatch from: up out of the sand, a wobble, then the top
+  // flies off (`fling`) and the empty bottom sinks back in.
+  type Egg = { obj: THREE.Group; laidAt: number; bornAt: number; phase: number; fling: THREE.Vector3 }
+  const eggs: Egg[] = []
   const nest = { nextAt: -1, side: 1 }
 
   // --- state shared with the frame loop --------------------------------------------
@@ -954,11 +978,52 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     say('baby turtles!', 2.5)
     shreyas.react('point', 2, towards(at))
     for (let i = 0; i < 5; i++) {
+      const bornAt = t + 1.6 + i * 0.45
+      const egg = M.turtleEgg()
+      egg.position.set(at.x + (Math.random() - 0.5) * 0.6, at.y, at.z + (Math.random() - 0.5) * 0.5)
+      egg.rotation.y = Math.random() * 6
+      scene.add(egg)
+      eggs.push({ obj: egg, laidAt: t + i * 0.08, bornAt, phase: Math.random() * 6, fling: new THREE.Vector3((Math.random() - 0.5) * 0.8, 1.6, (Math.random() - 0.5) * 0.8) })
       const obj = M.hatchling()
-      obj.position.set(at.x + (Math.random() - 0.5) * 0.5, at.y, at.z + (Math.random() - 0.5) * 0.4)
+      obj.position.copy(egg.position)
       obj.visible = false
       scene.add(obj)
-      turtles.push({ obj, bornAt: t + i * 0.45, heading: Math.atan2(nest.side, 0.45) + (Math.random() - 0.5) * 0.5, phase: Math.random() * 6, boostUntil: 0 })
+      turtles.push({ obj, bornAt, heading: Math.atan2(nest.side, 0.45) + (Math.random() - 0.5) * 0.5, phase: Math.random() * 6, boostUntil: 0 })
+    }
+  }
+
+  function crackEggs(dt: number) {
+    for (const e of [...eggs]) {
+      const since = t - e.laidAt
+      const age = t - e.bornAt
+      const { whole, top, bottom } = e.obj.userData as Record<string, THREE.Object3D>
+      const ground = M.groundAt(e.obj.position.x, e.obj.position.z)
+      if (age < 0) {
+        // Pushed up out of the sand, then rocking harder as the turtle gets ready.
+        e.obj.visible = since > 0
+        e.obj.position.y = ground - 0.13 * (1 - smooth(THREE.MathUtils.clamp(since / 0.5, 0, 1)))
+        const rock = Math.max(0, 1 + age / 1.2)
+        e.obj.rotation.z = Math.sin(t * 26 + e.phase) * 0.3 * rock * rock
+        continue
+      }
+      if (whole.visible) {
+        whole.visible = false
+        top.visible = bottom.visible = true
+        e.obj.rotation.z = 0
+      }
+      // The top's flung off, tumbling, and gone when it lands.
+      if (top.visible) {
+        e.fling.y -= 7 * dt
+        top.position.addScaledVector(e.fling, dt / e.obj.scale.y)
+        top.rotation.x += dt * 9
+        top.visible = top.position.y > -0.05
+      }
+      // The empty shell stays a while, then sinks into the sand.
+      e.obj.position.y = ground - 0.15 * THREE.MathUtils.clamp((age - 2.5) / 1, 0, 1)
+      if (age > 3.5) {
+        e.obj.removeFromParent()
+        eggs.splice(eggs.indexOf(e), 1)
+      }
     }
   }
 
@@ -980,7 +1045,7 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
       const ground = M.groundAt(h.obj.position.x, h.obj.position.z)
       h.obj.position.y = ground + (t < h.boostUntil ? Math.abs(Math.sin(h.phase)) * 0.08 : 0)
       h.obj.rotation.y = h.heading + Math.sin(h.phase) * 0.25
-      // Popping up out of the sand.
+      // Climbing up out of its egg.
       h.obj.scale.setScalar(Math.min(1, age / 0.35))
       for (const f of h.obj.userData.flippers as THREE.Object3D[]) f.rotation.y = Math.sin(h.phase) * 0.6 * f.userData.side
       if (ground > 0) continue
@@ -1322,6 +1387,7 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
         nest.nextAt = t + 35
       }
     } else if (night < 0.5) nest.nextAt = -1
+    crackEggs(dt)
     crawl(dt)
     runErrand(dt)
     marks.step()
@@ -1351,6 +1417,9 @@ export function createWorld(canvas: HTMLCanvasElement, front: HTMLCanvasElement,
     camera.position.set(CAMERA.x + eased.x * 2.2, CAMERA.y - eased.y * 0.8 - depth, CAMERA.z)
     camera.lookAt(TARGET.x, TARGET.y - depth, TARGET.z)
     camera.updateMatrixWorld()
+    // Which way, level with the sea, the sun shines from, as the view sees it.
+    seaShimmer.shimmer.value = 6 * (1 - night)
+    seaShimmer.sunDir.value.copy(light.position).sub(light.target.position).setY(0).normalize().transformDirection(camera.matrixWorldInverse)
 
     // The ocean, and the water's colour from the surface down.
     view.w = size.w

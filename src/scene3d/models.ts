@@ -639,6 +639,22 @@ export function hatchling() {
   return group
 }
 
+// A turtle's egg, sitting at its middle. Whole (userData.whole) until it
+// cracks; then two open halves, unoutlined since their insides show: the top
+// (userData.top) comes off and the bottom (userData.bottom) stays behind.
+export function turtleEgg() {
+  const group = new THREE.Group()
+  group.scale.set(1, 1.2, 1)
+  const whole = inked(new THREE.SphereGeometry(0.11, 12, 8), toon('#f6efdc'), 1.2)
+  const shell = toon('#f6efdc', { side: THREE.DoubleSide })
+  const top = plain(new THREE.SphereGeometry(0.11, 12, 4, 0, Math.PI * 2, 0, Math.PI / 2), shell)
+  const bottom = plain(new THREE.SphereGeometry(0.11, 12, 4, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), shell)
+  top.visible = bottom.visible = false
+  group.add(whole, top, bottom)
+  Object.assign(group.userData, { whole, top, bottom })
+  return group
+}
+
 // A small sea chest with its lid shut (userData.lid, hinged at the back) and
 // gold inside (userData.gold), for when it's opened.
 export function treasureChest() {

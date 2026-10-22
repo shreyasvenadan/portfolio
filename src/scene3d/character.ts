@@ -126,11 +126,24 @@ export function buildHead(skin = toon(SKIN)) {
     }
   }
   for (let i = 0; i < 7; i++) curls.push([50 + rand() * 6, 90 + (i - 3) * 17 + rand() * 4, 0.13 + rand() * 0.03])
+  // Down the back of the head to the nape, coming down only as far as the
+  // tops of the ears at the sides, and a little smaller towards the neck.
+  for (let lat = 8; lat >= -32; lat -= 13) {
+    const ring = Math.round(Math.cos(rad(lat)) * 16)
+    for (let i = 0; i < ring; i++) {
+      const lon = (i / ring) * 360 + lat * 3
+      const back = -Math.sin(rad(lon))
+      if (back < -0.3 || lat < 8 - 42 * Math.max(0, back)) continue
+      curls.push([lat, lon, 0.15 + (lat - 8) * 0.0008 + rand() * 0.035])
+    }
+  }
   for (const [lat, lon, r] of curls) {
     const ball = inked(curl, toon(rand() < 0.3 ? HAIR_LIGHT : HAIR), 1.8)
     ball.scale.setScalar(r)
     const d = 0.6
-    ball.position.set(Math.cos(rad(lat)) * Math.cos(rad(lon)) * d * 0.94, 0.56 + Math.sin(rad(lat)) * d * 1.04, Math.cos(rad(lat)) * Math.sin(rad(lon)) * d * 0.92)
+    // Hugging the skull, which narrows into the jaw below its middle.
+    const narrow = jaw(Math.sin(rad(lat)) * d)
+    ball.position.set(Math.cos(rad(lat)) * Math.cos(rad(lon)) * d * 0.94 * narrow, 0.56 + Math.sin(rad(lat)) * d * 1.04, Math.cos(rad(lat)) * Math.sin(rad(lon)) * d * 0.92)
     ball.rotation.set(rand() * 3, rand() * 3, 0)
     hair.add(ball)
   }
