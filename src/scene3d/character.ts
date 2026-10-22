@@ -21,6 +21,9 @@ type Action = 'wave' | 'look' | 'shrug' | 'laugh'
 const ACTIONS: Action[] = ['wave', 'look', 'shrug', 'laugh']
 const DURATION: Record<Action | 'jump', number> = { wave: 2.8, look: 3, shrug: 2, laugh: 2.2, jump: 0.95 }
 const ACTION_GAP = 6.5
+// A kick: the leg draws back, then swings through, meeting the ball at KICK_CONTACT seconds in.
+const KICK = 0.75
+export const KICK_CONTACT = KICK * 0.5
 
 // Things he does in response to what happens on the island:
 //   cheer    arms up, hopping       point    an arm out at something
@@ -166,6 +169,7 @@ export class Character {
   private umbrella: THREE.Group
   private mouths: Record<'grin' | 'laugh' | 'oh', THREE.Object3D>
   private jumpAt = -10
+  private kickAt = -10
   private t = 0
   private reaction = { kind: 'shrug' as Reaction, at: -100, dur: 0, dir: new THREE.Vector2() }
   // How fast he's running, 0 (standing) to 1, and where in his stride he is.
@@ -356,6 +360,10 @@ export class Character {
     if (this.t - this.jumpAt > DURATION.jump) this.jumpAt = this.t
   }
 
+  kick() {
+    this.kickAt = this.t
+  }
+
   update(t: number, gaze: Gaze, lean: number, still: boolean) {
     const dt = Math.max(0, Math.min(0.05, t - this.t))
     this.t = t
@@ -425,6 +433,14 @@ export class Character {
     const swing = Math.sin(this.phase) * 0.75 * run
     this.hips[0].rotation.x = swing
     this.hips[1].rotation.x = -swing
+    // Kicking: his right leg draws back, whips through and follows up high,
+    // then settles; leaning back a little into it.
+    const kk = (t - this.kickAt) / KICK
+    if (kk >= 0 && kk < 1) {
+      const leg = kk < 0.4 ? smooth(kk / 0.4) * 0.8 : kk < 0.55 ? 0.8 - smooth((kk - 0.4) / 0.15) * 2.2 : -1.4 * (1 - smooth((kk - 0.55) / 0.45))
+      this.hips[0].rotation.x = leg
+      this.body.rotation.x -= Math.max(0, -leg) * 0.12
+    }
 
     // --- Arms (angles as in the drawn version; screen-clockwise is -z here).
     const lift = (shrug * 10 + airborne * 4) * 0.0045

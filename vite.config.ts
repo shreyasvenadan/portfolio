@@ -9,13 +9,14 @@ export default defineConfig({
   base: '/portfolio/',
   plugins: [react(), tailwindcss()],
   build: {
-    // More pages, so /portfolio/resume/ and /portfolio/sealens/ work on GitHub
+    // More pages, so /portfolio/resume/, /portfolio/sealens/ and /portfolio/football/ work on GitHub
     // Pages without a router.
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL('index.html', import.meta.url)),
         resume: fileURLToPath(new URL('resume/index.html', import.meta.url)),
         sealens: fileURLToPath(new URL('sealens/index.html', import.meta.url)),
+        football: fileURLToPath(new URL('football/index.html', import.meta.url)),
       },
     },
   },

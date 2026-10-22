@@ -910,3 +910,30 @@ html[data-lock] body::after {
   z-index: 1000;
   background: #061a2c;
 }
+
+/* --- The football flying into the screen until it covers it, on the way to
+   the football page (src/lib/kick.ts): its white, held while the page
+   changes, and on the football page the ball it shrinks back into. */
+.ball-cover,
+html[data-ball] body::after {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #fffdf6;
+}
+html[data-ball] body::after {
+  content: '';
+}
+.ball-away {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 1001;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.ball-away svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

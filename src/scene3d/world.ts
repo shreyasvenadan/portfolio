@@ -6,7 +6,7 @@
 //   plane           shot down into the sea
 //   gull            squawks and steals a coconut
 //   coconut         falls, bounces and rolls; grows back
-//   football        kicked into the sea, where it bobs
+//   football        he kicks it at the screen, into the football page
 //   pirate ship     cannon hits; it fires back; enough hits sink it, and a
 //                   treasure chest washes up (click it to open it)
 //   Shreyas         jumps
@@ -21,10 +21,11 @@
 import * as THREE from 'three'
 import { discover, foundDiscoveries, type DiscoveryId } from '../lib/discoveries'
 import { isNight, toggleNight } from '../lib/night'
+import { ballOver } from '../lib/kick'
 import { currentQuip, say } from '../lib/quip'
 import { cannonHit, chime, planeCrash, rainfall, sinkingShip, snip, splash, squawk, thud, thunder, whistle } from '../lib/sound'
 import { depthPx } from '../lib/world'
-import { Character } from './character'
+import { Character, KICK_CONTACT } from './character'
 import { Fx } from './fx'
 import * as M from './models'
 import { createOcean, FRONT, type View } from './ocean'
@@ -597,7 +598,7 @@ ${shader.fragmentShader}`.replace(
         openChest()
         break
       case 'ball':
-        kickBall(x)
+        kickBall()
         break
       case 'nut':
         dropCoconut(hit.obj as THREE.Mesh)
@@ -669,52 +670,62 @@ ${shader.fragmentShader}`.replace(
     }, after)
   }
 
-  // The football flies off away from the side it was clicked on, into the sea.
-  function kickBall(clientX: number) {
+  // Clicked, Shreyas runs up to the football and kicks it at the screen; it
+  // comes until it covers the screen, and the football page opens (lib/kick.ts).
+  function kickBall() {
     if (ball.userData.kicked) return
-    thud()
     discover('football')
-    if (still) return
     ball.userData.kicked = true
-    const dir = clientX < toScreen(ball.position).x ? 1 : -1
-    // Shreyas runs after it, as far as the water.
-    if (errand.phase === 'none') Object.assign(errand, { phase: 'wait', until: t + 0.35, side: dir })
-    const FLIGHT = 64
-    const land = new THREE.Vector3(dir * (11.5 + Math.random() * 3), 0, 2 + Math.random() * 4)
-    const v = new THREE.Vector3().subVectors(land, ball.position).divideScalar(FLIGHT)
-    const g = 0.012
-    v.y = (land.y - ball.position.y + (g * FLIGHT * FLIGHT) / 2) / FLIGHT
+    if (still) return ballOver()
+    say('watch this!', 1.6)
+    Object.assign(errand, { phase: 'toBall', until: 0 })
+  }
+
+  // Off his foot, the ball flies at the camera, spinning, and keeps coming
+  // until it covers the whole screen. Its path is laid out as it's seen: on
+  // screen it goes straight from his foot to the middle, while
+  // how far off it looks closes in steadily, then rushes up to the lens. Near
+  // the end it stays a little way off and grows instead (which looks the
+  // same), so it fills the view without the camera ending up inside it; and
+  // it turns a white panel to face the camera, so the screen ends up white.
+  function launchBall() {
+    thud()
+    const FLIGHT = 46
+    // How far off it looks at the end: close enough to cover the screen.
+    const END = 0.45
+    const look = camera.getWorldDirection(new THREE.Vector3())
+    const start = ball.position.clone().project(camera)
+    const far = ball.position.distanceTo(camera.position)
+    const ray = new THREE.Vector3()
+    // The middle of a white panel: the middle of one of the faces of the
+    // icosahedron whose corners are the black ones (models.ts).
+    const corners = new THREE.IcosahedronGeometry(1, 0).attributes.position
+    const panel = new THREE.Vector3()
+    for (let k = 0; k < 3; k++) panel.add(new THREE.Vector3().fromBufferAttribute(corners, k))
+    const facing = new THREE.Quaternion().setFromUnitVectors(panel.normalize(), look.clone().negate())
     fx.add(new THREE.Object3D(), (_, age) => {
-      if (age < FLIGHT) {
-        v.y -= g
-        ball.position.add(v)
-        ball.rotation.z -= dir * 0.25
-        ball.rotation.x += 0.1
-      } else {
-        if (age === FLIGHT) {
-          splash()
-          fx.splash(ball.position.x, ball.position.z, 1)
-        }
-        // Bobbing on the swell, drifting slowly on.
-        ball.position.x += v.x * 0.03
-        ball.position.y = waveAt(ball.position.x, ball.position.z, t) + 0.12 + Math.sin(age / 14) * 0.05
-        ball.rotation.z -= dir * 0.006
-        const left = FLIGHT + 420 - age
-        ball.scale.setScalar(Math.min(1, left / 60))
-      }
-      if (age < FLIGHT + 420) return true
-      // A fresh one back on the sand a little later.
+      const k = Math.min(1, age / FLIGHT)
+      const s = 1 - (1 - Math.min(1, k / 0.85)) ** 2
+      ray.set(start.x * (1 - s), start.y * (1 - s), 0.5).unproject(camera).sub(camera.position).normalize()
+      const seen = far * (END / far) ** (k ** 1.6)
+      const off = Math.max(4, seen)
+      ball.position.copy(camera.position).addScaledVector(ray, off)
+      ball.scale.setScalar(off / seen)
+      if (k < 0.65) {
+        ball.rotation.x -= 0.35
+        ball.rotation.z += 0.08
+      } else ball.quaternion.slerp(facing, 0.3)
+      if (age === FLIGHT) ballOver()
+      if (age < FLIGHT + 60) return true
+      // Gone off to the football page; back on the sand if they come back.
       ball.visible = false
       window.setTimeout(() => {
         ball.position.copy(ballHome)
         ball.rotation.set(0, 0, 0)
+        ball.scale.setScalar(1)
         ball.visible = true
-        fx.add(new THREE.Object3D(), (_, a) => {
-          ball.scale.setScalar(Math.min(1, (a + 1) / 30))
-          if (a >= 30) delete ball.userData.kicked
-          return a < 30
-        })
-      }, 2500)
+        delete ball.userData.kicked
+      }, 1500)
       return false
     })
   }
@@ -918,33 +929,26 @@ ${shader.fragmentShader}`.replace(
     return { x: b.x - a.x, y: a.y - b.y }
   }
 
-  // --- Shreyas running after the football ---------------------------------------------
-  type Errand = { phase: 'none' | 'wait' | 'out' | 'look' | 'back'; until: number; side: number }
-  const errand: Errand = { phase: 'none', until: 0, side: 1 }
-  const RUN_TO = new THREE.Vector3(5.4, 0, 4.8)
+  // --- Shreyas running up to kick the football ----------------------------------------
+  type Errand = { phase: 'none' | 'toBall' | 'kick' | 'back'; until: number }
+  const errand: Errand = { phase: 'none', until: 0 }
   function runErrand(dt: number) {
     const me = shreyas.root.position
     let goal: THREE.Vector3 | null = null
     let speed = 0
     let face = 0
     switch (errand.phase) {
-      case 'wait':
-        if (t > errand.until) {
-          errand.phase = 'out'
-          say('my ball!', 2)
-        }
-        break
-      case 'out': {
-        // As far as the water, or the edge of the screen on narrow ones.
-        const seen = (CAMERA.z - RUN_TO.z) * Math.tan(THREE.MathUtils.degToRad(16)) * (FRAME.w / FRAME.h) * (size.w / (FRAME.w * frame.s))
-        goal = RUN_TO.clone().setX(Math.min(RUN_TO.x, seen - 1) * errand.side)
+      case 'toBall':
+        // Just behind it, so it's between him and the camera.
+        goal = new THREE.Vector3(ball.position.x + 0.22, 0, ball.position.z - 0.75)
         speed = 3.4
         break
-      }
-      case 'look':
-        // Gazing out to sea after it.
-        face = errand.side * 0.7
-        if (t > errand.until) errand.phase = 'back'
+      case 'kick':
+        // Facing the camera; his foot meets the ball, and it's off.
+        if (t > errand.until) {
+          launchBall()
+          Object.assign(errand, { phase: 'back' })
+        }
         break
       case 'back':
         goal = HOME
@@ -956,10 +960,9 @@ ${shader.fragmentShader}`.replace(
       const to = new THREE.Vector3(goal.x - me.x, 0, goal.z - me.z)
       const d = to.length()
       if (d < 0.08) {
-        if (errand.phase === 'out') {
-          Object.assign(errand, { phase: 'look', until: t + 2.2 })
-          shreyas.react('shrug', 1.8)
-          say("…I'll get another one", 2.4)
+        if (errand.phase === 'toBall') {
+          Object.assign(errand, { phase: 'kick', until: t + KICK_CONTACT })
+          shreyas.kick()
         } else errand.phase = 'none'
       } else {
         const step = Math.min(d, speed * dt)
@@ -1178,7 +1181,7 @@ ${shader.fragmentShader}`.replace(
     })
     storms.set(c, { until: t + 10, stop: rainfall() })
     discover('rain')
-    if (errand.phase !== 'out' && errand.phase !== 'back') shreyas.react('shelter', 10.5)
+    if (errand.phase === 'none') shreyas.react('shelter', 10.5)
     say('ugh, rain', 2.2)
   }
 
