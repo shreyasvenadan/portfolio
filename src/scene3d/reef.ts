@@ -6,7 +6,7 @@
 import * as THREE from 'three'
 import { ISLAND } from './models'
 import { ball, bead, cached, curve, glowing, hose, paint, rod, slab, solid, type Part, type V3 } from './shapes'
-import { inked, jitter, seeded } from './toon'
+import { inked, jitter, outlineUniforms, seeded } from './toon'
 
 const quiet = <T extends THREE.Object3D>(o: T) => {
   o.traverse((c) => {
@@ -29,8 +29,13 @@ function piece(key: string, width: number, parts: () => Part[], px = 1.8) {
 
 // Its outline at a few depths: [height, sides, front, back, shift back]. It
 // starts just under the island's beach, tucks in under the sandy spit, bulges
-// out where the reef grows, then falls away back into the dark.
+// out where the reef grows, then falls away back into the dark. Its edge rises
+// out of the water, above the highest swell, and is closed over, so from under
+// the surface there's rock all the way up to it, never a gap into the island.
+// From above, the part of it out of the water is hidden (seamount, below).
 const LEVELS = [
+  [0.8, 0.05, 0.05, 0.05, 0],
+  [0.8, 1.0, 1.0, 1.0, 0],
   [-0.75, 1.0, 1.0, 1.0, 0],
   [-1.5, 1.02, 0.86, 1.0, 0],
   [-2.8, 1.05, 0.6, 1.02, 0],
@@ -111,14 +116,33 @@ export function seamount() {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
   g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
   jitter(g, 0.5, 4)
-  // Its top stays clear of the troughs between waves.
+  // Its rim stays clear of the crests (they reach about 0.4).
   const p = g.attributes.position
-  for (let i = 0; i < p.count; i++) p.setY(i, Math.min(p.getY(i), -0.6))
+  for (let i = 0; i < p.count; i++) if (p.getY(i) > 0.4) p.setY(i, 0.8)
   g.computeVertexNormals()
-  const mesh = inked(g, paint, 2.5)
+  const mesh = inked(g, aboveWaterHidden(paint.clone()), 2.5)
+  const line = mesh.children[0] as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>
+  line.material = aboveWaterHidden(line.material.clone())
+  // Cloning copied the screen size; it has to stay the shared one.
+  line.material.uniforms.resolution = outlineUniforms.resolution
   mesh.castShadow = false
   mesh.receiveShadow = false
   return mesh
+}
+
+// Seen from above the water, the rock isn't drawn above where the troughs
+// reach: the sea hides everything under that, and the beach is there instead.
+function aboveWaterHidden<M extends THREE.Material>(material: M) {
+  const water = material.onBeforeCompile
+  material.onBeforeCompile = (shader, renderer) => {
+    water.call(material, shader, renderer)
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <fog_fragment>',
+      /* glsl */ `#include <fog_fragment>
+  if ( cameraPosition.y > 0.0 && vFogWorld.y > -0.45 ) discard;`,
+    )
+  }
+  return material
 }
 
 // --- reef pieces (each one unit wide, standing on y = 0) -----------------------------
