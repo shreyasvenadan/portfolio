@@ -16,6 +16,29 @@ const JEANS = '#24242a'
 const SHOE = '#1d1d22'
 const SHOE_TRIM = '#b7392f'
 const MOUTH = '#6e211d'
+// His club kit (the football page): red, white and blue stripes, white
+// shorts, red socks.
+const KIT_RED = '#d8343a'
+const KIT_BLUE = '#2a4fa8'
+const KIT_WHITE = '#f6f2ea'
+
+// Vertical stripes wrapped round the shirt (a lathe, so u runs round it).
+function stripes() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 64
+  canvas.height = 4
+  const ctx = canvas.getContext('2d')!
+  const order = [KIT_RED, KIT_WHITE, KIT_BLUE, KIT_WHITE]
+  for (let i = 0; i < 16; i++) {
+    ctx.fillStyle = order[i % 4]
+    ctx.fillRect(i * 4, 0, 4, 4)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.magFilter = THREE.NearestFilter
+  texture.minFilter = THREE.NearestFilter
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
 
 type Action = 'wave' | 'look' | 'shrug' | 'laugh'
 const ACTIONS: Action[] = ['wave', 'look', 'shrug', 'laugh']
@@ -24,6 +47,8 @@ const ACTION_GAP = 6.5
 // A kick: the leg draws back, then swings through, meeting the ball at KICK_CONTACT seconds in.
 const KICK = 0.75
 export const KICK_CONTACT = KICK * 0.5
+// A keepy-uppy flick, meeting the ball halfway through.
+export const TAP = 0.34
 
 // Things he does in response to what happens on the island:
 //   cheer    arms up, hopping       point    an arm out at something
@@ -175,8 +200,13 @@ export class Character {
   // How fast he's running, 0 (standing) to 1, and where in his stride he is.
   stride = 0
   private phase = 0
+  // 0 to 1: concentrating (juggling a ball), so no idle waving or shrugging.
+  focus = 0
+  // When each foot last flicked up to keep a ball in the air (tap()).
+  private taps = [-10, -10]
 
-  constructor() {
+  // `kit`: in his football kit instead of the shirt and jeans.
+  constructor({ kit = false }: { kit?: boolean } = {}) {
     this.root.add(this.body)
     const skin = toon(SKIN)
 
@@ -187,9 +217,17 @@ export class Character {
       hip.position.set(side * 0.21, HIP, 0)
       this.body.add(hip)
       this.hips.push(hip)
-      const leg = inked(new THREE.CapsuleGeometry(0.15, 0.87, 3, 10), toon(JEANS), 2.5)
+      const leg = inked(new THREE.CapsuleGeometry(0.15, 0.87, 3, 10), kit ? skin : toon(JEANS), 2.5)
       leg.position.set(0, 0.72 - HIP, 0)
       hip.add(leg)
+      if (kit) {
+        const shorts = inked(new THREE.CapsuleGeometry(0.19, 0.2, 3, 10), toon(KIT_WHITE), 2.5)
+        shorts.position.y = 1.13 - HIP
+        hip.add(shorts)
+        const sock = inked(new THREE.CylinderGeometry(0.16, 0.15, 0.46, 10), toon(KIT_RED), 2.5)
+        sock.position.y = 0.4 - HIP
+        hip.add(sock)
+      }
       const shoe = inked(new THREE.CapsuleGeometry(0.16, 0.26, 3, 10), toon(SHOE), 2.5)
       shoe.rotation.x = Math.PI / 2
       shoe.scale.set(1.1, 1, 0.75)
@@ -202,7 +240,7 @@ export class Character {
 
     // --- torso: blue button-up, tucked into black jeans
     this.body.add(this.torso)
-    const hips = inked(new THREE.CapsuleGeometry(0.33, 0.25, 3, 12), toon(JEANS), 2.5)
+    const hips = inked(new THREE.CapsuleGeometry(0.33, 0.25, 3, 12), toon(kit ? KIT_WHITE : JEANS), 2.5)
     hips.scale.set(1, 1, 0.7)
     hips.position.y = 1.3
     this.torso.add(hips)
@@ -210,9 +248,18 @@ export class Character {
     const shirtProfile = [
       [0, 1.45], [0.35, 1.45], [0.36, 1.55], [0.43, 1.9], [0.47, 2.3], [0.43, 2.41], [0.3, 2.48], [0, 2.5],
     ].map(([r, y]) => new THREE.Vector2(r, y))
-    const shirt = inked(new THREE.LatheGeometry(shirtProfile, 18), toon(TOP), 2.5)
+    const shirt = inked(new THREE.LatheGeometry(shirtProfile, 32), kit ? toon('#ffffff', { map: stripes() }) : toon(TOP), 2.5)
     shirt.scale.z = 0.68
     this.torso.add(shirt)
+    if (kit) {
+      const collar = inked(new THREE.TorusGeometry(0.15, 0.035, 6, 16), toon(KIT_BLUE), 1.5)
+      collar.rotation.x = Math.PI / 2 - 0.2
+      collar.position.set(0, 2.47, 0.02)
+      this.torso.add(collar)
+    }
+    const shirtDetails = new THREE.Group()
+    shirtDetails.visible = !kit
+    this.torso.add(shirtDetails)
     const placket = inked(new THREE.BoxGeometry(0.06, 0.95, 0.03), toon(TOP_DARK), 1.2)
     // How far the shirt's front sits forward at a given height.
     const shirtFront = (y: number) => {
@@ -222,12 +269,12 @@ export class Character {
     }
     placket.position.set(0.02, 1.88, shirtFront(1.88) + 0.008)
     placket.rotation.x = 0.09
-    this.torso.add(placket)
+    shirtDetails.add(placket)
     const button = new THREE.SphereGeometry(0.03, 8, 6)
     for (const y of [2.25, 2.05, 1.85, 1.65, 1.47]) {
       const b = new THREE.Mesh(button, toon('#e8edf3'))
       b.position.set(0.06, y, shirtFront(y) + 0.02)
-      this.torso.add(b)
+      shirtDetails.add(b)
     }
     // Pointed collar, sitting in front of the neck.
     for (const side of [-1, 1]) {
@@ -240,7 +287,7 @@ export class Character {
       const collar = inked(g, toon(TOP), 1.8)
       collar.position.set(0, 2.47, 0.2)
       collar.rotation.x = -0.35
-      this.torso.add(collar)
+      shirtDetails.add(collar)
     }
     const neck = inked(new THREE.CylinderGeometry(0.12, 0.13, 0.32, 10), skin, 2)
     neck.position.set(0, 2.55, 0.02)
@@ -251,17 +298,18 @@ export class Character {
       const shoulder = new THREE.Group()
       shoulder.position.set(side * 0.47, 2.36, 0)
       this.torso.add(shoulder)
-      const upper = inked(new THREE.CapsuleGeometry(0.11, 0.44, 3, 10), toon(TOP), 2.5)
+      const upper = inked(new THREE.CapsuleGeometry(0.11, 0.44, 3, 10), toon(kit ? KIT_RED : TOP), 2.5)
       upper.position.y = -0.3
       shoulder.add(upper)
       const elbow = new THREE.Group()
       elbow.position.y = -0.58
       shoulder.add(elbow)
-      const fore = inked(new THREE.CapsuleGeometry(0.1, 0.42, 3, 10), toon(TOP), 2.5)
+      const fore = inked(new THREE.CapsuleGeometry(0.1, 0.42, 3, 10), kit ? skin : toon(TOP), 2.5)
       fore.position.y = -0.26
       elbow.add(fore)
       const cuff = inked(new THREE.CylinderGeometry(0.115, 0.115, 0.08, 10), toon(TOP_DARK), 1.5)
       cuff.position.y = -0.5
+      cuff.visible = !kit
       elbow.add(cuff)
       const hand = inked(new THREE.SphereGeometry(0.14, 12, 10), skin, 2.5)
       hand.scale.set(0.9, 1.1, 0.75)
@@ -364,6 +412,11 @@ export class Character {
     this.kickAt = this.t
   }
 
+  // A quick flick of one foot (0 or 1), to keep a ball up.
+  tap(foot: 0 | 1) {
+    this.taps[foot] = this.t
+  }
+
   update(t: number, gaze: Gaze, lean: number, still: boolean) {
     const dt = Math.max(0, Math.min(0.05, t - this.t))
     this.t = t
@@ -379,7 +432,7 @@ export class Character {
     // Running, he doesn't stop for idle actions.
     const run = still ? 0 : this.stride
     this.phase += dt * 11 * run
-    const busy = Math.max(w, run)
+    const busy = Math.max(w, run, this.focus)
 
     // --- Idle actions, one every few seconds, plus click-to-jump.
     const since = t - 1.5
@@ -440,6 +493,11 @@ export class Character {
       const leg = kk < 0.4 ? smooth(kk / 0.4) * 0.8 : kk < 0.55 ? 0.8 - smooth((kk - 0.4) / 0.15) * 2.2 : -1.4 * (1 - smooth((kk - 0.55) / 0.45))
       this.hips[0].rotation.x = leg
       this.body.rotation.x -= Math.max(0, -leg) * 0.12
+    }
+    // Keepy-uppies: the foot comes up in front and drops back.
+    for (const foot of [0, 1] as const) {
+      const tk = (t - this.taps[foot]) / TAP
+      if (tk >= 0 && tk < 1) this.hips[foot].rotation.x = -Math.sin(tk * Math.PI) * 0.8
     }
 
     // --- Arms (angles as in the drawn version; screen-clockwise is -z here).

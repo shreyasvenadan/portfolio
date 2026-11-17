@@ -20,7 +20,7 @@ const hasWebGL = () => {
 
 // Back to the main page. Come from there, it's a step back in history, so
 // the browser puts them back exactly where they were; otherwise the link
-// takes them to SeaLens in the work section.
+// takes them to SeaLens in the experience section.
 function backToSea(e: React.MouseEvent) {
   const home = new URL(import.meta.env.BASE_URL, window.location.href)
   const from = document.referrer && new URL(document.referrer)
@@ -80,6 +80,8 @@ export default function SeaLens() {
         <p className="dive-lead">{project.description}</p>
         <Links />
 
+        {/* One column, or two side by side when the panel is wide (index.css). */}
+        <div className="dive-sections">
         {project.details?.map((section) => (
           <section key={section.heading} className="dive-section">
             <h2 className="dive-heading font-display">{section.heading}</h2>
@@ -109,6 +111,7 @@ export default function SeaLens() {
           <h2 className="dive-heading font-display">Built with</h2>
           <p>{project.tech.join(', ')}</p>
         </section>
+        </div>
 
         <Links />
       </main>

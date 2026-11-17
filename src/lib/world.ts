@@ -1,6 +1,6 @@
 // The world behind the page is laid out in depth units from 0 to 500, one
-// 100-unit zone per section: surface, reef (about), open blue (work),
-// twilight (experience) and abyss (contact). Each zone is stretched to its
+// 100-unit zone per section: surface, reef (about), open blue (experience),
+// twilight (projects) and abyss (contact). Each zone is stretched to its
 // section's height on the page, so the world scrolls along with the text. The
 // surface and the abyss are always exactly one screen tall.
 //
@@ -14,7 +14,7 @@ function measure() {
   const vh = window.innerHeight
   const top = (id: string) => (document.getElementById(id)?.getBoundingClientRect().top ?? 0) + window.scrollY
   const end = (document.querySelector('footer')?.getBoundingClientRect().bottom ?? 5 * vh) + window.scrollY
-  const edges = [0, vh, top('work'), top('experience'), end - vh, end]
+  const edges = [0, vh, top('experience'), top('projects'), end - vh, end]
   // Keep every zone at least half a screen tall, whatever the layout does.
   for (let i = 1; i < edges.length; i++) edges[i] = Math.max(edges[i], edges[i - 1] + vh / 2)
   bounds = edges

@@ -38,7 +38,7 @@ export const links = {
   github: 'https://github.com/shreyasvenadan',
   linkedin: 'https://www.linkedin.com/in/shreyasvenadan/',
   youtube: 'https://www.youtube.com/@shreyasvenadan',
-  email: 'shreyasvenadan10@gmail.com',
+  email: 'shreyasvenadan@gmail.com',
   resume: `${import.meta.env.BASE_URL}shreyas-venadan-resume.pdf`,
 }
 
@@ -52,6 +52,12 @@ export type Project = {
   app?: string
   // Its icon, in public/.
   logo?: string
+  // Shown at the top of the Experience section instead of under Work.
+  inExperience?: boolean
+  // For those: the role, when and where, shown as on the other Experience entries.
+  role?: string
+  period?: string
+  location?: string
   // The longer story, on the project's own page (a "More about" link).
   details?: { heading: string; body?: string; points?: string[]; links?: { label: string; href: string }[] }[]
 }
@@ -59,6 +65,9 @@ export type Project = {
 export const projects: Project[] = [
   {
     title: 'SeaLens',
+    inExperience: true,
+    role: 'Co-Founder, Tech and Marketing Lead',
+    period: '2025 — Present',
     description:
       'macOS and web app that uses machine learning to identify, track and count fish populations in underwater reef video.',
     tech: ['SwiftUI', 'SwiftData', 'Tuist', 'React', 'TypeScript', 'Vite', 'Supabase', 'YOLOv12', 'SwiftFormer', 'CPEA'],
@@ -154,6 +163,10 @@ export const projects: Project[] = [
   },
   {
     title: 'MyKaleidoscope',
+    inExperience: true,
+    role: 'Spectrum Tuition',
+    period: '2026',
+    location: 'Melbourne, VIC',
     description:
       'Goal-tracking and personal development platform for Spectrum Tuition. Built onboarding and Wheel of Life assessment flows, plus Google Calendar integration to turn goal deadlines into events.',
     tech: ['Next.js', 'React', 'Express', 'Supabase', 'PostgreSQL', 'Tailwind CSS'],
@@ -190,34 +203,19 @@ export type Experience = {
   org: string
   location?: string
   period: string
+  // Its logo, in public/.
+  logo?: string
+  // Logo height as a Tailwind class; defaults to h-10.
+  logoClass?: string
   points: string[]
 }
 
 export const experience: Experience[] = [
   {
-    role: 'Co-Founder, Tech and Marketing Lead',
-    org: 'SeaLens',
-    period: '2025 — Present',
-    points: [
-      'Co-led development of the production macOS app (SwiftUI, SwiftData, Tuist), integrating machine-learning outputs into a scientist-friendly workflow.',
-      'Led development of the SeaLens web app (React, TypeScript, Vite, Supabase), extending access beyond macOS.',
-      'Selected as a Spotlight Team (1 of 4 across all Indonesian Apple Developer Academies); presented to Indonesian ministers, three Apple Directors and the Singapore Oceanarium.',
-      '1st place at the EU Conexus Innovation Contest 2025.',
-    ],
-  },
-  {
-    role: 'RMIT Industry Project',
-    org: 'Spectrum Tuition',
-    location: 'Melbourne, VIC',
-    period: '2026',
-    points: [
-      'Building MyKaleidoscope in Agile sprints using a full-stack TypeScript monorepo (Next.js, React, Express, Supabase).',
-      'Built onboarding and Wheel of Life assessment flows, and Google Calendar integration for goal deadlines.',
-    ],
-  },
-  {
     role: 'Co-Founder, SeaLens',
     org: 'Apple Developer Institute for Entrepreneurship',
+    logo: `${import.meta.env.BASE_URL}apple-developer-institute-logo.png`,
+    logoClass: 'h-14',
     location: 'Jakarta, Indonesia',
     period: '2026',
     points: [
@@ -228,6 +226,8 @@ export const experience: Experience[] = [
   {
     role: 'iOS Developer',
     org: 'Apple Developer Academy @ BINUS',
+    logo: `${import.meta.env.BASE_URL}apple-developer-academy-logo.png`,
+    logoClass: 'h-14',
     location: 'Bali, Indonesia',
     period: '2025',
     points: [
@@ -238,6 +238,7 @@ export const experience: Experience[] = [
   {
     role: 'Bachelor of Software Engineering',
     org: 'RMIT University',
+    logo: `${import.meta.env.BASE_URL}rmit-logo.png`,
     location: 'Melbourne, VIC',
     period: '2022 — 2026',
     points: [],

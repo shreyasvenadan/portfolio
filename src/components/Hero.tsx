@@ -26,7 +26,7 @@ export default function Hero() {
       </p>
       <div className="mt-7 flex flex-wrap justify-center gap-3 font-display [text-shadow:none]">
         <a
-          href="#work"
+          href="#experience"
           className="flex flex-col items-center gap-1 text-lg text-ink/80 transition hover:text-accent"
         >
           scroll to dive

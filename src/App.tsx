@@ -60,8 +60,8 @@ export default function App() {
         </div>
         <div className="mx-auto max-w-[42rem] text-center">
           <About />
-          <Projects />
           <Experience />
+          <Projects />
           <Contact />
         </div>
       </main>

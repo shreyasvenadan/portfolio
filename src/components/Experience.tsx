@@ -1,12 +1,20 @@
-import { experience } from '../data/content'
+import { experience, projects } from '../data/content'
+import ProjectCard from './ProjectCard'
 import Section from './Section'
 
 export default function Experience() {
   return (
     <Section id="experience" title="Experience">
-      <ol className="space-y-14">
+      <ol className="space-y-12">
+        {/* Projects that are also roles (SeaLens, MyKaleidoscope) lead the section, as their full card. */}
+        {projects
+          .filter((project) => project.inExperience)
+          .map((project) => (
+            <ProjectCard key={project.title} project={project} className="border-t border-ink/15 pt-12" />
+          ))}
         {experience.map((item) => (
-          <li key={`${item.role}-${item.org}`} data-focus>
+          <li key={`${item.role}-${item.org}`} data-focus className="border-t border-ink/15 pt-12">
+            {item.logo && <img src={item.logo} alt="" className={`mx-auto mb-3 w-auto ${item.logoClass ?? 'h-10'}`} />}
             <p className="font-display text-muted tabular-nums">{item.period}</p>
             <div>
               <h3 className="font-display text-2xl font-bold tracking-tight">{item.org}</h3>

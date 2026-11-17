@@ -98,16 +98,16 @@ const KINDS: Kind[] = [
   { make: () => C.eel('#4b4560'), size: 200, zone: [430, 458], speed: 0.3 },
 ]
 
-// The reef covers the rock's face from just under the water down to where
-// the face turns away: a piece in each cell of a grid (in world units), nudged
-// off it, picked at random and sized on screen like the drawn version's
-// pieces (64-150px, or as a share of a narrow screen's width). Those behind the text column are hidden
-// as the page is laid out, so the reef frames the text rather than sitting
-// behind it. (No anemones: their arms are drawn one by one, too many for a
+// The reef is dotted over the rock's face from just under the water down to
+// where the face turns away: a piece in each cell of a loose grid (in world
+// units), nudged off it, picked at random and kept small on screen, in scale
+// with the fish (36-74px, or as a share of a narrow screen's width). Those
+// behind the text column are hidden as the page is laid out, so the reef
+// frames the text rather than sitting behind it. (No anemones: their arms are drawn one by one, too many for a
 // whole reef of them.)
 const REEF_TOP = -1.8
 const REEF_BOTTOM = -19
-const REEF_STEP = 1.3
+const REEF_STEP = 2.4
 const pick = <T,>(rand: () => number, list: T[]) => list[Math.floor(rand() * list.length)]
 const CORALS: ((rand: () => number) => THREE.Group)[] = [
   (rand) => R.branchCoral(pick(rand, ['#f07c8c', '#ffcf5c', '#9fb8ff', '#e07a5f'])),
@@ -206,7 +206,7 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
         const piece = pick(rand, CORALS)(rand)
         piece.rotation.y = (rand() - 0.5) * 0.8
         group.add(piece)
-        reef.push({ piece, x: jx, y: jy, px: 64 + rand() * 86, lean: 0 })
+        reef.push({ piece, x: jx, y: jy, px: 36 + rand() * 38, lean: 0 })
       }
     }
   }

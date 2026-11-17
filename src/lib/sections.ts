@@ -2,8 +2,8 @@
 export const sections = [
   { id: 'top', label: 'Surface', depth: 0 },
   { id: 'about', label: 'About', depth: 15 },
-  { id: 'work', label: 'Work', depth: 40 },
-  { id: 'experience', label: 'Experience', depth: 90 },
+  { id: 'experience', label: 'Experience', depth: 40 },
+  { id: 'projects', label: 'Projects', depth: 90 },
   { id: 'contact', label: 'Contact', depth: 200 },
 ] as const
 
