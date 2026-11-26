@@ -164,6 +164,10 @@ export const programs: Program[] = [
       {
         heading: 'What changed',
         body: "It changed how I think about SeaLens: not just a technical project, but a business solving a real problem. We graduated from the Institute in Jakarta, and the next goal is real adoption by blue-tech organisations across the region.",
+        photos: [
+          photo('adi-team', 2000, 1125, 'Graduation day', 'The SeaLens team in their black SeaLens tees, pointing at themselves in front of the Graduation’s Day screens.'),
+          photo('adi-cohort', 2000, 1500, 'The graduating cohort', 'The whole Institute cohort gathered in front of the two Graduation’s Day screens.'),
+        ],
       },
     ],
     posts: [

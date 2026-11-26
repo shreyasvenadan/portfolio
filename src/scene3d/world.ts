@@ -626,7 +626,8 @@ ${shader.fragmentShader}`.replace(
     return true
   }
 
-  // Coconuts drop, bounce and roll to a stop; a new one grows back later.
+  // Coconuts drop and thud into the sand, sinking in a little and leaving a
+  // dent; a new one grows back later.
   function dropCoconut(nut: THREE.Mesh) {
     discover('coconut')
     nut.userData.falling = true
@@ -635,21 +636,24 @@ ${shader.fragmentShader}`.replace(
     fallen.position.copy(at)
     nut.visible = false
     const v = new THREE.Vector3((Math.random() < 0.5 ? -1 : 1) * (0.03 + Math.random() * 0.03), 0, 0.02 + Math.random() * 0.03)
-    let bounces = 0
+    let landed = false
     fx.add(fallen, (n, age) => {
-      v.y -= 0.012
-      n.position.add(v)
-      const ground = M.groundAt(n.position.x, n.position.z) + 0.24
-      if (n.position.y < ground) {
-        n.position.y = ground
-        if (bounces === 0) thud()
-        v.y = bounces < 2 ? -v.y * 0.35 : 0
-        bounces++
-        v.x *= 0.95
-        v.z *= 0.95
+      if (!landed) {
+        v.y -= 0.012
+        n.position.add(v)
+        n.rotation.z -= v.x / 0.26
+        n.rotation.x += v.z / 0.26
+        const ground = M.groundAt(n.position.x, n.position.z) + 0.24
+        if (n.position.y < ground) {
+          // It stays where it lands, sunk a little into the sand.
+          landed = true
+          n.position.y = ground - 0.06
+          thud()
+          const spot = n.position.clone().setY(ground - 0.24)
+          marks.dent(spot, 0.3)
+          fx.sandBurst(spot, 0.35)
+        }
       }
-      n.rotation.z -= v.x / 0.26
-      n.rotation.x += v.z / 0.26
       // Lies there a while, then sinks into the sand.
       if (age > 400) n.scale.setScalar(Math.max(0.01, 1 - (age - 400) / 40))
       return age < 440
@@ -735,7 +739,10 @@ ${shader.fragmentShader}`.replace(
   function annoyGull(i: number) {
     const gull = gulls[i]
     const state = gullState[i]
-    squawk()
+    // Each cry is turned down as the gull gets further off than it was when
+    // it cried (and, flying away, fades out with it).
+    let cry = squawk()
+    let near = gull.position.distanceTo(camera.position)
     const from = gull.position.clone()
     for (let k = 0; k < 2; k++) fx.feather(from)
     if (still) return
@@ -770,10 +777,15 @@ ${shader.fragmentShader}`.replace(
           carried.position.set(0, -0.35, 0)
           carried.scale.setScalar(0.8)
           gull.add(carried)
-          squawk()
+          // The first cry fades out under the second.
+          cry(0, 0.6)
+          cry = squawk({ long: true })
+          near = gull.position.distanceTo(camera.position)
         }
         gull.position.copy(curve(to.clone().add(new THREE.Vector3(0, 0.6, 0)), mid2, away, (age - DIVE) / ESCAPE))
       }
+      const flown = Math.max(0, (age - DIVE) / ESCAPE)
+      cry(Math.min(1, near / gull.position.distanceTo(camera.position)) * (1 - flown) ** 1.5)
       gull.lookAt(gull.position.clone().add(gull.position.clone().sub(prev)))
       gull.rotateY(-Math.PI / 2)
       if (age < DIVE + ESCAPE) return true

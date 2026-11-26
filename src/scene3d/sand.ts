@@ -88,6 +88,30 @@ export class SandMarks {
     this.marked()
   }
 
+  // A small soft dent, where something dropped onto the sand: shaded in the
+  // middle, with a faint lip of pushed-up sand round it.
+  dent(at: THREE.Vector3, radius: number) {
+    const [x, z] = this.toCanvas(at.x, at.z)
+    const c = this.c
+    c.globalCompositeOperation = 'source-over'
+    const lip = c.createRadialGradient(x, z, radius * 0.7 * PX, x, z, radius * 1.4 * PX)
+    lip.addColorStop(0, 'rgba(255,255,255,0.5)')
+    lip.addColorStop(1, 'rgba(255,255,255,0)')
+    c.fillStyle = lip
+    c.beginPath()
+    c.arc(x, z, radius * 1.4 * PX, 0, Math.PI * 2)
+    c.fill()
+    const hollow = c.createRadialGradient(x, z + radius * 0.1 * PX, 0, x, z + radius * 0.1 * PX, radius * PX)
+    hollow.addColorStop(0, 'rgba(0,0,0,0.65)')
+    hollow.addColorStop(0.7, 'rgba(0,0,0,0.45)')
+    hollow.addColorStop(1, 'rgba(0,0,0,0)')
+    c.fillStyle = hollow
+    c.beginPath()
+    c.arc(x, z + radius * 0.1 * PX, radius * PX, 0, Math.PI * 2)
+    c.fill()
+    this.marked()
+  }
+
   private marked() {
     this.texture.needsUpdate = true
     this.left = 900

@@ -296,8 +296,48 @@ export function chime() {
   })
 }
 
-// A seagull: two or three harsh, falling "kee-ow" cries.
-export function squawk() {
+// A seagull: one of six cries cut from a recording (public/sounds/gull-1..6:
+// three single "kee-ow"s, then a burst of cries and two runs of laughing
+// calls, which are longer and fade out slowly), never the same one twice in a
+// row, and pitched a touch up or down each time so even a repeat sounds like
+// a different bird. Fetched up front, decoded on first use. `long` picks from
+// the longer three, for a gull flying away. Returns its volume, 0 to 1, for
+// the caller to turn down as the gull gets further away.
+const GULL_FILES = [1, 2, 3, 4, 5, 6].map((n) => fetch(`${import.meta.env.BASE_URL}sounds/gull-${n}.mp3`).then((r) => r.arrayBuffer()))
+let gulls: Promise<AudioBuffer[]> | null = null
+let lastGull = -1
+const LONG_GULLS = [3, 4, 5]
+
+// `glide` is roughly how many seconds it takes to get there.
+export type Volume = (level: number, glide?: number) => void
+
+export function squawk({ long = false } = {}): Volume {
+  const a = audio()
+  const level = a.createGain()
+  level.connect(a.destination)
+  gulls ??= Promise.all(GULL_FILES.map(async (file) => a.decodeAudioData(await file)))
+  gulls
+    .then((buffers) => {
+      // Any but the last one played.
+      const pool = (long ? LONG_GULLS : buffers.map((_, i) => i)).filter((i) => i !== lastGull)
+      const pick = pool[Math.floor(Math.random() * pool.length)]
+      lastGull = pick
+      const src = a.createBufferSource()
+      src.buffer = buffers[pick]
+      src.playbackRate.value = 0.92 + Math.random() * 0.16
+      const out = a.createGain()
+      out.gain.value = 0.55
+      src.connect(out).connect(level)
+      src.start()
+    })
+    // If the recordings can't load, fall back to the synthesized cry.
+    .catch(synthSquawk)
+  // Eased, so a level set every frame glides rather than steps.
+  return (v, glide = 0.15) => level.gain.setTargetAtTime(Math.min(1, Math.max(0, v)), a.currentTime, glide / 3)
+}
+
+// The synthesized seagull: two or three harsh, falling "kee-ow" cries.
+function synthSquawk() {
   const a = audio()
   const t = a.currentTime
   const cries = 2 + Math.round(Math.random())

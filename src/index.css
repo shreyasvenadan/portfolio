@@ -1329,7 +1329,7 @@ html[data-night='true'] .pitch-scene {
 
 /* --- The Apple program pages (Program.tsx: /academy/ and /institute/) --
    The SeaLens page's layout (.dive-*) over a 3D scene (scene3d/program.ts):
-   the Academy's reception in Bali, Jakarta for the Institute. Until it draws,
+   the Academy's reception in Bali, the Institute's graduation room in Jakarta. Until it draws,
    or without WebGL, their sky and ground colours. */
 .apple-scene,
 .apple-canvas {
@@ -1342,13 +1342,13 @@ html[data-night='true'] .pitch-scene {
   background: linear-gradient(to bottom, #e7e3dc, #f2efe9 15%, #f2efe9 70%, #d8ccba 71%, #cfc2ae);
 }
 .apple-scene-institute {
-  background: linear-gradient(to bottom, #7fb6d8, #f3dcc0 55%, #c8bfae 56%, #b8ae9c);
+  background: linear-gradient(to bottom, #f1eee8, #dcc3a0 12%, #d5bb96 82%, #76757b 83%, #6a696f);
 }
 html[data-night='true'] .apple-scene-academy {
   background: linear-gradient(to bottom, #8d877d, #b6afa4 15%, #b6afa4 70%, #8f8576 71%, #85796a);
 }
 html[data-night='true'] .apple-scene-institute {
-  background: linear-gradient(to bottom, #0f1433, #3a3f78 55%, #4a4c5c 56%, #3a3c4a);
+  background: linear-gradient(to bottom, #a9a398, #b49d7c 12%, #ac9574 82%, #55545a 83%, #4a494f);
 }
 .apple-logo {
   height: 4.5rem;

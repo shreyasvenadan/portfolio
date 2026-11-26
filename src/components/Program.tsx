@@ -1,8 +1,8 @@
 // A page for one Apple program: /portfolio/academy/ (the Apple Developer
 // Academy @ BINUS) or /portfolio/institute/ (the Apple Developer Institute
 // for Entrepreneurship). Built on the SeaLens page's layout (.dive-*): its
-// 3D scene fills the window (scene3d/program.ts, Bali or Jakarta, with the
-// program's logo in it), with the story beside it, or below it on phones.
+// 3D scene fills the window (scene3d/program.ts: the Academy's reception or
+// the Institute's graduation room), with the story beside it, or below it on phones.
 import { useEffect, useRef, useState } from 'react'
 import { programs, type Program as ProgramData } from '../data/apple'
 import { isNight } from '../lib/night'
