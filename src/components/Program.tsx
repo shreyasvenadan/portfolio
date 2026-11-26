@@ -5,7 +5,7 @@
 // Academy's reception or the Institute's graduation room), with the story beside it, or below it on phones.
 import { useEffect, useRef, useState } from 'react'
 import { programs, type Program as ProgramData } from '../data/apple'
-import { isNight } from '../lib/night'
+import NightSwitch, { useNight } from './NightSwitch'
 import { prefersReducedMotion } from '../lib/sections'
 import { createProgramScene } from '../scene3d/program'
 import { slug } from './ProjectCard'
@@ -90,28 +90,76 @@ function Photos({ photos }: { photos: ViewerPhoto[] }) {
   )
 }
 
+// How long the scene takes to turn from day to night, or back, in ms.
+const FADE = 3500
+
 export default function Program({ id }: { id: ProgramData['id'] }) {
   // The pages before and after this one, in the order they happened.
   const at = programs.findIndex((p) => p.id === id)
   const program = programs[at]
   const before = programs[at - 1]
   const next = programs[at + 1]
-  const canvas = useRef<HTMLCanvasElement>(null)
+  const holder = useRef<HTMLDivElement>(null)
+  const night = useNight()
+  // The scene's canvases: usually one, but two for a moment when switching
+  // between day and night, the new one fading in over the old.
+  const layers = useRef<{ drop: () => void; time: () => number }[]>([])
+
+  useEffect(
+    () => () => {
+      layers.current.forEach((layer) => layer.drop())
+      layers.current = []
+    },
+    [],
+  )
 
   useEffect(() => {
     if (!hasWebGL()) return
-    const scene = createProgramScene(canvas.current!, { kind: id, still: prefersReducedMotion(), night: isNight() })
-    return () => scene.dispose()
-  }, [id])
+    const canvas = document.createElement('canvas')
+    canvas.className = 'apple-canvas'
+    const under = layers.current
+    const fading = under.length > 0 && !prefersReducedMotion()
+    if (fading) canvas.style.opacity = '0'
+    holder.current!.append(canvas)
+    // Picking up where the one underneath had got to, so only the light
+    // changes as it fades in.
+    const scene = createProgramScene(canvas, { kind: id, still: prefersReducedMotion(), night, from: under.at(-1)?.time() ?? 0 })
+    let timer = 0
+    let dropped = false
+    const layer = {
+      time: scene.time,
+      drop: () => {
+        if (dropped) return
+        dropped = true
+        clearTimeout(timer)
+        scene.dispose()
+        canvas.remove()
+      },
+    }
+    layers.current = [...under, layer]
+    const clearUnder = () => {
+      under.forEach((old) => old.drop())
+      layers.current = layers.current.filter((l) => !under.includes(l))
+    }
+    if (!fading) clearUnder()
+    else {
+      // Day turns to night (or back) slowly, like dusk coming on.
+      canvas.getBoundingClientRect()
+      canvas.style.transition = `opacity ${FADE}ms ease-in-out`
+      canvas.style.opacity = '1'
+      timer = window.setTimeout(clearUnder, FADE)
+    }
+  }, [id, night])
 
   return (
     <>
       {/* The backdrop's colours show until the scene draws, or without WebGL. */}
       <div className={`apple-scene apple-scene-${id}`} aria-hidden />
-      <canvas ref={canvas} className="apple-canvas" aria-hidden />
+      <div ref={holder} aria-hidden />
       <a href={`${base}#experience`} onClick={backToSea} className={`dive-back apple-back-${id} font-display`}>
         ← back to the sea
       </a>
+      <NightSwitch />
 
       <main className="dive-copy">
         <img src={program.logo} alt="" className="apple-logo" />

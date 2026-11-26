@@ -21,7 +21,7 @@ import { Character, type Cut, type Look as Style } from './character'
 import { cloud, palm } from './models'
 import { inked, jitter, outlineUniforms, plain, ramp, seeded, toon } from './toon'
 
-export type ProgramScene = { dispose(): void }
+export type ProgramScene = { dispose(): void; time(): number }
 type Kind = 'academy' | 'institute' | 'rmit'
 
 type Look = { top: string; low: string; hemi: string; ground: string; sun: string; light: number; ambient: number }
@@ -53,7 +53,7 @@ type Animate = (t: number) => void
 
 export function createProgramScene(
   canvas: HTMLCanvasElement,
-  { kind, still, night, onReady }: { kind: Kind; still: boolean; night: boolean; onReady?: () => void },
+  { kind, still, night, onReady, from = 0 }: { kind: Kind; still: boolean; night: boolean; onReady?: () => void; from?: number },
 ): ProgramScene {
   const look = LOOKS[kind][night ? 'night' : 'day']
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
@@ -162,6 +162,14 @@ export function createProgramScene(
   let last = performance.now()
   let t = 0
   let raf = 0
+  // Starting part way through (`from` seconds in, where a scene this one is
+  // replacing had got to): run everything up to then first, so trams and
+  // people are where they were. The timetables are seeded, so they match.
+  if (!still)
+    for (const step = 0.05; t + step <= Math.min(from, 900); ) {
+      t += step
+      for (const a of animations) a(t)
+    }
   function tick(now: number) {
     resize()
     const dt = still ? 0 : THREE.MathUtils.clamp((now - last) / 1000, 0, 0.05)
@@ -196,6 +204,8 @@ export function createProgramScene(
   window.addEventListener('resize', onResize)
 
   return {
+    // How far into its timeline the scene is, in seconds.
+    time: () => t,
     dispose() {
       disposed = true
       cancelAnimationFrame(raf)
@@ -486,14 +496,89 @@ function academyRoom(scene: THREE.Scene, night: boolean, animations: Animate[], 
   const backSkirt = inked(new THREE.BoxGeometry(HALF * 2, 0.12, 0.03), skirt, 1.5)
   backSkirt.position.set(0, 0.06, BACK + 0.015)
   scene.add(backSkirt)
+  // Each side wall has a doorway in it, in line with the band in front of the
+  // desk where the students walk: glass double doors standing open, and a
+  // short hall beyond, so they come in through one and leave by the other.
+  const sideMat = toon('#e9e5dd')
+  const D = { z: STUDENT_BAND.mid, w: 2.6, h: 2.6 }
+  const doorFrom = D.z - D.w / 2
+  const doorTo = D.z + D.w / 2
+  const frameMat = toon('#7a6248')
+  const glassMat = new THREE.MeshBasicMaterial({ color: night ? '#a9c4cc' : '#d6eef2', transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide })
+  const hallWall = toon(night ? '#c9c2b6' : '#efebe3')
   for (const side of [-1, 1]) {
-    const wall = plain(new THREE.PlaneGeometry(DEPTH, COVE), toon('#e9e5dd'))
-    wall.rotation.y = (-side * Math.PI) / 2
-    wall.position.set(side * HALF, COVE / 2, BACK + DEPTH / 2)
-    scene.add(wall)
-    const sideSkirt = inked(new THREE.BoxGeometry(0.03, 0.12, DEPTH), skirt, 1.5)
-    sideSkirt.position.set(side * (HALF - 0.015), 0.06, BACK + DEPTH / 2)
-    scene.add(sideSkirt)
+    const piece = (from: number, to: number, bottom: number, top: number) => {
+      const wall = plain(new THREE.PlaneGeometry(to - from, top - bottom), sideMat)
+      wall.rotation.y = (-side * Math.PI) / 2
+      wall.position.set(side * HALF, (bottom + top) / 2, (from + to) / 2)
+      scene.add(wall)
+    }
+    piece(BACK, doorFrom, 0, COVE)
+    piece(doorTo, BACK + DEPTH, 0, COVE)
+    piece(doorFrom, doorTo, D.h, COVE)
+    for (const [from, to] of [
+      [BACK, doorFrom],
+      [doorTo, BACK + DEPTH],
+    ]) {
+      const sideSkirt = inked(new THREE.BoxGeometry(0.03, 0.12, to - from), skirt, 1.5)
+      sideSkirt.position.set(side * (HALF - 0.015), 0.06, (from + to) / 2)
+      scene.add(sideSkirt)
+    }
+    // The frame: two jambs and a head.
+    for (const end of [-1, 1]) {
+      const jamb = inked(new THREE.BoxGeometry(0.22, D.h, 0.1), frameMat, 1.5)
+      jamb.position.set(side * (HALF + 0.05), D.h / 2, D.z + end * (D.w / 2 + 0.05))
+      scene.add(jamb)
+    }
+    const head = inked(new THREE.BoxGeometry(0.22, 0.1, D.w + 0.2), frameMat, 1.5)
+    head.position.set(side * (HALF + 0.05), D.h + 0.05, D.z)
+    scene.add(head)
+    // The two glass doors, each hinged at its jamb and swung out flat
+    // against the hall's walls.
+    const LEAF = D.w / 2 - 0.02
+    for (const end of [-1, 1]) {
+      const door = new THREE.Group()
+      const pane = plain(new THREE.PlaneGeometry(LEAF - 0.12, D.h - 0.16), glassMat)
+      pane.position.set(LEAF / 2, D.h / 2, 0)
+      door.add(pane)
+      for (const [w, h, x, y] of [
+        [LEAF, 0.07, LEAF / 2, 0.035],
+        [LEAF, 0.07, LEAF / 2, D.h - 0.075],
+        [0.07, D.h - 0.04, 0.035, D.h / 2],
+        [0.07, D.h - 0.04, LEAF - 0.035, D.h / 2],
+      ]) {
+        const bar = inked(new THREE.BoxGeometry(w, h, 0.05), frameMat, 1.2)
+        bar.position.set(x, y, 0)
+        door.add(bar)
+      }
+      const pull = inked(new THREE.BoxGeometry(0.03, 0.5, 0.05), toon('#c9cbce'), 1)
+      pull.position.set(LEAF - 0.14, 1.05, 0.05)
+      door.add(pull)
+      door.position.set(side * (HALF + 0.12), 0, D.z + end * (D.w / 2 - 0.02))
+      // Local +x runs from the hinge out to the door's free edge: point it
+      // straight out from the room.
+      door.rotation.y = side > 0 ? 0 : Math.PI
+      door.position.z += end * 0.06
+      scene.add(door)
+    }
+    // The hall beyond: the same floor, pale walls, and the light from outside.
+    const HALL = 3.4
+    const hallFloor = plain(new THREE.PlaneGeometry(HALL, D.w + 1).rotateX(-Math.PI / 2), toon('#ffffff', { map: floorMap }))
+    hallFloor.position.set(side * (HALF + HALL / 2), 0.001, D.z)
+    scene.add(hallFloor)
+    for (const end of [-1, 1]) {
+      const hallSide = plain(new THREE.PlaneGeometry(HALL, COVE), hallWall)
+      hallSide.position.set(side * (HALF + HALL / 2), COVE / 2, D.z + end * (D.w / 2 + 0.5))
+      hallSide.rotation.y = end > 0 ? Math.PI : 0
+      scene.add(hallSide)
+    }
+    const hallEnd = plain(new THREE.PlaneGeometry(D.w + 1, COVE), hallWall)
+    hallEnd.rotation.y = (-side * Math.PI) / 2
+    hallEnd.position.set(side * (HALF + HALL), COVE / 2, D.z)
+    scene.add(hallEnd)
+    const hallCeil = plain(new THREE.PlaneGeometry(HALL, D.w + 1).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: night ? '#b8b1a6' : '#f1eee8' }))
+    hallCeil.position.set(side * (HALF + HALL / 2), D.h + 0.4, D.z)
+    scene.add(hallCeil)
   }
 
   // The ceiling: square tiles with downlights set in them, stepping up into
@@ -668,7 +753,7 @@ function academyRoom(scene: THREE.Scene, night: boolean, animations: Animate[], 
 
   // A bench along the left wall.
   const bench = inked(new THREE.BoxGeometry(0.6, 0.45, 3), wood, 2)
-  bench.position.set(-HALF + 0.35, 0.225, BACK + 6)
+  bench.position.set(-HALF + 0.35, 0.225, D.z + D.w / 2 + 2.3)
   scene.add(bench)
 
   // Students coming and going.
@@ -698,6 +783,10 @@ const TOPS: [string, string][] = [
 ]
 const BOTTOMS = ['#24242a', '#3b4a6b', '#6e6458', '#c9b89c', '#2f3a4f']
 const SHOES = ['#1d1d22', '#f4f2ee', '#8a5b3a']
+
+// Where the students walk across the Academy's reception, in front of the
+// desk: the doorways in the side walls line up with it.
+const STUDENT_BAND = { from: 0.55, to: 2.25, mid: 1.4 }
 
 // The students are built like Shreyas (scene3d/character.ts), each in their
 // own style, shrunk to the room.
@@ -743,14 +832,15 @@ function student(rand: () => number, tops: [string, string][]): Student {
 }
 
 // Every 20 seconds a student (or two together) walks across the room in
-// front of the desk, from one side wall to the other.
+// front of the desk, in through the doorway in one side wall and out
+// through the other. They start and finish out of sight in the halls beyond.
 function students(scene: THREE.Scene, animations: Animate[], half: number) {
   const rand = seeded(31)
   const pool = Array.from({ length: 8 }, () => student(rand, TOPS))
   pool.forEach((s) => scene.add(s.me.root))
   type Walk = { s: Student; dir: number; speed: number; x: number; z: number }
   const walking: Walk[] = []
-  const START = half - 0.4
+  const START = half + 2.6
   const ahead = { x: 0, y: 0.1, near: 0 }
   let next = 1.5
   let prev = 0
@@ -771,11 +861,13 @@ function students(scene: THREE.Scene, animations: Animate[], half: number) {
     if (t >= next) {
       const dir = rand() < 0.5 ? 1 : -1
       // A band just in front of the desk, so they don't block the view of it.
-      const z = 0.3 + rand() * 2.2
+      const { from, to, mid } = STUDENT_BAND
+      const z = from + rand() * (to - from)
       const stride = 0.45 + rand() * 0.12
       send(dir, z, stride, 0)
-      // Sometimes a friend walks with them, a little behind and to one side.
-      if (rand() < 0.3) send(dir, z + (rand() < 0.5 ? 0.55 : -0.55), stride, 0.7)
+      // Sometimes a friend walks with them, a little behind and to the side
+      // with more room (still inside the doorway).
+      if (rand() < 0.3) send(dir, z + (z < mid ? 0.5 : -0.5), stride, 0.7)
       next = t + 20
     }
     for (let i = walking.length - 1; i >= 0; i--) {
@@ -1510,8 +1602,9 @@ function sandstone(night: boolean) {
 // The tall black sign that sticks out from Building 22, RMIT's logo running
 // up it in white; `onLoad` redraws once the image arrives.
 function bladeSign(onLoad: () => void) {
-  const W = 160
-  const H = 640
+  // The same shape as the sign (1.5 by 4.8), at a good resolution.
+  const W = 400
+  const H = 1280
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
@@ -1523,9 +1616,11 @@ function bladeSign(onLoad: () => void) {
   texture.anisotropy = 8
   const logo = new Image()
   logo.onload = () => {
-    // Turned to read upwards, as on the real one.
-    const w = H * 0.8
-    const h = (w * logo.naturalHeight) / logo.naturalWidth
+    // Turned to read upwards, as on the real one, and fitted inside the
+    // sign with a margin all round.
+    const aspect = logo.naturalWidth / logo.naturalHeight
+    const w = Math.min(H * 0.82, W * 0.72 * aspect)
+    const h = w / aspect
     c.save()
     c.translate(W / 2, H / 2)
     c.rotate(-Math.PI / 2)
@@ -1607,6 +1702,67 @@ function brickFacade(w: number, h: number, night: boolean, seed: number) {
     c.fillRect(x * PX + 6, y(2.8), 1.9 * PX - 12, 2.6 * PX)
     c.fillStyle = night ? '#f6dc9e' : '#4d6a86'
     c.fillRect(x * PX + 6, y(2.8), 1.9 * PX - 12, 0.3 * PX)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 8
+  return texture
+}
+
+// The State Library's long front: pale grey stone, rusticated along the
+// ground floor, tall windows under little pediments above, pilasters
+// between, and a balustrade along the top. `w` and `h` in metres.
+function classicalFacade(w: number, h: number, night: boolean) {
+  const PX = 32
+  const W = Math.round(w * PX)
+  const H = Math.round(h * PX)
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const c = canvas.getContext('2d')!
+  const stone = night ? '#a7a294' : '#d8d3c3'
+  const shade = night ? '#8f8a7d' : '#c2bca9'
+  const light = night ? '#bdb8a9' : '#ece8da'
+  const glass = night ? '#f1cf86' : '#3a4a5a'
+  c.fillStyle = stone
+  c.fillRect(0, 0, W, H)
+  const y = (m: number) => H - m * PX
+  // Rusticated ground floor.
+  c.fillStyle = shade
+  for (let m = 0.5; m < 4.4; m += 0.55) c.fillRect(0, y(m), W, 3)
+  c.fillStyle = light
+  c.fillRect(0, y(4.6), W, 0.3 * PX)
+  // A balustrade and cornice on top.
+  c.fillRect(0, y(h - 0.6), W, 0.35 * PX)
+  c.fillStyle = shade
+  for (let x = 6; x < W; x += 14) c.fillRect(x, y(h - 0.15), 5, 0.4 * PX)
+  // Bays, leaving the middle clear for the portico.
+  const bays = Math.round(w / 2.6)
+  const bay = W / bays
+  for (let b = 0; b < bays; b++) {
+    const cx = (b + 0.5) * bay
+    if (Math.abs(cx - W / 2) < 7.5 * PX) continue
+    c.fillStyle = shade
+    c.fillRect(b * bay, y(h - 0.6), 0.25 * PX, (h - 5.2) * PX)
+    // Upper window with its pediment.
+    const ww = 1.1 * PX
+    c.fillStyle = light
+    c.beginPath()
+    c.moveTo(cx - ww / 2 - 8, y(9.4))
+    c.lineTo(cx, y(10.1))
+    c.lineTo(cx + ww / 2 + 8, y(9.4))
+    c.closePath()
+    c.fill()
+    c.fillRect(cx - ww / 2 - 5, y(9.35), ww + 10, (9.35 - 5.6) * PX)
+    c.fillStyle = glass
+    c.fillRect(cx - ww / 2, y(9.2), ww, 3.4 * PX)
+    c.fillStyle = light
+    c.fillRect(cx - 2, y(9.2), 4, 3.4 * PX)
+    // Ground-floor window, arched.
+    c.fillStyle = glass
+    c.beginPath()
+    c.roundRect(cx - ww / 2, y(3.8), ww, 2.8 * PX, [ww / 2, ww / 2, 0, 0])
+    c.fill()
   }
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
@@ -1789,9 +1945,11 @@ function melbourne(scene: THREE.Scene, night: boolean, animations: Animate[], re
     scene.add(b)
   }
   const bladeTex = bladeSign(redraw)
-  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.18, 4.8, 1.2), [new THREE.MeshBasicMaterial({ map: bladeTex }), new THREE.MeshBasicMaterial({ map: bladeTex }), toon('#121214'), toon('#121214'), toon('#121214'), toon('#121214')])
+  // On the side wall by the corner, sticking out over the side street with
+  // its face to the main street, so it reads straight on.
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(1.5, 4.8, 0.18), [toon('#121214'), toon('#121214'), toon('#121214'), toon('#121214'), new THREE.MeshBasicMaterial({ map: bladeTex }), new THREE.MeshBasicMaterial({ map: bladeTex })])
   blade.castShadow = true
-  blade.position.set(-B22.w / 2 + 2.2, 9.2, FRONT + 0.6)
+  blade.position.set(B22.w / 2 + 0.75, 9.2, FRONT - 1.6)
   scene.add(blade)
 
   // Storey Hall's annex to its left: crystals of grey and silver, a little
@@ -1838,16 +1996,114 @@ function melbourne(scene: THREE.Scene, night: boolean, animations: Animate[], re
     kerb.position.set(x, 0.07, ROAD.from - 60.1)
     scene.add(kerb)
   }
-  const NEXT = { w: 10, h: 13, d: 10 }
-  const nextFront = brickFacade(NEXT.w, NEXT.h, night, 13)
-  const next = inked(new THREE.BoxGeometry(NEXT.w, NEXT.h, NEXT.d), [brick, brick, toon('#7a7f88'), brick, toon('#ffffff', { map: nextFront }), brick] as unknown as THREE.Material, 2.5)
-  next.position.set(SIDE.to + 1.6 + NEXT.w / 2, NEXT.h / 2, FRONT - NEXT.d / 2)
-  scene.add(next)
   const inStreet = (x: number) => x > SIDE.from - 0.6 && x < SIDE.to + 0.6
+
+  // Across the side street, the State Library: set back behind its lawn, a
+  // portico of six columns under a pediment at the top of the steps, the
+  // long stone front either side, and the reading room's green copper dome
+  // rising behind.
+  const LIB = { x: SIDE.to + 17, front: FRONT - 13, w: 30, h: 12, d: 16 }
+  const lawn = plain(new THREE.PlaneGeometry(LIB.w + 4, ROAD.from - 1.4 - LIB.front).rotateX(-Math.PI / 2), toon(night ? '#2f4a30' : '#6fa04f'))
+  lawn.position.set(LIB.x, 0.02, (LIB.front + ROAD.from - 1.4) / 2)
+  scene.add(lawn)
+  const path = plain(new THREE.PlaneGeometry(8, ROAD.from - 1.4 - LIB.front).rotateX(-Math.PI / 2), toon(night ? '#6a665e' : '#d6cfc0'))
+  path.position.set(LIB.x, 0.03, lawn.position.z)
+  scene.add(path)
+  const libFront = classicalFacade(LIB.w, LIB.h, night)
+  const stoneMat = toon(night ? '#a7a294' : '#d8d3c3')
+  const libRoof = toon(night ? '#4a4e58' : '#8f98a3')
+  const library = inked(new THREE.BoxGeometry(LIB.w, LIB.h, LIB.d), [stoneMat, stoneMat, libRoof, stoneMat, toon('#ffffff', { map: libFront }), stoneMat] as unknown as THREE.Material, 2.5)
+  library.position.set(LIB.x, LIB.h / 2, LIB.front - LIB.d / 2)
+  scene.add(library)
+  const paleStone = toon(night ? '#b9b4a5' : '#e9e4d4')
+  const PORT = { w: 13, d: 5, base: 1.6, col: 8 }
+  const podium = inked(new THREE.BoxGeometry(PORT.w + 1, PORT.base, PORT.d), paleStone, 2)
+  podium.position.set(LIB.x, PORT.base / 2, LIB.front + PORT.d / 2)
+  scene.add(podium)
+  for (let k = 0; k < 3; k++) {
+    const step = inked(new THREE.BoxGeometry(PORT.w - 2, PORT.base * (1 - (k + 1) / 4), 0.55), paleStone, 1.5)
+    step.position.set(LIB.x, (PORT.base * (1 - (k + 1) / 4)) / 2, LIB.front + PORT.d + 0.275 + k * 0.55)
+    scene.add(step)
+  }
+  for (let k = 0; k < 6; k++) {
+    const col = inked(new THREE.CylinderGeometry(0.42, 0.5, PORT.col, 14), paleStone, 2)
+    col.position.set(LIB.x - 5 + k * 2, PORT.base + PORT.col / 2, LIB.front + PORT.d - 1)
+    scene.add(col)
+    const cap = inked(new THREE.BoxGeometry(1.1, 0.35, 1.1), paleStone, 1.5)
+    cap.position.set(col.position.x, PORT.base + PORT.col - 0.17, col.position.z)
+    scene.add(cap)
+  }
+  // The dark doorway behind the columns.
+  const door = plain(new THREE.PlaneGeometry(3, 5), toon(night ? '#f1d48e' : '#3a3530', night ? { emissive: '#5a4418' } : {}))
+  door.position.set(LIB.x, PORT.base + 2.5, LIB.front + 0.02)
+  scene.add(door)
+  const TOP = PORT.base + PORT.col
+  const entablature = inked(new THREE.BoxGeometry(PORT.w + 1, 1.3, PORT.d), paleStone, 2)
+  entablature.position.set(LIB.x, TOP + 0.65, LIB.front + PORT.d / 2)
+  scene.add(entablature)
+  const R = (PORT.w + 1) / Math.sqrt(3)
+  const pediment2 = inked(new THREE.CylinderGeometry(R, R, PORT.d, 3).rotateX(Math.PI / 2).rotateZ(Math.PI), paleStone, 2)
+  pediment2.scale.set(1, 0.3, 1)
+  pediment2.position.set(LIB.x, TOP + 1.3 + (R / 2) * 0.3, LIB.front + PORT.d / 2)
+  scene.add(pediment2)
+  // The dome: a drum, the copper dome, and the lantern on top.
+  const copper = toon(night ? '#4f7f72' : '#86b8a2')
+  const DOME = { r: 7, z: LIB.front - LIB.d / 2 - 2 }
+  const drum = inked(new THREE.CylinderGeometry(DOME.r, DOME.r, 3, 32), stoneMat, 2.5)
+  drum.position.set(LIB.x, LIB.h + 1.5, DOME.z)
+  scene.add(drum)
+  const dome = inked(new THREE.SphereGeometry(DOME.r, 32, 14, 0, Math.PI * 2, 0, Math.PI / 2), copper, 2.5)
+  dome.scale.set(1, 0.8, 1)
+  dome.position.set(LIB.x, LIB.h + 3, DOME.z)
+  scene.add(dome)
+  // Ribs down the dome.
+  const ribMat = toon(night ? '#3c6358' : '#6a9a86')
+  for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * Math.PI * 2
+    // A quarter ring from the rim up to the top, turned round the dome.
+    const rib = plain(new THREE.TorusGeometry(DOME.r + 0.03, 0.07, 4, 24, Math.PI / 2), ribMat)
+    rib.rotation.y = a
+    rib.scale.set(1, 0.8, 1)
+    rib.position.set(LIB.x, LIB.h + 3, DOME.z)
+    scene.add(rib)
+  }
+  const lantern = inked(new THREE.CylinderGeometry(1.1, 1.2, 1.8, 16), night ? toon('#f3d690', { emissive: '#6b5420' }) : stoneMat, 2)
+  lantern.position.set(LIB.x, LIB.h + 3 + DOME.r * 0.8 + 0.8, DOME.z)
+  scene.add(lantern)
+  const cap = inked(new THREE.SphereGeometry(1.2, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), copper, 2)
+  cap.position.set(LIB.x, lantern.position.y + 0.9, DOME.z)
+  scene.add(cap)
+  if (night) {
+    const porchLight = new THREE.SpotLight('#ffe7b8', 60, 22, 0.7, 0.6, 1.5)
+    porchLight.position.set(LIB.x, 1, ROAD.from - 2)
+    porchLight.target.position.set(LIB.x, 7, LIB.front + 4)
+    scene.add(porchLight, porchLight.target)
+  }
+
+  // Buildings down both sides of the side street.
+  for (const [x, from] of [
+    [SIDE.from - 0.8 - 4.5, FRONT - B22.d - 0.3],
+    [SIDE.to + 0.8 + 4.5, LIB.front - LIB.d - 0.4],
+  ]) {
+    let z = from
+    let k = 0
+    while (z > -105) {
+      const d = 6 + rand() * 6
+      const h = 9 + rand() * 9 + Math.min(20, -z * 0.2)
+      const b = tower(9, h, d, 20 + k++ + (x > 0 ? 7 : 0), night)
+      b.position.set(x, h / 2, z - d / 2)
+      scene.add(b)
+      z -= d + 0.3
+    }
+  }
+
+  // And one across the far end, closing it off.
+  const end = tower(SIDE.to - SIDE.from + 22, 30, 8, 33, night)
+  end.position.set((SIDE.from + SIDE.to) / 2, 15, -112)
+  scene.add(end)
 
   // More of the campus along the street, and the towers behind.
   for (const [x, w, h, i] of [
-    [SIDE.to + 1.6 + NEXT.w + 5, 9, 22, 2],
     [HALL_X - HALL.w / 2 - 4.5, 8.5, 14, 1],
     [HALL_X - HALL.w / 2 - 13.5, 9, 19, 4],
   ]) {
@@ -1866,8 +2122,10 @@ function melbourne(scene: THREE.Scene, night: boolean, animations: Animate[], re
       const w = 4 + rand() * 4
       const h = row.hMin + rand() * (row.hMax - row.hMin)
       const d = 4 + rand() * 3
+      const dz = (rand() - 0.5) * 5
+      if (Math.abs(x - (SIDE.from + SIDE.to) / 2) < w / 2 + 4) continue
       const b = tower(w, h, d, n++, night)
-      b.position.set(x, h / 2, row.z + (rand() - 0.5) * 5)
+      b.position.set(x, h / 2, row.z + dz)
       scene.add(b)
       if (rand() < 0.3) {
         const top = inked(new THREE.BoxGeometry(w * 0.5, 1.4, d * 0.5), toon(night ? '#3a3f55' : '#8f98a3'), 2)
@@ -1911,7 +2169,7 @@ function melbourne(scene: THREE.Scene, night: boolean, animations: Animate[], re
   }
 
   // Street trees and lamps along the near footpath.
-  for (const x of [-30, -21, -12.5, 4.6, 19, 28]) {
+  for (const x of [-30, -21, -12.5, 4.6, 18.5, 25, 39, 46]) {
     const trunk = inked(new THREE.CylinderGeometry(0.12, 0.16, 2, 6), toon('#6b4a2e'), 1.5)
     trunk.position.set(x, 1, ROAD.from - 0.45)
     scene.add(trunk)
@@ -1935,36 +2193,39 @@ function melbourne(scene: THREE.Scene, night: boolean, animations: Animate[], re
   }
   if (night) {
     const flood = new THREE.SpotLight('#fff1d0', 40, 12, 0.6, 0.6, 1.5)
-    flood.position.set(-B22.w / 2 + 4, 4, FRONT + 4)
-    flood.target.position.set(-B22.w / 2 + 2.2, 9, FRONT)
+    flood.position.set(B22.w / 2 + 2.5, 4, FRONT + 3)
+    flood.target.position.set(B22.w / 2 + 0.6, 9, FRONT - 1.6)
     scene.add(flood, flood.target)
   }
 
-  // A tram every so often, one way or the other, each on its own track
-  // (they keep left: those heading right take the track nearer the campus).
-  const t1 = tram(night)
-  t1.visible = false
-  scene.add(t1)
+  // Trams both ways, one line each: they keep left, so those heading right
+  // run on the track nearer the campus and those heading left on the far
+  // one. Each line has a tram every so often, on its own timetable.
   const SPAN = 40
-  let run = { dir: 1, start: 0.5 }
-  let prev = 0
-  animations.push((t) => {
-    if (t < run.start) {
-      t1.visible = false
+  for (const [track, dir, first] of [
+    [TRACKS[0], 1, 0.5],
+    [TRACKS[1], -1, 6],
+  ]) {
+    const car = tram(night)
+    car.visible = false
+    scene.add(car)
+    let start = first
+    let prev = 0
+    animations.push((t) => {
+      const dt = t - prev
       prev = t
-      return
-    }
-    if (!t1.visible) {
-      t1.visible = true
-      t1.position.set(-run.dir * SPAN, 0, run.dir > 0 ? TRACKS[0] : TRACKS[1])
-    }
-    t1.position.x += run.dir * 7 * (t - prev)
-    prev = t
-    if (Math.abs(t1.position.x) > SPAN) {
-      t1.visible = false
-      run = { dir: -run.dir, start: t + 8 + rand() * 6 }
-    }
-  })
+      if (t < start) return
+      if (!car.visible) {
+        car.visible = true
+        car.position.set(-dir * SPAN, 0, track)
+      }
+      car.position.x += dir * 7 * dt
+      if (Math.abs(car.position.x) > SPAN) {
+        car.visible = false
+        start = t + 6 + rand() * 6
+      }
+    })
+  }
 
   // Students walking along the footpath in front of the campus.
   students(scene, animations, 26)

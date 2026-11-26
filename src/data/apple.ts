@@ -52,7 +52,7 @@ export const programs: Program[] = [
     location: 'Melbourne, VIC',
     period: '2022 — 2026',
     logo: `${base}rmit-logo-light.png`,
-    lead: "I'm studying a Bachelor of Software Engineering at RMIT in Melbourne, graduating in 2026. It's where I learned to build software properly: in teams, from requirements and design through to testing and release.",
+    lead: "I've completed a Bachelor of Software Engineering at RMIT in Melbourne, finishing in 2026. It's where I learned to build software properly: in teams, from requirements and design through to testing and release.",
     sections: [
       {
         heading: 'What I built',
@@ -61,6 +61,16 @@ export const programs: Program[] = [
           'A cloud music subscription service with a Python backend and RESTful APIs, on AWS (EC2, S3, API Gateway, Lambda and DynamoDB).',
           'Websites built on real RMIT data in an Agile Scrum team, with Figma prototypes, user stories, acceptance tests and unit tests.',
           'Secure e-commerce applications integrating PayPal, Google Pay and reCAPTCHA, hardened through vulnerability assessments and simulated attacks.',
+        ],
+      },
+      {
+        heading: 'Units completed',
+        points: [
+          '2022: Mathematics for Computing 1 and 2, Programming Bootcamp 1 and 2, Programming Studio 1 and 2.',
+          '2023: Software Engineering Fundamentals, Software Engineering: Process and Tools, Algorithms and Analysis, Practical Data Science, Professional Computing Practice.',
+          '2024: Advanced Programming Techniques, Object Oriented Software Design, Full Stack Development, Cloud Computing, Secure Electronic Commerce, Artificial Intelligence, Operating Systems Principles, Computing Theory.',
+          '2025: Software Engineering Principles and Practice 1 and 2, Approved Industry Experience 1 and 2.',
+          '2026: Machine Learning, Software Engineering Project.',
         ],
       },
       {

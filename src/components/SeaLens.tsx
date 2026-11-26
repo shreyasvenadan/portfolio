@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { projects } from '../data/content'
 import { pageReady } from '../lib/lockOn'
-import { isNight } from '../lib/night'
+import NightSwitch, { useNight } from './NightSwitch'
 import { prefersReducedMotion } from '../lib/sections'
 import { createDive } from '../scene3d/dive'
 
@@ -56,12 +56,13 @@ function Links() {
 export default function SeaLens() {
   const scene = useRef<HTMLCanvasElement>(null)
   const boxes = useRef<HTMLCanvasElement>(null)
+  const night = useNight()
 
   useEffect(() => {
     if (!hasWebGL()) return pageReady()
-    const dive = createDive(scene.current!, boxes.current!, { still: prefersReducedMotion(), night: isNight(), onReady: pageReady })
+    const dive = createDive(scene.current!, boxes.current!, { still: prefersReducedMotion(), night, onReady: pageReady })
     return () => dive.dispose()
-  }, [])
+  }, [night])
 
   return (
     <>
@@ -70,6 +71,7 @@ export default function SeaLens() {
       <a href={`${import.meta.env.BASE_URL}#sealens`} onClick={backToSea} className="dive-back font-display">
         ← back to the sea
       </a>
+      <NightSwitch />
 
       <main className="dive-copy">
         <p className="dive-kicker font-display">Co-founder · Tech and marketing lead</p>

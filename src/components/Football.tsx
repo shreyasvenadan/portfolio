@@ -5,7 +5,7 @@
 // video and a wall of polaroids that open into a viewer.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { categories, full, photos, thumb, video, type Category, type Photo } from '../data/football'
-import { isNight } from '../lib/night'
+import NightSwitch, { useNight } from './NightSwitch'
 import { prefersReducedMotion } from '../lib/sections'
 import { createPitch, type Pitch, type PitchStats } from '../scene3d/pitch'
 import Grain from './Grain'
@@ -154,15 +154,17 @@ export default function Football() {
   const shown = useMemo(() => (filter === 'all' ? photos : photos.filter((p) => p.category === filter)), [filter])
   const viewerItems = useMemo(() => shown.map((p) => ({ full: full(p), thumb: thumb(p), caption: p.caption, ratio: p.ratio })), [shown])
 
+  const night = useNight()
+
   useEffect(() => {
     if (!hasWebGL()) return
     const still = prefersReducedMotion()
-    pitch.current = createPitch(scene.current!, { still, night: isNight(), onStats: setStats, onReady: () => setLive(!still) })
+    pitch.current = createPitch(scene.current!, { still, night, onStats: setStats, onReady: () => setLive(!still) })
     return () => {
       pitch.current?.dispose()
       pitch.current = null
     }
-  }, [])
+  }, [night])
 
   return (
     <>
@@ -170,6 +172,7 @@ export default function Football() {
       <a href={import.meta.env.BASE_URL} onClick={backToIsland} className="dive-back font-display">
         ← back to the island
       </a>
+      <NightSwitch />
       {live && (
         <div className="pitch-score font-display">
           <span>
