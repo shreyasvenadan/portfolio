@@ -1452,41 +1452,50 @@ function instituteRoom(scene: THREE.Scene, night: boolean, animations: Animate[]
 
 // --- RMIT (Melbourne) ----------------------------------------------------------
 
-// Facade textures for the city's towers: `wall`, the windows in the day, and
-// `lit`, which windows glow after dark.
-function facade(base: string, glass: string, seed: number) {
-  const rand = seeded(seed)
-  const make = () => {
-    const c = document.createElement('canvas')
-    c.width = 64
-    c.height = 64
-    return c
-  }
-  const wall = make()
-  const lit = make()
+const cityTexture = (canvas: HTMLCanvasElement) => {
+  const t = new THREE.CanvasTexture(canvas)
+  t.colorSpace = THREE.SRGBColorSpace
+  t.magFilter = THREE.NearestFilter
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  return t
+}
+
+// A tower's walls by day: a tile of 4 by 4 windows, repeated over each face.
+function facade(base: string, glass: string) {
+  const wall = document.createElement('canvas')
+  wall.width = wall.height = 64
   const w = wall.getContext('2d')!
-  const l = lit.getContext('2d')!
   w.fillStyle = base
   w.fillRect(0, 0, 64, 64)
-  l.fillStyle = '#000'
-  l.fillRect(0, 0, 64, 64)
-  for (let y = 0; y < 4; y++)
-    for (let x = 0; x < 4; x++) {
-      w.fillStyle = glass
-      w.fillRect(x * 16 + 3, y * 16 + 4, 10, 9)
-      if (rand() < 0.55) {
-        l.fillStyle = rand() < 0.7 ? '#ffd88a' : '#cfe6ff'
-        l.fillRect(x * 16 + 3, y * 16 + 4, 10, 9)
+  w.fillStyle = glass
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) w.fillRect(x * 16 + 3, y * 16 + 4, 10, 9)
+  return cityTexture(wall)
+}
+
+// Which windows are lit late at night, across the whole city: one big map,
+// LIT.cols by LIT.rows windows, with only the odd one lit, at random. Each
+// face of each tower shows its own part of it, bigger than any face, so the
+// lights never fall into a pattern. Drawn once and shared.
+const LIT = { cols: 64, rows: 256, cell: 8 }
+let cityLights: THREE.CanvasTexture | null = null
+function litWindows() {
+  if (cityLights) return cityLights
+  const canvas = document.createElement('canvas')
+  canvas.width = LIT.cols * LIT.cell
+  canvas.height = LIT.rows * LIT.cell
+  const c = canvas.getContext('2d')!
+  c.fillStyle = '#000'
+  c.fillRect(0, 0, canvas.width, canvas.height)
+  const rand = seeded(97)
+  const S = LIT.cell / 16 // the day tile's 16px window cell, at this size
+  for (let y = 0; y < LIT.rows; y++)
+    for (let x = 0; x < LIT.cols; x++)
+      if (rand() < 0.1) {
+        c.fillStyle = rand() < 0.7 ? '#ffd88a' : '#cfe6ff'
+        c.fillRect(x * LIT.cell + 3 * S, y * LIT.cell + 4 * S, 10 * S, 9 * S)
       }
-    }
-  const tex = (canvas: HTMLCanvasElement) => {
-    const t = new THREE.CanvasTexture(canvas)
-    t.colorSpace = THREE.SRGBColorSpace
-    t.magFilter = THREE.NearestFilter
-    t.wrapS = t.wrapT = THREE.RepeatWrapping
-    return t
-  }
-  return { wall: tex(wall), lit: tex(lit) }
+  cityLights = cityTexture(canvas)
+  return cityLights
 }
 
 const PALETTE: [string, string][] = [
@@ -1501,17 +1510,22 @@ const PALETTE: [string, string][] = [
 // A tower of offices, its windows lit at night.
 function tower(w: number, h: number, d: number, i: number, night: boolean) {
   const [base, glass] = PALETTE[i % PALETTE.length]
-  const { wall, lit } = facade(base, glass, i + 3)
+  const wall = facade(base, glass)
+  const rand = seeded(i * 7 + 5)
   const side = (span: number) => {
     const map = wall.clone()
     map.repeat.set(Math.max(1, Math.round(span / 1.6)), Math.max(1, Math.round(h / 1.6)))
     const extra: THREE.MeshToonMaterialParameters = { map }
     if (night) {
-      const glow = lit.clone()
-      glow.repeat.copy(map.repeat)
-      Object.assign(extra, { emissive: '#ffffff', emissiveMap: glow, emissiveIntensity: 0.9 })
+      // Its own patch of the city's lights, window for window with the day
+      // tile (4 windows to a tile), starting somewhere at random.
+      const glow = litWindows().clone()
+      glow.repeat.set((map.repeat.x * 4) / LIT.cols, (map.repeat.y * 4) / LIT.rows)
+      glow.offset.set(Math.floor(rand() * LIT.cols) / LIT.cols, Math.floor(rand() * LIT.rows) / LIT.rows)
+      Object.assign(extra, { emissive: '#ffffff', emissiveMap: glow, emissiveIntensity: 0.75 })
     }
-    return new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: ramp, ...extra })
+    // Darker at night, the towers just shapes against the sky.
+    return new THREE.MeshToonMaterial({ color: night ? '#6c7290' : '#ffffff', gradientMap: ramp, ...extra })
   }
   const roof = toon(night ? '#3a3f55' : '#8f98a3')
   const zSide = side(w)
@@ -1573,7 +1587,8 @@ function sandstone(night: boolean) {
   // Courses of stone.
   c.fillStyle = night ? '#a8956f' : '#d4bf8c'
   for (let y = 0; y < H; y += 16) c.fillRect(0, y, W, 2)
-  const glass = night ? '#f1cf86' : '#3a4a5a'
+  // At night it's dark inside but for one window.
+  const glass = (floor: number, i: number) => (night ? (floor === 1 && i === 2 ? '#f1cf86' : '#2a3040') : '#3a4a5a')
   for (let floor = 0; floor < 3; floor++) {
     const top = 40 + floor * 160
     // Cornice under the floor above.
@@ -1585,11 +1600,11 @@ function sandstone(night: boolean) {
       c.beginPath()
       c.roundRect(x - 6, top - 6, 56, 112, [28, 28, 0, 0])
       c.fill()
-      c.fillStyle = glass
+      c.fillStyle = glass(floor, i)
       c.beginPath()
       c.roundRect(x, top, 44, 100, [22, 22, 0, 0])
       c.fill()
-      c.fillStyle = night ? '#c9a45e' : '#26333f'
+      c.fillStyle = night ? '#4a4f5c' : '#26333f'
       c.fillRect(x + 21, top + 8, 2, 92)
     }
   }
@@ -1671,7 +1686,7 @@ function brickFacade(w: number, h: number, night: boolean, seed: number) {
       c.beginPath()
       c.roundRect(cx - ww / 2 - 4, wy - 4, ww + 8, wh + 4, top ? [ww / 2 + 4, ww / 2 + 4, 0, 0] : 0)
       c.fill()
-      c.fillStyle = night ? (rand() < 0.5 ? '#f3d28a' : '#2a3040') : rand() < 0.2 ? '#5d7186' : '#3a4a5a'
+      c.fillStyle = night ? (rand() < 0.12 ? '#f3d28a' : '#2a3040') : rand() < 0.2 ? '#5d7186' : '#3a4a5a'
       c.beginPath()
       c.roundRect(cx - ww / 2, wy, ww, wh, top ? [ww / 2, ww / 2, 0, 0] : 0)
       c.fill()
@@ -1698,9 +1713,9 @@ function brickFacade(w: number, h: number, night: boolean, seed: number) {
   c.fillStyle = '#17181c'
   c.fillRect(0, y(BRICK.ground), W, BRICK.ground * PX)
   for (let x = 0.4; x < w - 1.2; x += 2.2) {
-    c.fillStyle = night ? '#e9c77e' : '#2f4b66'
+    c.fillStyle = night ? '#252a36' : '#2f4b66'
     c.fillRect(x * PX + 6, y(2.8), 1.9 * PX - 12, 2.6 * PX)
-    c.fillStyle = night ? '#f6dc9e' : '#4d6a86'
+    c.fillStyle = night ? '#323847' : '#4d6a86'
     c.fillRect(x * PX + 6, y(2.8), 1.9 * PX - 12, 0.3 * PX)
   }
   const texture = new THREE.CanvasTexture(canvas)
@@ -1723,7 +1738,9 @@ function classicalFacade(w: number, h: number, night: boolean) {
   const stone = night ? '#a7a294' : '#d8d3c3'
   const shade = night ? '#8f8a7d' : '#c2bca9'
   const light = night ? '#bdb8a9' : '#ece8da'
-  const glass = night ? '#f1cf86' : '#3a4a5a'
+  const rand = seeded(61)
+  // At night it's closed: dark, but for the odd window.
+  const glass = () => (night ? (rand() < 0.12 ? '#f1cf86' : '#2a3040') : '#3a4a5a')
   c.fillStyle = stone
   c.fillRect(0, 0, W, H)
   const y = (m: number) => H - m * PX
@@ -1754,12 +1771,12 @@ function classicalFacade(w: number, h: number, night: boolean) {
     c.closePath()
     c.fill()
     c.fillRect(cx - ww / 2 - 5, y(9.35), ww + 10, (9.35 - 5.6) * PX)
-    c.fillStyle = glass
+    c.fillStyle = glass()
     c.fillRect(cx - ww / 2, y(9.2), ww, 3.4 * PX)
     c.fillStyle = light
     c.fillRect(cx - 2, y(9.2), 4, 3.4 * PX)
     // Ground-floor window, arched.
-    c.fillStyle = glass
+    c.fillStyle = glass()
     c.beginPath()
     c.roundRect(cx - ww / 2, y(3.8), ww, 2.8 * PX, [ww / 2, ww / 2, 0, 0])
     c.fill()
@@ -2034,7 +2051,7 @@ function melbourne(scene: THREE.Scene, night: boolean, animations: Animate[], re
     scene.add(cap)
   }
   // The dark doorway behind the columns.
-  const door = plain(new THREE.PlaneGeometry(3, 5), toon(night ? '#f1d48e' : '#3a3530', night ? { emissive: '#5a4418' } : {}))
+  const door = plain(new THREE.PlaneGeometry(3, 5), toon(night ? '#24232a' : '#3a3530'))
   door.position.set(LIB.x, PORT.base + 2.5, LIB.front + 0.02)
   scene.add(door)
   const TOP = PORT.base + PORT.col

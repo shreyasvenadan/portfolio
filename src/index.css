@@ -858,7 +858,6 @@ dialog.note::backdrop {
 .dive-lead + .dive-links {
   margin-top: 1.5rem;
 }
-.dive-copy :focus-visible,
 /* The day/night switch, in the top right corner of the scene: by the panel's
    edge on wide screens, in the corner of the window on narrow ones. */
 .dive-night {
@@ -895,6 +894,7 @@ dialog.note::backdrop {
     left: calc(40vw - 3.6rem);
   }
 }
+.dive-copy :focus-visible,
 .dive-back:focus-visible {
   outline: 3px solid #f2c230;
   outline-offset: 3px;
@@ -1403,12 +1403,6 @@ html[data-night='true'] .apple-scene-rmit {
 }
 .apple-scene-institute {
   background: linear-gradient(to bottom, #f1eee8, #dcc3a0 12%, #d5bb96 82%, #76757b 83%, #6a696f);
-}
-html[data-night='true'] .apple-scene-academy {
-  background: linear-gradient(to bottom, #8d877d, #b6afa4 15%, #b6afa4 70%, #8f8576 71%, #85796a);
-}
-html[data-night='true'] .apple-scene-institute {
-  background: linear-gradient(to bottom, #a9a398, #b49d7c 12%, #ac9574 82%, #55545a 83%, #4a494f);
 }
 .apple-logo {
   height: 4.5rem;

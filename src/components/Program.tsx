@@ -100,7 +100,12 @@ export default function Program({ id }: { id: ProgramData['id'] }) {
   const before = programs[at - 1]
   const next = programs[at + 1]
   const holder = useRef<HTMLDivElement>(null)
-  const night = useNight()
+  // Only RMIT's street is outdoors; the Academy and the Institute are rooms,
+  // the same by day or night, so they're always lit as by day and have no
+  // switch.
+  const outdoors = id === 'rmit'
+  const nightOut = useNight()
+  const night = outdoors && nightOut
   // The scene's canvases: usually one, but two for a moment when switching
   // between day and night, the new one fading in over the old.
   const layers = useRef<{ drop: () => void; time: () => number }[]>([])
@@ -159,7 +164,7 @@ export default function Program({ id }: { id: ProgramData['id'] }) {
       <a href={`${base}#experience`} onClick={backToSea} className={`dive-back apple-back-${id} font-display`}>
         ← back to the sea
       </a>
-      <NightSwitch />
+      {outdoors && <NightSwitch />}
 
       <main className="dive-copy">
         <img src={program.logo} alt="" className="apple-logo" />
