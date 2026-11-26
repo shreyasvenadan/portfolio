@@ -29,7 +29,7 @@ export default function Experience() {
               )}
               {item.page && (
                 <a href={item.page} className="mt-5 inline-block font-display text-accent underline-offset-4 hover:underline">
-                  More about {item.org.startsWith('Apple Developer Academy') ? 'the Academy' : 'the Institute'} →
+                  More about {item.org.startsWith('Apple Developer Academy') ? 'the Academy' : item.org.includes('University') ? 'the University' : 'the Institute'} →
                 </a>
               )}
             </div>

@@ -10,11 +10,11 @@
 // page text (drawn on a second canvas) and some behind it.
 //
 // Clicks: a fish near the hook gets hooked (and let go on the next click), a
-// diver says "oof", a jellyfish stings, the wreck sounds its horn, and the
+// diver says "ouch", a jellyfish stings, the wreck sounds its horn, and the
 // bottle breaks open to a note.
 import * as THREE from 'three'
 import { openBottle } from '../lib/bottle'
-import { oof, shipHorn, thud } from '../lib/sound'
+import { ouch, shipHorn, thud } from '../lib/sound'
 import { depthPx } from '../lib/world'
 import { zap } from '../lib/zap'
 import * as C from './creatures'
@@ -54,7 +54,7 @@ export const FRONT = 1
 
 // size: width in px on a wide screen. zone: depth band. speed: cruising px per
 // frame. school: how many swim together (one leader plus followers). bank:
-// rolls into turns. calm: isn't startled by the cursor. diver: says "oof".
+// rolls into turns. calm: isn't startled by the cursor. diver: says "ouch".
 type Kind = { make: () => C.Model; size: number; zone: [number, number]; speed: number; count?: number; school?: number; bank?: boolean; calm?: boolean; diver?: boolean }
 
 const KINDS: Kind[] = [
@@ -799,7 +799,7 @@ export function createOcean(scene: THREE.Scene, fx: Fx, still: boolean): Ocean {
     }
     const diver = diverAt(x, y)
     if (diver) {
-      oof()
+      ouch()
       diver.vd -= 2.5 * view.unit(diver.lane)
       return true
     }

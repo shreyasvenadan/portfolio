@@ -2,7 +2,7 @@ import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { prefersReducedMotion } from '../lib/sections'
 import { depthPx, pxDepth, worldBounds } from '../lib/world'
-import { oof } from '../lib/sound'
+import { ouch } from '../lib/sound'
 
 // Everything that swims. Each creature wanders freely inside its depth zone:
 // it drifts and turns on its own, speeds up and dawdles, turns back near the
@@ -346,7 +346,7 @@ function Anglerfish() {
 // size: width in px on a wide screen. zone: depth band (src/lib/world.ts;
 // the reef is 100-200, open blue 200-300, twilight 300-400, abyss 400-500). speed: cruising px per frame. school: how many swim
 // together (one leader plus followers). bank: turn by tilting, not flipping.
-// calm: isn't startled by the cursor (divers, sharks, whales). diver: says "oof" when clicked.
+// calm: isn't startled by the cursor (divers, sharks, whales). diver: says "ouch" when clicked.
 type Kind = { art: ReactNode; size: number; zone: [number, number]; speed: number; count?: number; school?: number; bank?: boolean; calm?: boolean; diver?: boolean }
 
 const KINDS: Kind[] = [
@@ -422,7 +422,7 @@ const BEND = { x: 6.5, y: 20 }
 const SLOP = 24
 
 let hooking: { near: (x: number, y: number) => boolean; click: (x: number, y: number) => boolean; holding: () => boolean } | null = null
-// Clicking a diver: they say "oof" and flinch. Set up by swim(), like the hook.
+// Clicking a diver: they say "ouch" and flinch. Set up by swim(), like the hook.
 let poking: { near: (x: number, y: number) => boolean; click: (x: number, y: number) => boolean } | null = null
 export const divers = {
   over: (x: number, y: number) => poking?.near(x, y) ?? false,
@@ -542,7 +542,7 @@ function swim(layer: HTMLElement, back: HTMLElement) {
     click: (x, y) => {
       const b = diverAt(x, y)
       if (!b) return false
-      oof()
+      ouch()
       b.vy -= 2.5
       return true
     },

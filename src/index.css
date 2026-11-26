@@ -775,12 +775,22 @@ dialog.note::backdrop {
   min-height: 100svh;
   margin-left: 40vw;
   padding: 6rem clamp(2rem, 5vw, 5rem) 5rem;
-  border-left: 3px solid rgb(244 239 224 / 0.25);
-  background: rgb(6 26 44 / 0.62);
-  backdrop-filter: blur(10px);
   color: #e9f1ef;
   font-size: 1.1rem;
   line-height: 1.7;
+}
+/* The panel itself, drawn behind the text and fixed to the window, so when
+   the browser's scroll bounces at the top or bottom of the page it stays
+   put rather than showing its edge. */
+.dive-copy::before {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  inset: 0 0 0 40vw;
+  border-left: 3px solid rgb(244 239 224 / 0.25);
+  background: rgb(6 26 44 / 0.62);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
 }
 .dive-copy > * {
   max-width: 40rem;
@@ -878,6 +888,14 @@ dialog.note::backdrop {
   .dive-copy {
     margin: 58svh 0 0;
     padding: 2.5rem 1.25rem 4rem;
+  }
+  /* On phones the panel slides up over the scene with a rounded top, so it
+     scrolls with the page; a shadow its own colour carries it on past the
+     bottom (a shadow doesn't make the page any longer). */
+  .dive-copy::before {
+    position: absolute;
+    inset: 0;
+    box-shadow: 0 100vh 0 0 rgb(6 26 44 / 0.8);
     border-left: 0;
     border-top: 3px solid rgb(244 239 224 / 0.25);
     border-radius: 1.5rem 1.5rem 0 0;
@@ -1337,6 +1355,12 @@ html[data-night='true'] .pitch-scene {
   inset: 0;
   width: 100%;
   height: 100%;
+}
+.apple-scene-rmit {
+  background: linear-gradient(to bottom, #86b3d6, #ebe4d8 55%, #bdb6aa 56%, #a9a296);
+}
+html[data-night='true'] .apple-scene-rmit {
+  background: linear-gradient(to bottom, #0f1433, #3a3f78 55%, #5a5a62 56%, #4a4a52);
 }
 .apple-scene-academy {
   background: linear-gradient(to bottom, #e7e3dc, #f2efe9 15%, #f2efe9 70%, #d8ccba 71%, #cfc2ae);

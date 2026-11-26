@@ -13,12 +13,18 @@ export default function Contact() {
       >
         {links.email}
       </a>
-      <div className="mt-10 flex justify-center gap-8 font-display text-muted">
+      <div className="mt-10 flex flex-wrap justify-center gap-x-8 gap-y-3 font-display text-muted">
+        <a href={`${import.meta.env.BASE_URL}resume/`} className="hover:text-ink">
+          Resume
+        </a>
         <a href={links.github} target="_blank" rel="noreferrer" className="hover:text-ink">
           GitHub
         </a>
         <a href={links.linkedin} target="_blank" rel="noreferrer" className="hover:text-ink">
           LinkedIn
+        </a>
+        <a href={links.youtube} target="_blank" rel="noreferrer" className="hover:text-ink">
+          YouTube
         </a>
       </div>
     </section>

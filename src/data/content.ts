@@ -8,7 +8,7 @@ export const profile = {
   about: [
     "I'm a software engineering student at RMIT in Melbourne, graduating in 2026. I was selected for the inaugural Apple Developer Academy @ BINUS cohort in Bali (top 3% of applicants globally), where I designed, built and shipped apps across iOS, watchOS and macOS in cross-cultural teams.",
     "There I co-founded SeaLens, a macOS and web app that helps marine scientists monitor reef biodiversity by detecting, tracking and classifying fish in underwater video with machine learning. SeaLens won 1st place at the EU Conexus Innovation Contest 2025 and was selected for Apple's Developer Institute for Entrepreneurship.",
-    'Outside of code I do photography and videography, coach youth football, and have played competitive football for 14+ years.',
+    'Outside of code I do photography and videography, and have played competitive football for 14+ years.',
   ],
   skills: {
     Languages: ['Swift', 'TypeScript', 'JavaScript', 'Python', 'Java', 'C++', 'PHP', 'SQL'],
@@ -26,8 +26,8 @@ export const profile = {
       'PostgreSQL',
       'MySQL',
     ],
-    'Machine Learning': ['Regression', 'Classification', 'Neural networks', 'Transfer learning', 'Feature engineering'],
-    Tools: ['Xcode', 'Git', 'GitHub', 'Figma', 'Agile/Scrum', 'Unit testing'],
+    'Machine Learning': ['Regression', 'Classification', 'Neural networks', 'Transfer learning', 'Feature engineering', 'LLM APIs'],
+    Tools: ['Xcode', 'Git', 'GitHub', 'Figma', 'Claude Code', 'Agile/Scrum', 'Unit testing'],
   } as Record<string, string[]>,
   // Export your résumé as PDF to public/resume.pdf, then set this to
   // `${import.meta.env.BASE_URL}resume.pdf` to show the Résumé button.
@@ -179,6 +179,12 @@ export const projects: Project[] = [
     tech: ['Python', 'Regression', 'Neural networks', 'Transfer learning'],
   },
   {
+    title: 'This Website',
+    description:
+      'My interactive portfolio: a cel-shaded 3D island built from scratch in Three.js that you can play with (knock down coconuts, annoy the gulls, sink a pirate ship, start a storm), then scroll down into an underwater world. Custom toon and outline shaders, a procedurally generated reef, a day and night mode, and 3D scenes for each program page.',
+    tech: ['React', 'TypeScript', 'Three.js', 'GLSL', 'Web Audio', 'Vite', 'Tailwind CSS'],
+  },
+  {
     title: 'Cloud Music Subscription Service',
     description:
       'Cloud-based music subscription service with a Python backend and RESTful APIs, hosted and managed on AWS infrastructure.',
@@ -243,6 +249,7 @@ export const experience: Experience[] = [
     role: 'Bachelor of Software Engineering',
     org: 'RMIT University',
     logo: `${import.meta.env.BASE_URL}rmit-logo.png`,
+    page: `${import.meta.env.BASE_URL}rmit/`,
     location: 'Melbourne, VIC',
     period: '2022 — 2026',
     points: [],

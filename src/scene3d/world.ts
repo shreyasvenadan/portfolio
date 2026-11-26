@@ -739,10 +739,7 @@ ${shader.fragmentShader}`.replace(
   function annoyGull(i: number) {
     const gull = gulls[i]
     const state = gullState[i]
-    // Each cry is turned down as the gull gets further off than it was when
-    // it cried (and, flying away, fades out with it).
-    let cry = squawk()
-    let near = gull.position.distanceTo(camera.position)
+    squawk()
     const from = gull.position.clone()
     for (let k = 0; k < 2; k++) fx.feather(from)
     if (still) return
@@ -777,15 +774,10 @@ ${shader.fragmentShader}`.replace(
           carried.position.set(0, -0.35, 0)
           carried.scale.setScalar(0.8)
           gull.add(carried)
-          // The first cry fades out under the second.
-          cry(0, 0.6)
-          cry = squawk({ long: true })
-          near = gull.position.distanceTo(camera.position)
+          squawk()
         }
         gull.position.copy(curve(to.clone().add(new THREE.Vector3(0, 0.6, 0)), mid2, away, (age - DIVE) / ESCAPE))
       }
-      const flown = Math.max(0, (age - DIVE) / ESCAPE)
-      cry(Math.min(1, near / gull.position.distanceTo(camera.position)) * (1 - flown) ** 1.5)
       gull.lookAt(gull.position.clone().add(gull.position.clone().sub(prev)))
       gull.rotateY(-Math.PI / 2)
       if (age < DIVE + ESCAPE) return true

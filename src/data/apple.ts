@@ -1,6 +1,7 @@
-// The two Apple program pages, /portfolio/academy/ (the Apple Developer
-// Academy @ BINUS) and /portfolio/institute/ (the Apple Developer Institute
-// for Entrepreneurship), told from the LinkedIn posts written along the way.
+// The program pages, in the order they happened: /portfolio/rmit/ (RMIT
+// University), /portfolio/academy/ (the Apple Developer Academy @ BINUS) and
+// /portfolio/institute/ (the Apple Developer Institute for Entrepreneurship),
+// the Apple two told from the LinkedIn posts written along the way.
 
 import type { ViewerPhoto } from '../components/PhotoViewer'
 
@@ -15,7 +16,7 @@ export type Section = {
 
 export type Program = {
   // Its page, at /portfolio/<id>/.
-  id: 'academy' | 'institute'
+  id: 'rmit' | 'academy' | 'institute'
   // Its short name, for the link to it from the other page.
   short: string
   name: string
@@ -23,9 +24,12 @@ export type Program = {
   location: string
   period: string
   logo: string
+  // Whether the page links on to SeaLens's page.
+  seaLens?: boolean
   lead: string
   sections: Section[]
-  posts: { label: string; href: string }[]
+  // LinkedIn posts about it, if any.
+  posts?: { label: string; href: string }[]
 }
 
 const base = import.meta.env.BASE_URL
@@ -41,6 +45,31 @@ const photo = (name: string, w: number, h: number, caption: string, alt: string)
 
 export const programs: Program[] = [
   {
+    id: 'rmit',
+    short: 'RMIT',
+    name: 'RMIT University',
+    role: 'Bachelor of Software Engineering',
+    location: 'Melbourne, VIC',
+    period: '2022 — 2026',
+    logo: `${base}rmit-logo-light.png`,
+    lead: "I'm studying a Bachelor of Software Engineering at RMIT in Melbourne, graduating in 2026. It's where I learned to build software properly: in teams, from requirements and design through to testing and release.",
+    sections: [
+      {
+        heading: 'What I built',
+        points: [
+          'Machine learning: regression models predicting Melbourne Airbnb prices, classifiers predicting wildfire intensity across 7 global regions, and a histopathology image classifier for colon cancer cells using data augmentation and transfer learning.',
+          'A cloud music subscription service with a Python backend and RESTful APIs, on AWS (EC2, S3, API Gateway, Lambda and DynamoDB).',
+          'Websites built on real RMIT data in an Agile Scrum team, with Figma prototypes, user stories, acceptance tests and unit tests.',
+          'Secure e-commerce applications integrating PayPal, Google Pay and reCAPTCHA, hardened through vulnerability assessments and simulated attacks.',
+        ],
+      },
+      {
+        heading: 'Taking it further',
+        body: 'Alongside the degree I was selected for the inaugural Apple Developer Academy @ BINUS in Bali, where SeaLens started, and then took SeaLens through the Apple Developer Institute for Entrepreneurship in Jakarta.',
+      },
+    ],
+  },
+  {
     id: 'academy',
     short: 'the Academy',
     name: 'Apple Developer Academy @ BINUS',
@@ -48,6 +77,7 @@ export const programs: Program[] = [
     location: 'Bali, Indonesia',
     period: '2025',
     logo: `${base}apple-developer-academy-logo.png`,
+    seaLens: true,
     lead: 'I was selected for the inaugural cohort of the Apple Developer Academy @ BINUS in Bali, among the top 3% of applicants globally. Over the year I designed, built and shipped apps across iOS, watchOS and macOS in cross-cultural teams.',
     sections: [
       {
@@ -147,6 +177,7 @@ export const programs: Program[] = [
     location: 'Jakarta, Indonesia',
     period: '2026',
     logo: `${base}apple-developer-institute-logo.png`,
+    seaLens: true,
     lead: 'After the Academy, SeaLens was selected for the Apple Developer Institute for Entrepreneurship in Jakarta: a six-month Apple program for early-stage startups built on Apple platforms. It was the step from a project to a business.',
     sections: [
       {

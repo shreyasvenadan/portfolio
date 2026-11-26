@@ -1,8 +1,8 @@
-// A page for one Apple program: /portfolio/academy/ (the Apple Developer
-// Academy @ BINUS) or /portfolio/institute/ (the Apple Developer Institute
-// for Entrepreneurship). Built on the SeaLens page's layout (.dive-*): its
-// 3D scene fills the window (scene3d/program.ts: the Academy's reception or
-// the Institute's graduation room), with the story beside it, or below it on phones.
+// A page for one program: /portfolio/rmit/ (RMIT University),
+// /portfolio/academy/ (the Apple Developer Academy @ BINUS) or
+// /portfolio/institute/ (the Apple Developer Institute for Entrepreneurship). Built on the SeaLens page's layout (.dive-*): its
+// 3D scene fills the window (scene3d/program.ts: Swanston Street, the
+// Academy's reception or the Institute's graduation room), with the story beside it, or below it on phones.
 import { useEffect, useRef, useState } from 'react'
 import { programs, type Program as ProgramData } from '../data/apple'
 import { isNight } from '../lib/night'
@@ -91,8 +91,11 @@ function Photos({ photos }: { photos: ViewerPhoto[] }) {
 }
 
 export default function Program({ id }: { id: ProgramData['id'] }) {
-  const program = programs.find((p) => p.id === id)!
-  const other = programs.find((p) => p.id !== id)!
+  // The pages before and after this one, in the order they happened.
+  const at = programs.findIndex((p) => p.id === id)
+  const program = programs[at]
+  const before = programs[at - 1]
+  const next = programs[at + 1]
   const canvas = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -134,6 +137,7 @@ export default function Program({ id }: { id: ProgramData['id'] }) {
             </section>
           ))}
 
+          {program.posts && program.posts.length > 0 && (
           <section className="dive-section">
             <h2 className="dive-heading font-display">On LinkedIn</h2>
             <ul className="dive-points">
@@ -146,13 +150,13 @@ export default function Program({ id }: { id: ProgramData['id'] }) {
               ))}
             </ul>
           </section>
+          )}
         </div>
 
         <div className="dive-links font-display">
-          <a href={`${base}${other.id}/`}>
-            {id === 'academy' ? 'Next' : 'Before this'}: {other.short} →
-          </a>
-          <a href={`${base}${slug('SeaLens')}/`}>More about SeaLens →</a>
+          {before && <a href={`${base}${before.id}/`}>Before this: {before.short} →</a>}
+          {next && <a href={`${base}${next.id}/`}>Next: {next.short} →</a>}
+          {program.seaLens && <a href={`${base}${slug('SeaLens')}/`}>More about SeaLens →</a>}
         </div>
       </main>
       <Grain />

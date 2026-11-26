@@ -1,6 +1,11 @@
-// The scenes behind the Apple program pages, in the island's cel-shaded,
-// ink-outlined style, each with the program's logo in the middle:
+// The scenes behind the program pages (RMIT and the two Apple programs), in
+// the island's cel-shaded, ink-outlined style, each with its logo in the
+// middle:
 //
+// - rmit (Melbourne): Swanston Street outside RMIT, Building 22 on the corner
+//   with the Green Brain on its roof and RMIT's sign on it, Storey Hall and
+//   its annex beside it, trams going by under the wires, students on the
+//   footpath, and the city's towers behind.
 // - academy (Bali): the Academy's reception, the BINUS University and Apple
 //   Developer Academy sign on the wall under a lit cove, the reception desk
 //   in front of it, potted palms in the corners, and every now and then
@@ -14,13 +19,17 @@
 import * as THREE from 'three'
 import { Character, type Cut, type Look as Style } from './character'
 import { cloud, palm } from './models'
-import { inked, outlineUniforms, plain, seeded, toon } from './toon'
+import { inked, jitter, outlineUniforms, plain, ramp, seeded, toon } from './toon'
 
 export type ProgramScene = { dispose(): void }
-type Kind = 'academy' | 'institute'
+type Kind = 'academy' | 'institute' | 'rmit'
 
 type Look = { top: string; low: string; hemi: string; ground: string; sun: string; light: number; ambient: number }
 const LOOKS: Record<Kind, { day: Look; night: Look }> = {
+  rmit: {
+    day: { top: '#86b3d6', low: '#ebe4d8', hemi: '#fff6ea', ground: '#8a857c', sun: '#fff3dc', light: 1.45, ambient: 1.3 },
+    night: { top: '#0f1433', low: '#3a3f78', hemi: '#8a96d0', ground: '#22283a', sun: '#d8deff', light: 0.8, ambient: 0.75 },
+  },
   academy: {
     day: { top: '#f0a865', low: '#fbe2b4', hemi: '#fffaf0', ground: '#c9b89c', sun: '#fff1dc', light: 1.1, ambient: 1.6 },
     night: { top: '#141b40', low: '#3d4a86', hemi: '#f3e6d0', ground: '#6e6458', sun: '#ffe2b8', light: 0.7, ambient: 1.1 },
@@ -35,6 +44,7 @@ const LOOKS: Record<Kind, { day: Look; night: Look }> = {
 // The Institute's lens is wider, so the wall can stand close behind the
 // tables in front and still fit.
 const FRAME: Record<Kind, { fov: number; at: THREE.Vector3; look: THREE.Vector3; atNarrow: THREE.Vector3; lookNarrow: THREE.Vector3 }> = {
+  rmit: { fov: 30, at: new THREE.Vector3(14.5, 4.5, 46), look: new THREE.Vector3(0.8, 9, -4), atNarrow: new THREE.Vector3(15, 7, 84), lookNarrow: new THREE.Vector3(1, 9.5, -4) },
   academy: { fov: 30, at: new THREE.Vector3(0, 2.5, 15), look: new THREE.Vector3(0, 2.45, -3), atNarrow: new THREE.Vector3(0, 2.6, 26), lookNarrow: new THREE.Vector3(0, 2.2, -3) },
   institute: { fov: 45, at: new THREE.Vector3(0, 1.9, 18.9), look: new THREE.Vector3(0, 2.3, 4.1), atNarrow: new THREE.Vector3(0, 2.1, 32.6), lookNarrow: new THREE.Vector3(0, 2.0, 4.1) },
 }
@@ -51,6 +61,8 @@ export function createProgramScene(
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFShadowMap
   const scene = new THREE.Scene()
+  // Haze over the city; the other two are indoors.
+  if (kind === 'rmit') scene.fog = new THREE.Fog(look.low, 60, 260)
   const camera = new THREE.PerspectiveCamera(FRAME[kind].fov, 1, 0.5, 1200)
   const animations: Animate[] = []
 
@@ -101,8 +113,10 @@ export function createProgramScene(
   // --- light
   scene.add(new THREE.HemisphereLight(look.hemi, look.ground, look.ambient))
   const sun = new THREE.DirectionalLight(look.sun, look.light)
-  // Indoors, the light falls from high in front, so things' shadows land behind them.
-  sun.position.set(-3, 9, 10)
+  // Indoors, the light falls from high in front, so things' shadows land
+  // behind them; outdoors, the sun's off to one side.
+  if (kind === 'rmit') sun.position.set(night ? 4 : -9, night ? 18 : 14, night ? 8 : 8)
+  else sun.position.set(-3, 9, 10)
   sun.castShadow = true
   sun.shadow.mapSize.set(2048, 2048)
   Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, far: 80 })
@@ -111,7 +125,8 @@ export function createProgramScene(
   // --- the scene, with its logo; still scenes redraw when an image arrives
   const redraw = () => still && requestAnimationFrame(tick)
   if (kind === 'academy') academyRoom(scene, night, animations, redraw)
-  else instituteRoom(scene, night, animations)
+  else if (kind === 'institute') instituteRoom(scene, night, animations)
+  else melbourne(scene, night, animations, redraw)
 
   // --- framing: the sign on the left (or at the top), the text beside (or below)
   const frame = FRAME[kind]
@@ -1341,4 +1356,616 @@ function instituteRoom(scene: THREE.Scene, night: boolean, animations: Animate[]
 
   // Graduates coming in through the door, most in the team's black tees.
   visitors(scene, animations, new THREE.Vector3(HALF, 0, DOOR_Z), BACK, [...Array(5).fill(['#1d1f24', '#111317']), ...TOPS])
+}
+
+// --- RMIT (Melbourne) ----------------------------------------------------------
+
+// Facade textures for the city's towers: `wall`, the windows in the day, and
+// `lit`, which windows glow after dark.
+function facade(base: string, glass: string, seed: number) {
+  const rand = seeded(seed)
+  const make = () => {
+    const c = document.createElement('canvas')
+    c.width = 64
+    c.height = 64
+    return c
+  }
+  const wall = make()
+  const lit = make()
+  const w = wall.getContext('2d')!
+  const l = lit.getContext('2d')!
+  w.fillStyle = base
+  w.fillRect(0, 0, 64, 64)
+  l.fillStyle = '#000'
+  l.fillRect(0, 0, 64, 64)
+  for (let y = 0; y < 4; y++)
+    for (let x = 0; x < 4; x++) {
+      w.fillStyle = glass
+      w.fillRect(x * 16 + 3, y * 16 + 4, 10, 9)
+      if (rand() < 0.55) {
+        l.fillStyle = rand() < 0.7 ? '#ffd88a' : '#cfe6ff'
+        l.fillRect(x * 16 + 3, y * 16 + 4, 10, 9)
+      }
+    }
+  const tex = (canvas: HTMLCanvasElement) => {
+    const t = new THREE.CanvasTexture(canvas)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.magFilter = THREE.NearestFilter
+    t.wrapS = t.wrapT = THREE.RepeatWrapping
+    return t
+  }
+  return { wall: tex(wall), lit: tex(lit) }
+}
+
+const PALETTE: [string, string][] = [
+  ['#c9d3dc', '#4d6a86'],
+  ['#e6ddcb', '#5a6f84'],
+  ['#9fb4c4', '#2f4b66'],
+  ['#d7c7b0', '#4a5e74'],
+  ['#b8c9c2', '#365a5e'],
+  ['#8e959e', '#2c3a4a'],
+]
+
+// A tower of offices, its windows lit at night.
+function tower(w: number, h: number, d: number, i: number, night: boolean) {
+  const [base, glass] = PALETTE[i % PALETTE.length]
+  const { wall, lit } = facade(base, glass, i + 3)
+  const side = (span: number) => {
+    const map = wall.clone()
+    map.repeat.set(Math.max(1, Math.round(span / 1.6)), Math.max(1, Math.round(h / 1.6)))
+    const extra: THREE.MeshToonMaterialParameters = { map }
+    if (night) {
+      const glow = lit.clone()
+      glow.repeat.copy(map.repeat)
+      Object.assign(extra, { emissive: '#ffffff', emissiveMap: glow, emissiveIntensity: 0.9 })
+    }
+    return new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: ramp, ...extra })
+  }
+  const roof = toon(night ? '#3a3f55' : '#8f98a3')
+  const zSide = side(w)
+  const xSide = side(d)
+  return inked(new THREE.BoxGeometry(w, h, d), [xSide, xSide, roof, roof, zSide, zSide] as unknown as THREE.Material, 2)
+}
+
+// Storey Hall's annex: its facade a tiling of green and purple rhombuses with
+// pale joints, after the Penrose tiling on the real one on Swanston Street.
+function rhombusFacade(night: boolean, greens = ['#2f9a55', '#3cb06a', '#25804a', '#8cc84b'], purples = ['#6e3596', '#843fae', '#55286f'], mix = 0.55) {
+  const S = 512
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = S
+  const c = canvas.getContext('2d')!
+  const rand = seeded(88)
+  c.fillStyle = night ? '#b9b2a2' : '#e9e2d0'
+  c.fillRect(0, 0, S, S)
+  const W = 64
+  const H = 40
+  for (let row = -1; row < S / H + 1; row++)
+    for (let col = -1; col < S / W + 1; col++) {
+      const x = col * W + (row % 2 ? W / 2 : 0)
+      const y = row * H
+      // Each cell split into two rhombuses, thin and fat, coloured apart.
+      const shapes: [number[][], boolean][] = [
+        [[[x, y + H / 2], [x + W / 2, y], [x + W, y + H / 2], [x + W / 2, y + H]], true],
+        [[[x + W / 2, y], [x + W * 0.75, y + H / 2], [x + W / 2, y + H], [x + W * 0.25, y + H / 2]], false],
+      ]
+      for (const [pts, fat] of shapes) {
+        const set = rand() < mix ? greens : purples
+        c.fillStyle = set[Math.floor(rand() * set.length)]
+        c.beginPath()
+        pts.forEach(([px, py], i) => (i ? c.lineTo(px, py) : c.moveTo(px, py)))
+        c.closePath()
+        c.fill()
+        c.strokeStyle = night ? '#cfc8b8' : '#f4efe2'
+        c.lineWidth = fat ? 3 : 2
+        c.stroke()
+      }
+    }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+  texture.anisotropy = 8
+  return texture
+}
+
+// Storey Hall itself: sandstone, three storeys of tall arched windows with a
+// cornice between each, and a parapet along the top.
+function sandstone(night: boolean) {
+  const W = 256
+  const H = 512
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const c = canvas.getContext('2d')!
+  c.fillStyle = night ? '#b9a682' : '#e3cf9f'
+  c.fillRect(0, 0, W, H)
+  // Courses of stone.
+  c.fillStyle = night ? '#a8956f' : '#d4bf8c'
+  for (let y = 0; y < H; y += 16) c.fillRect(0, y, W, 2)
+  const glass = night ? '#f1cf86' : '#3a4a5a'
+  for (let floor = 0; floor < 3; floor++) {
+    const top = 40 + floor * 160
+    // Cornice under the floor above.
+    c.fillStyle = night ? '#cdb991' : '#efe0b8'
+    c.fillRect(0, top - 22, W, 12)
+    for (let i = 0; i < 3; i++) {
+      const x = 30 + i * 74
+      c.fillStyle = night ? '#8c7a56' : '#bca677'
+      c.beginPath()
+      c.roundRect(x - 6, top - 6, 56, 112, [28, 28, 0, 0])
+      c.fill()
+      c.fillStyle = glass
+      c.beginPath()
+      c.roundRect(x, top, 44, 100, [22, 22, 0, 0])
+      c.fill()
+      c.fillStyle = night ? '#c9a45e' : '#26333f'
+      c.fillRect(x + 21, top + 8, 2, 92)
+    }
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 8
+  return texture
+}
+
+// The tall black sign that sticks out from Building 22, RMIT's logo running
+// up it in white; `onLoad` redraws once the image arrives.
+function bladeSign(onLoad: () => void) {
+  const W = 160
+  const H = 640
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const c = canvas.getContext('2d')!
+  c.fillStyle = '#121214'
+  c.fillRect(0, 0, W, H)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 8
+  const logo = new Image()
+  logo.onload = () => {
+    // Turned to read upwards, as on the real one.
+    const w = H * 0.8
+    const h = (w * logo.naturalHeight) / logo.naturalWidth
+    c.save()
+    c.translate(W / 2, H / 2)
+    c.rotate(-Math.PI / 2)
+    c.drawImage(logo, -w / 2, -h / 2, w, h)
+    c.restore()
+    texture.needsUpdate = true
+    onLoad()
+  }
+  logo.src = `${import.meta.env.BASE_URL}rmit-logo-light.png`
+  return texture
+}
+
+// Building 22's walls: red brick with cream bands between the floors, cream
+// pilasters at the ends, white-framed windows (arched along the top floor)
+// over a black shopfront. `w` and `h` in metres, the texture 48px to one.
+const BRICK = { ground: 3.4, floors: [3.4, 6.8, 10.2], cornice: 13.2 }
+function brickFacade(w: number, h: number, night: boolean, seed: number) {
+  const PX = 48
+  const W = Math.round(w * PX)
+  const H = Math.round(h * PX)
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const c = canvas.getContext('2d')!
+  const rand = seeded(seed)
+  const y = (m: number) => H - m * PX
+  const cream = night ? '#c9bea6' : '#eee4cc'
+  c.fillStyle = night ? '#6e3328' : '#a8452f'
+  c.fillRect(0, 0, W, H)
+  // Courses of brick.
+  c.fillStyle = night ? '#5f2c23' : '#953b28'
+  for (let r = 0; r < H; r += 6) c.fillRect(0, r, W, 1)
+  // The bays and their windows.
+  const bays = Math.max(2, Math.round(w / 2.6))
+  const bay = w / bays
+  BRICK.floors.forEach((floor, f) => {
+    const top = f === 2
+    for (let b = 0; b < bays; b++) {
+      const cx = (b + 0.5) * bay * PX
+      const ww = 1.05 * PX
+      const wh = (top ? 2.0 : 2.1) * PX
+      const wy = y(floor + 0.7) - wh
+      // Sill and lintel in cream.
+      c.fillStyle = cream
+      c.fillRect(cx - ww / 2 - 6, y(floor + 0.7), ww + 12, 7)
+      if (!top) c.fillRect(cx - ww / 2 - 4, wy - 12, ww + 8, 10)
+      c.fillStyle = '#f6f3ea'
+      c.beginPath()
+      c.roundRect(cx - ww / 2 - 4, wy - 4, ww + 8, wh + 4, top ? [ww / 2 + 4, ww / 2 + 4, 0, 0] : 0)
+      c.fill()
+      c.fillStyle = night ? (rand() < 0.5 ? '#f3d28a' : '#2a3040') : rand() < 0.2 ? '#5d7186' : '#3a4a5a'
+      c.beginPath()
+      c.roundRect(cx - ww / 2, wy, ww, wh, top ? [ww / 2, ww / 2, 0, 0] : 0)
+      c.fill()
+      c.fillStyle = '#f6f3ea'
+      c.fillRect(cx - 2, wy + (top ? ww / 2 : 0), 4, wh - (top ? ww / 2 : 0))
+      c.fillRect(cx - ww / 2, wy + wh * 0.55, ww, 4)
+    }
+  })
+  // Bands under each floor, the cornice, and the coping on the parapet.
+  c.fillStyle = cream
+  for (const m of BRICK.floors.slice(1)) c.fillRect(0, y(m + 0.1), W, 0.3 * PX)
+  c.fillRect(0, y(BRICK.cornice + 0.55), W, 0.55 * PX)
+  c.fillRect(0, 0, W, 0.18 * PX)
+  // Cream pilasters at the corners, with quoins.
+  for (const x of [0, W - 0.45 * PX]) {
+    c.fillRect(x, 0, 0.45 * PX, y(BRICK.ground))
+  }
+  c.fillStyle = night ? '#b3a88f' : '#ddd1b4'
+  for (let m = BRICK.ground; m < BRICK.cornice; m += 0.6) {
+    c.fillRect(0, y(m + 0.25), 0.45 * PX, 2)
+    c.fillRect(W - 0.45 * PX, y(m + 0.25), 0.45 * PX, 2)
+  }
+  // The black shopfront along the street.
+  c.fillStyle = '#17181c'
+  c.fillRect(0, y(BRICK.ground), W, BRICK.ground * PX)
+  for (let x = 0.4; x < w - 1.2; x += 2.2) {
+    c.fillStyle = night ? '#e9c77e' : '#2f4b66'
+    c.fillRect(x * PX + 6, y(2.8), 1.9 * PX - 12, 2.6 * PX)
+    c.fillStyle = night ? '#f6dc9e' : '#4d6a86'
+    c.fillRect(x * PX + 6, y(2.8), 1.9 * PX - 12, 0.3 * PX)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 8
+  return texture
+}
+
+// A lumpy green blob, for the Green Brain and its canopy.
+function blob(r: number, seed: number, night: boolean) {
+  const rand = seeded(seed)
+  const shades = night ? ['#4f9e58', '#3f8f4c', '#5daa60'] : ['#6ccb6c', '#56b95e', '#83d878']
+  return inked(jitter(new THREE.IcosahedronGeometry(r, 3), r * 0.14, seed), toon(shades[Math.floor(rand() * shades.length)]), 2.5)
+}
+
+// A Melbourne tram: three white sections with a green band low down, joined
+// by dark bellows, a pantograph on the middle one up to the wire, and the
+// route on an amber sign at each end. It runs along +x; its middle is x = 0.
+function tram(night: boolean) {
+  const group = new THREE.Group()
+  const white = toon('#f3f2ee')
+  const green = toon('#3a9a4c')
+  const dark = toon('#1f2a36')
+  const grey = toon('#6d727a')
+  const WIDTH = 2.6
+  const sections = [6.4, 4.2, 6.4]
+  const GAP = 0.35
+  const total = sections.reduce((a, b) => a + b) + GAP * 2
+  let x = -total / 2
+  sections.forEach((len, i) => {
+    const mid = x + len / 2
+    const skirt = inked(new THREE.BoxGeometry(len, 0.35, WIDTH - 0.1), grey, 1.5)
+    skirt.position.set(mid, 0.35, 0)
+    group.add(skirt)
+    const band = inked(new THREE.BoxGeometry(len, 0.75, WIDTH), green, 2)
+    band.position.set(mid, 0.9, 0)
+    group.add(band)
+    const body = inked(new THREE.BoxGeometry(len, 1.9, WIDTH), white, 2)
+    body.position.set(mid, 2.22, 0)
+    group.add(body)
+    // The windows: a dark band down each side, the glass a touch proud.
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(len - 0.5, 1.0, WIDTH + 0.04), night ? toon('#f3d690', { emissive: '#6b5420' }) : dark)
+    glass.position.set(mid, 2.3, 0)
+    group.add(glass)
+    for (let p = 1; p < Math.round(len / 1.4); p++) {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.0, WIDTH + 0.06), white)
+      post.position.set(x + 0.25 + (p * (len - 0.5)) / Math.round(len / 1.4), 2.3, 0)
+      group.add(post)
+    }
+    const roof = inked(new THREE.BoxGeometry(len - 0.2, 0.25, WIDTH - 0.3), toon('#d9dbde'), 1.5)
+    roof.position.set(mid, 3.28, 0)
+    group.add(roof)
+    if (i === 1) {
+      // The pantograph: a diamond of arms up to a bar on the wire.
+      const arm = toon('#2b2f36')
+      for (const [lean, y] of [
+        [0.5, 3.75],
+        [-0.5, 4.45],
+      ]) {
+        const a = inked(new THREE.BoxGeometry(0.05, 0.9, 0.05), arm, 1)
+        a.position.set(mid, y, 0)
+        a.rotation.z = lean
+        group.add(a)
+      }
+      const bar = inked(new THREE.BoxGeometry(0.1, 0.06, 1.2), arm, 1)
+      bar.position.set(mid, 4.85, 0)
+      group.add(bar)
+    }
+    x += len
+    if (i < 2) {
+      const bellows = new THREE.Mesh(new THREE.BoxGeometry(GAP, 2.6, WIDTH - 0.3), dark)
+      bellows.position.set(x + GAP / 2, 1.95, 0)
+      group.add(bellows)
+      x += GAP
+    }
+  })
+  // The cab windows and route signs at each end.
+  const route = document.createElement('canvas')
+  route.width = 256
+  route.height = 48
+  const rc = route.getContext('2d')!
+  rc.fillStyle = '#16130e'
+  rc.fillRect(0, 0, 256, 48)
+  rc.fillStyle = '#ffb21c'
+  rc.font = `700 34px 'Helvetica Neue', Arial, sans-serif`
+  rc.textBaseline = 'middle'
+  rc.fillText('1   East Coburg', 14, 26)
+  const routeTex = new THREE.CanvasTexture(route)
+  routeTex.colorSpace = THREE.SRGBColorSpace
+  for (const end of [-1, 1]) {
+    const cab = new THREE.Mesh(new THREE.PlaneGeometry(WIDTH - 0.5, 1.1), dark)
+    cab.position.set(end * (total / 2 + 0.01), 2.25, 0)
+    cab.rotation.y = (end * Math.PI) / 2
+    group.add(cab)
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.3), new THREE.MeshBasicMaterial({ map: routeTex }))
+    sign.position.set(end * (total / 2 + 0.02), 3.0, 0)
+    sign.rotation.y = (end * Math.PI) / 2
+    group.add(sign)
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.14, 0.3), new THREE.MeshBasicMaterial({ color: night ? '#fff1c0' : '#e8e2d4' }))
+    for (const z of [-0.9, 0.9]) {
+      const l = lamp.clone()
+      l.position.set(end * (total / 2 + 0.02), 0.95, z)
+      group.add(l)
+    }
+  }
+  group.userData.length = total
+  return group
+}
+
+// Swanston Street outside RMIT: Building 22 on the corner, Storey Hall's
+// annex and Storey Hall beside it, a side street, more of the campus either
+// side, tram tracks down the street with the wires over them and a tram
+// every so often, students walking along the footpath, and the city's towers
+// behind with Eureka's gold crown among them.
+function melbourne(scene: THREE.Scene, night: boolean, animations: Animate[], redraw: () => void) {
+  const rand = seeded(23)
+  const FRONT = -2 // the buildings' fronts
+  const ROAD = { from: 3.1, to: 8.7 }
+  const TRACKS = [4.7, 7.1]
+
+  // Footpaths and the road, the tram tracks set into it.
+  const paving = plain(new THREE.PlaneGeometry(600, 600).rotateX(-Math.PI / 2), toon(night ? '#5a5a62' : '#bdb6aa'))
+  scene.add(paving)
+  const road = plain(new THREE.PlaneGeometry(600, ROAD.to - ROAD.from).rotateX(-Math.PI / 2), toon(night ? '#2a2c34' : '#55575f'))
+  road.position.set(0, 0.01, (ROAD.from + ROAD.to) / 2)
+  scene.add(road)
+  // (The near kerb breaks for the side street; see below.)
+  for (const [z, from, to] of [
+    [ROAD.from, -300, 8.1],
+    [ROAD.from, 15.1, 300],
+    [ROAD.to, -300, 300],
+  ]) {
+    const kerb = inked(new THREE.BoxGeometry(to - from, 0.14, 0.22), toon('#d8d2c6'), 1.5)
+    kerb.position.set((from + to) / 2, 0.07, z)
+    scene.add(kerb)
+  }
+  const rail = toon('#9a9ca2')
+  for (const z of TRACKS) {
+    const bed = plain(new THREE.PlaneGeometry(600, 2).rotateX(-Math.PI / 2), toon(night ? '#33353d' : '#64666d'))
+    bed.position.set(0, 0.015, z)
+    scene.add(bed)
+    for (const dz of [-0.72, 0.72]) {
+      const r = plain(new THREE.BoxGeometry(600, 0.03, 0.08), rail)
+      r.position.set(0, 0.03, z + dz)
+      scene.add(r)
+    }
+  }
+
+  // Building 22 on the corner: red brick and cream, the Green Brain bulging
+  // over its roof, a row of green lumps over the shopfront, and the black
+  // RMIT sign sticking out from it.
+  const B22 = { w: 13, h: 14, d: 12 }
+  const front = brickFacade(B22.w, B22.h, night, 5)
+  const side = brickFacade(B22.d, B22.h, night, 9)
+  const brick = toon(night ? '#6e3328' : '#a8452f')
+  const b22 = inked(new THREE.BoxGeometry(B22.w, B22.h, B22.d), [toon('#ffffff', { map: side }), brick, toon('#7a7f88'), brick, toon('#ffffff', { map: front }), brick] as unknown as THREE.Material, 2.5)
+  b22.position.set(0, B22.h / 2, FRONT - B22.d / 2)
+  scene.add(b22)
+  // The Green Brain: lumps piled over the roof, spilling past its edges.
+  const brain = new THREE.Group()
+  const brand = seeded(41)
+  for (let i = 0; i < 34; i++) {
+    const r = 1.1 + brand() * 1.2
+    const b = blob(r, 100 + i, night)
+    const edge = i < 16
+    b.position.set(
+      (brand() - 0.5) * (B22.w + 1.2),
+      B22.h + (edge ? 0.6 : 1.2) + brand() * (edge ? 0.8 : 1.8),
+      FRONT - B22.d / 2 + (edge ? B22.d / 2 - 0.2 + brand() * 0.8 : (brand() - 0.5) * B22.d),
+    )
+    if (edge && i % 3 === 0) b.position.set(B22.w / 2 + 0.2 - brand() * 0.4, b.position.y, FRONT - brand() * B22.d)
+    b.scale.set(1.1, 0.8, 1)
+    brain.add(b)
+  }
+  scene.add(brain)
+  // The canopy over the shopfront, carried on to the annex.
+  for (let i = 0; i < 8; i++) {
+    const b = blob(0.6, 300 + i, night)
+    b.scale.set(1.7, 0.55, 0.9)
+    b.position.set(-B22.w / 2 - 3.2 + i * 1.45, 3.65 + (i % 2) * 0.12, FRONT + 0.55)
+    scene.add(b)
+  }
+  const bladeTex = bladeSign(redraw)
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.18, 4.8, 1.2), [new THREE.MeshBasicMaterial({ map: bladeTex }), new THREE.MeshBasicMaterial({ map: bladeTex }), toon('#121214'), toon('#121214'), toon('#121214'), toon('#121214')])
+  blade.castShadow = true
+  blade.position.set(-B22.w / 2 + 2.2, 9.2, FRONT + 0.6)
+  scene.add(blade)
+
+  // Storey Hall's annex to its left: crystals of grey and silver, a little
+  // green among them, and the great green bulge of its entrance.
+  const ANNEX = { w: 5, h: 12, d: 6 }
+  const ANNEX_X = -B22.w / 2 - ANNEX.w / 2 - 0.05
+  const tiles = rhombusFacade(night, ['#9aa3a8', '#b9c0c3', '#7f898f', '#d3d8d9'], ['#5fae7c', '#8a9a7a'], 0.85)
+  tiles.repeat.set(ANNEX.w / 4, ANNEX.h / 4)
+  const plainWall = toon(night ? '#7c8084' : '#b8bec2')
+  const annex = inked(new THREE.BoxGeometry(ANNEX.w, ANNEX.h, ANNEX.d), [plainWall, plainWall, toon('#8f98a3'), plainWall, toon('#ffffff', { map: tiles }), plainWall] as unknown as THREE.Material, 2.5)
+  annex.position.set(ANNEX_X, ANNEX.h / 2, FRONT - ANNEX.d / 2 - 0.3)
+  scene.add(annex)
+  const bulge = inked(jitter(new THREE.SphereGeometry(2.4, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), 0.25, 7), toon(night ? '#2f8a46' : '#3fbf5a'), 2.5)
+  bulge.scale.set(0.95, 1.9, 0.55)
+  bulge.position.set(ANNEX_X, 0, FRONT - 0.3)
+  scene.add(bulge)
+
+  // Storey Hall to its left, with a parapet and a cornice.
+  const HALL = { w: 7, h: 12.5, d: 8 }
+  const stone = sandstone(night)
+  stone.repeat.set(2, 1)
+  stone.wrapS = THREE.RepeatWrapping
+  const stoneSide = toon(night ? '#b09e7a' : '#d9c595')
+  const hall = inked(new THREE.BoxGeometry(HALL.w, HALL.h, HALL.d), [stoneSide, stoneSide, toon('#8f98a3'), stoneSide, toon('#ffffff', { map: stone }), stoneSide] as unknown as THREE.Material, 2.5)
+  const HALL_X = ANNEX_X - (ANNEX.w + HALL.w) / 2 - 0.1
+  hall.position.set(HALL_X, HALL.h / 2, FRONT - HALL.d / 2)
+  scene.add(hall)
+  const cornice = inked(new THREE.BoxGeometry(HALL.w + 0.5, 0.5, 0.6), toon(night ? '#cdb991' : '#efe0b8'), 2)
+  cornice.position.set(HALL_X, HALL.h - 0.25, FRONT + 0.1)
+  scene.add(cornice)
+  // A low gable over the front: a three-sided prism, point up.
+  const pediment = inked(new THREE.CylinderGeometry(HALL.w * 0.42, HALL.w * 0.42, 0.6, 3).rotateX(Math.PI / 2).rotateZ(Math.PI), toon(night ? '#cdb991' : '#efe0b8'), 2)
+  pediment.scale.set(1, 0.45, 1)
+  pediment.position.set(HALL_X, HALL.h + 0.6, FRONT - 0.2)
+  scene.add(pediment)
+
+  // The side street round the corner, and another brick building past it.
+  const SIDE = { from: B22.w / 2 + 1.6, to: B22.w / 2 + 8.6 }
+  const sideRoad = plain(new THREE.PlaneGeometry(SIDE.to - SIDE.from, 120).rotateX(-Math.PI / 2), toon(night ? '#2a2c34' : '#55575f'))
+  sideRoad.position.set((SIDE.from + SIDE.to) / 2, 0.012, ROAD.from - 60)
+  scene.add(sideRoad)
+  for (const x of [SIDE.from, SIDE.to]) {
+    const kerb = inked(new THREE.BoxGeometry(0.22, 0.14, 120), toon('#d8d2c6'), 1.5)
+    kerb.position.set(x, 0.07, ROAD.from - 60.1)
+    scene.add(kerb)
+  }
+  const NEXT = { w: 10, h: 13, d: 10 }
+  const nextFront = brickFacade(NEXT.w, NEXT.h, night, 13)
+  const next = inked(new THREE.BoxGeometry(NEXT.w, NEXT.h, NEXT.d), [brick, brick, toon('#7a7f88'), brick, toon('#ffffff', { map: nextFront }), brick] as unknown as THREE.Material, 2.5)
+  next.position.set(SIDE.to + 1.6 + NEXT.w / 2, NEXT.h / 2, FRONT - NEXT.d / 2)
+  scene.add(next)
+  const inStreet = (x: number) => x > SIDE.from - 0.6 && x < SIDE.to + 0.6
+
+  // More of the campus along the street, and the towers behind.
+  for (const [x, w, h, i] of [
+    [SIDE.to + 1.6 + NEXT.w + 5, 9, 22, 2],
+    [HALL_X - HALL.w / 2 - 4.5, 8.5, 14, 1],
+    [HALL_X - HALL.w / 2 - 13.5, 9, 19, 4],
+  ]) {
+    const b = tower(w, h, 8, i, night)
+    b.position.set(x, h / 2, FRONT - 4)
+    scene.add(b)
+  }
+  let n = 7
+  for (const row of [
+    { z: -38, count: 16, hMin: 20, hMax: 38 },
+    { z: -64, count: 18, hMin: 28, hMax: 56 },
+    { z: -100, count: 20, hMin: 34, hMax: 70 },
+  ]) {
+    for (let i = 0; i < row.count; i++) {
+      const x = -90 + (i / (row.count - 1)) * 180 + (rand() - 0.5) * 4
+      const w = 4 + rand() * 4
+      const h = row.hMin + rand() * (row.hMax - row.hMin)
+      const d = 4 + rand() * 3
+      const b = tower(w, h, d, n++, night)
+      b.position.set(x, h / 2, row.z + (rand() - 0.5) * 5)
+      scene.add(b)
+      if (rand() < 0.3) {
+        const top = inked(new THREE.BoxGeometry(w * 0.5, 1.4, d * 0.5), toon(night ? '#3a3f55' : '#8f98a3'), 2)
+        top.position.set(b.position.x, h + 0.7, b.position.z)
+        scene.add(top)
+      }
+    }
+  }
+  // Eureka Tower, over to the left: tall and dark, its top in gold with a
+  // red stripe down it.
+  const EUREKA = { x: -30, z: -120, w: 8, h: 110 }
+  const eureka = tower(EUREKA.w, EUREKA.h, EUREKA.w, 5, night)
+  eureka.position.set(EUREKA.x, EUREKA.h / 2, EUREKA.z)
+  scene.add(eureka)
+  const gold = inked(new THREE.BoxGeometry(EUREKA.w + 0.05, 12, EUREKA.w + 0.05), toon('#e2b23a', night ? { emissive: '#6a4c0c' } : {}), 2)
+  gold.position.set(EUREKA.x, EUREKA.h - 6, EUREKA.z)
+  scene.add(gold)
+  const stripe = plain(new THREE.PlaneGeometry(1, EUREKA.h * 0.6), toon('#c3362b'))
+  stripe.position.set(EUREKA.x + 1.2, EUREKA.h * 0.62, EUREKA.z + EUREKA.w / 2 + 0.06)
+  scene.add(stripe)
+
+  // Poles along both footpaths holding the wires over the tracks.
+  const steel = toon('#4c525c')
+  const WIRE_Y = 5.4
+  // Off the middle, so none stands in front of the sign.
+  for (let x = -67.5; x <= 67.5; x += 15) {
+    for (const z of [ROAD.from - 0.45, ROAD.to + 0.45]) {
+      const pole = inked(new THREE.CylinderGeometry(0.09, 0.12, WIRE_Y + 0.8, 8), steel, 1.5)
+      pole.position.set(x, (WIRE_Y + 0.8) / 2, z)
+      scene.add(pole)
+    }
+    const span = plain(new THREE.BoxGeometry(0.03, 0.03, ROAD.to - ROAD.from + 0.8), steel)
+    span.position.set(x, WIRE_Y + 0.5, (ROAD.from + ROAD.to) / 2)
+    scene.add(span)
+  }
+  const wire = new THREE.MeshBasicMaterial({ color: '#2a2e35' })
+  for (const z of TRACKS) {
+    const w = plain(new THREE.BoxGeometry(600, 0.03, 0.03), wire)
+    w.position.set(0, WIRE_Y, z)
+    scene.add(w)
+  }
+
+  // Street trees and lamps along the near footpath.
+  for (const x of [-30, -21, -12.5, 4.6, 19, 28]) {
+    const trunk = inked(new THREE.CylinderGeometry(0.12, 0.16, 2, 6), toon('#6b4a2e'), 1.5)
+    trunk.position.set(x, 1, ROAD.from - 0.45)
+    scene.add(trunk)
+    const crown = inked(jitter(new THREE.IcosahedronGeometry(1.2, 1), 0.25, x * 7), toon(night ? '#2f5a3a' : '#4f8a46'), 2)
+    crown.position.set(x, 2.8, ROAD.from - 0.45)
+    scene.add(crown)
+  }
+  for (let x = -31.5; x <= 31.5; x += 9) {
+    if (inStreet(x)) continue
+    const pole = inked(new THREE.CylinderGeometry(0.05, 0.07, 3.6, 6), steel, 1.5)
+    pole.position.set(x, 1.8, ROAD.from - 0.45)
+    scene.add(pole)
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: night ? '#ffe3a0' : '#e8e2d4' }))
+    head.position.set(x, 3.65, ROAD.from - 0.45)
+    scene.add(head)
+    if (night && Math.abs(x) < 20) {
+      const light = new THREE.PointLight('#ffd9a0', 6, 8, 1.5)
+      light.position.copy(head.position)
+      scene.add(light)
+    }
+  }
+  if (night) {
+    const flood = new THREE.SpotLight('#fff1d0', 40, 12, 0.6, 0.6, 1.5)
+    flood.position.set(-B22.w / 2 + 4, 4, FRONT + 4)
+    flood.target.position.set(-B22.w / 2 + 2.2, 9, FRONT)
+    scene.add(flood, flood.target)
+  }
+
+  // A tram every so often, one way or the other, each on its own track
+  // (they keep left: those heading right take the track nearer the campus).
+  const t1 = tram(night)
+  t1.visible = false
+  scene.add(t1)
+  const SPAN = 40
+  let run = { dir: 1, start: 0.5 }
+  let prev = 0
+  animations.push((t) => {
+    if (t < run.start) {
+      t1.visible = false
+      prev = t
+      return
+    }
+    if (!t1.visible) {
+      t1.visible = true
+      t1.position.set(-run.dir * SPAN, 0, run.dir > 0 ? TRACKS[0] : TRACKS[1])
+    }
+    t1.position.x += run.dir * 7 * (t - prev)
+    prev = t
+    if (Math.abs(t1.position.x) > SPAN) {
+      t1.visible = false
+      run = { dir: -run.dir, start: t + 8 + rand() * 6 }
+    }
+  })
+
+  // Students walking along the footpath in front of the campus.
+  students(scene, animations, 26)
 }

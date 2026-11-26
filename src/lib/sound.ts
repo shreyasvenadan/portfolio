@@ -1,7 +1,15 @@
-// Little synthesized sound effects, so there are no audio files to load. The
-// audio context is created on first use, which is always inside a click.
+// The site's sound effects: most synthesized here, some recordings from
+// public/sounds. The audio context is created on first use, which is always
+// inside a click.
 let ctx: AudioContext | null = null
 const audio = () => (ctx ??= new AudioContext())
+
+// A recording fetched up front and decoded on first use.
+function clip(name: string) {
+  const file = fetch(`${import.meta.env.BASE_URL}sounds/${name}.mp3`).then((r) => r.arrayBuffer())
+  let buffer: Promise<AudioBuffer> | null = null
+  return () => (buffer ??= file.then((f) => audio().decodeAudioData(f)))
+}
 
 // A long, low ship's horn, muffled because the ship is underwater.
 export function shipHorn() {
@@ -79,16 +87,18 @@ export async function zapSound() {
   return src.buffer.duration
 }
 
-// Poking a diver: the Minecraft "oof" (public/sounds/oof.mp3), fetched up
-// front and decoded on first use like the zaps.
-const OOF_FILE = fetch(`${import.meta.env.BASE_URL}sounds/oof.mp3`).then((r) => r.arrayBuffer())
-let oofBuffer: Promise<AudioBuffer> | null = null
+// Poking a diver: one of nine "ouch"es (public/sounds/ouch-1..9), never the
+// same one twice in a row. Fetched up front and decoded on first use.
+const OUCHES = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => clip(`ouch-${n}`))
+let lastOuch = -1
 
-export async function oof() {
+export async function ouch() {
   const a = audio()
-  oofBuffer ??= OOF_FILE.then((file) => a.decodeAudioData(file))
+  const pool = OUCHES.map((_, i) => i).filter((i) => i !== lastOuch)
+  const pick = pool[Math.floor(Math.random() * pool.length)]
+  lastOuch = pick
   const src = a.createBufferSource()
-  src.buffer = await oofBuffer
+  src.buffer = await OUCHES[pick]()
   const out = a.createGain()
   out.gain.value = 0.8
   src.connect(out).connect(a.destination)
@@ -215,8 +225,48 @@ export function glassBreak() {
   }
 }
 
-// Steady rain: soft looping hiss that swells in. Returns a function that fades it out.
+
+// Steady rain: a recording (public/sounds/rain-loop.mp3, its end crossfaded
+// into its start so it loops without a seam), swelling in. Returns a function
+// that fades it out. Falls back to synthesized hiss if it can't load.
+const RAIN = clip('rain-loop')
+
 export function rainfall() {
+  const a = audio()
+  const out = a.createGain()
+  out.gain.value = 0
+  out.connect(a.destination)
+  let src: AudioBufferSourceNode | null = null
+  let stopSynth: (() => void) | null = null
+  let stopped = false
+  RAIN()
+    .then((buffer) => {
+      if (stopped) return
+      src = a.createBufferSource()
+      src.buffer = buffer
+      src.loop = true
+      src.connect(out)
+      const t = a.currentTime
+      src.start(t, Math.random() * buffer.duration)
+      out.gain.setValueAtTime(0, t)
+      out.gain.linearRampToValueAtTime(0.6, t + 1.5)
+    })
+    .catch(() => {
+      if (!stopped) stopSynth = synthRain()
+    })
+  return () => {
+    stopped = true
+    stopSynth?.()
+    const now = a.currentTime
+    out.gain.cancelScheduledValues(now)
+    out.gain.setValueAtTime(out.gain.value, now)
+    out.gain.linearRampToValueAtTime(0, now + 2)
+    src?.stop(now + 2.1)
+  }
+}
+
+// The synthesized rain: soft looping hiss that swells in.
+function synthRain() {
   const a = audio()
   const t = a.currentTime
   const out = a.createGain()
@@ -243,8 +293,32 @@ export function rainfall() {
   }
 }
 
-// Thunder: a sharp crack, then a long low rumble that rolls and dies away.
+// Thunder: one of three recorded strikes (public/sounds/thunder-1..3), each
+// starting on its crack and rolling away, never the same one twice running.
+// Falls back to the synthesized thunder if they can't load.
+const THUNDERS = [1, 2, 3].map((n) => clip(`thunder-${n}`))
+let lastThunder = -1
+
 export function thunder() {
+  const a = audio()
+  const pool = [0, 1, 2].filter((i) => i !== lastThunder)
+  const pick = pool[Math.floor(Math.random() * pool.length)]
+  lastThunder = pick
+  THUNDERS[pick]()
+    .then((buffer) => {
+      const src = a.createBufferSource()
+      src.buffer = buffer
+      const out = a.createGain()
+      out.gain.value = 0.8
+      src.connect(out).connect(a.destination)
+      src.start()
+    })
+    .catch(synthThunder)
+}
+
+// The synthesized thunder: a sharp crack, then a long low rumble that rolls
+// and dies away.
+function synthThunder() {
   const a = audio()
   const t = a.currentTime
   const crack = a.createBufferSource()
@@ -296,48 +370,8 @@ export function chime() {
   })
 }
 
-// A seagull: one of six cries cut from a recording (public/sounds/gull-1..6:
-// three single "kee-ow"s, then a burst of cries and two runs of laughing
-// calls, which are longer and fade out slowly), never the same one twice in a
-// row, and pitched a touch up or down each time so even a repeat sounds like
-// a different bird. Fetched up front, decoded on first use. `long` picks from
-// the longer three, for a gull flying away. Returns its volume, 0 to 1, for
-// the caller to turn down as the gull gets further away.
-const GULL_FILES = [1, 2, 3, 4, 5, 6].map((n) => fetch(`${import.meta.env.BASE_URL}sounds/gull-${n}.mp3`).then((r) => r.arrayBuffer()))
-let gulls: Promise<AudioBuffer[]> | null = null
-let lastGull = -1
-const LONG_GULLS = [3, 4, 5]
-
-// `glide` is roughly how many seconds it takes to get there.
-export type Volume = (level: number, glide?: number) => void
-
-export function squawk({ long = false } = {}): Volume {
-  const a = audio()
-  const level = a.createGain()
-  level.connect(a.destination)
-  gulls ??= Promise.all(GULL_FILES.map(async (file) => a.decodeAudioData(await file)))
-  gulls
-    .then((buffers) => {
-      // Any but the last one played.
-      const pool = (long ? LONG_GULLS : buffers.map((_, i) => i)).filter((i) => i !== lastGull)
-      const pick = pool[Math.floor(Math.random() * pool.length)]
-      lastGull = pick
-      const src = a.createBufferSource()
-      src.buffer = buffers[pick]
-      src.playbackRate.value = 0.92 + Math.random() * 0.16
-      const out = a.createGain()
-      out.gain.value = 0.55
-      src.connect(out).connect(level)
-      src.start()
-    })
-    // If the recordings can't load, fall back to the synthesized cry.
-    .catch(synthSquawk)
-  // Eased, so a level set every frame glides rather than steps.
-  return (v, glide = 0.15) => level.gain.setTargetAtTime(Math.min(1, Math.max(0, v)), a.currentTime, glide / 3)
-}
-
-// The synthesized seagull: two or three harsh, falling "kee-ow" cries.
-function synthSquawk() {
+// A seagull: two or three harsh, falling "kee-ow" cries.
+export function squawk() {
   const a = audio()
   const t = a.currentTime
   const cries = 2 + Math.round(Math.random())
