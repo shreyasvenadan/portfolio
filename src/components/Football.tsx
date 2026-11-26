@@ -3,12 +3,13 @@
 // window (scene3d/pitch.ts, him doing keepy-uppies at golden hour, click to
 // shoot), with the story beside it, or below it on phones: the highlights
 // video and a wall of polaroids that open into a viewer.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { categories, full, photos, thumb, video, type Category, type Photo } from '../data/football'
 import { isNight } from '../lib/night'
 import { prefersReducedMotion } from '../lib/sections'
 import { createPitch, type Pitch, type PitchStats } from '../scene3d/pitch'
 import Grain from './Grain'
+import PhotoViewer from './PhotoViewer'
 
 const hasWebGL = () => {
   try {
@@ -143,86 +144,6 @@ function Gallery({ onOpen, shown, filter, setFilter }: {
   )
 }
 
-function Viewer({ items, index, setIndex, onClose }: {
-  items: Photo[]
-  index: number
-  setIndex: (i: number) => void
-  onClose: () => void
-}) {
-  const closeBtn = useRef<HTMLButtonElement>(null)
-  const touch = useRef<number | null>(null)
-  const p = items[index]
-  const go = useCallback((d: number) => setIndex((index + d + items.length) % items.length), [index, items.length, setIndex])
-
-  useEffect(() => {
-    const back = document.activeElement as HTMLElement | null
-    closeBtn.current?.focus()
-    const overflow = document.documentElement.style.overflow
-    document.documentElement.style.overflow = 'hidden'
-    return () => {
-      document.documentElement.style.overflow = overflow
-      back?.focus()
-    }
-  }, [])
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-      else if (e.key === 'ArrowRight') go(1)
-      else if (e.key === 'ArrowLeft') go(-1)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [go, onClose])
-
-  // Warm the neighbours so stepping through is instant.
-  useEffect(() => {
-    for (const d of [1, -1]) new Image().src = full(items[(index + d + items.length) % items.length])
-  }, [index, items])
-
-  const closeOnBackdrop = (e: React.MouseEvent) => e.target === e.currentTarget && onClose()
-  return (
-    <div
-      className="viewer"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Photo viewer"
-      onClick={closeOnBackdrop}
-      onTouchStart={(e) => (touch.current = e.touches[0].clientX)}
-      onTouchEnd={(e) => {
-        if (touch.current === null) return
-        const dx = e.changedTouches[0].clientX - touch.current
-        if (Math.abs(dx) > 45) go(dx < 0 ? 1 : -1)
-        touch.current = null
-      }}
-    >
-      <div className="viewer-bar font-display">
-        <span>
-          {index + 1} / {items.length}
-        </span>
-        <button ref={closeBtn} type="button" onClick={onClose} className="viewer-btn" aria-label="Close">
-          ✕
-        </button>
-      </div>
-      <div className="viewer-stage" onClick={closeOnBackdrop}>
-        <button type="button" onClick={() => go(-1)} className="viewer-btn viewer-prev" aria-label="Previous photo">
-          ←
-        </button>
-        {/* Sized from the photo's known shape, not the image itself, so it's
-            full size before the big version has loaded; the thumbnail
-            (already loaded for the wall) shows through until then. */}
-        <figure key={p.name} className="viewer-polaroid" style={{ '--ratio': p.ratio } as React.CSSProperties}>
-          <img src={full(p)} alt={p.caption} style={{ backgroundImage: `url(${thumb(p)})` }} />
-          <figcaption className="font-display">{p.caption}</figcaption>
-        </figure>
-        <button type="button" onClick={() => go(1)} className="viewer-btn viewer-next" aria-label="Next photo">
-          →
-        </button>
-      </div>
-    </div>
-  )
-}
-
 export default function Football() {
   const scene = useRef<HTMLCanvasElement>(null)
   const pitch = useRef<Pitch | null>(null)
@@ -231,6 +152,7 @@ export default function Football() {
   const [filter, setFilter] = useState<Filter>('all')
   const [open, setOpen] = useState<number | null>(null)
   const shown = useMemo(() => (filter === 'all' ? photos : photos.filter((p) => p.category === filter)), [filter])
+  const viewerItems = useMemo(() => shown.map((p) => ({ full: full(p), thumb: thumb(p), caption: p.caption, ratio: p.ratio })), [shown])
 
   useEffect(() => {
     if (!hasWebGL()) return
@@ -268,19 +190,14 @@ export default function Football() {
           <header>
             <p className="dive-kicker font-display">player · coach</p>
             <h1 className="dive-title font-display">football</h1>
-            <p className="dive-lead">I've played competitive football for 14+ years, and I coach youth football.</p>
+            <p className="dive-lead">I've played competitive football for 14+ years, and have coached youth football.</p>
           </header>
           <Highlights />
         </div>
         <Gallery shown={shown} filter={filter} setFilter={setFilter} onOpen={setOpen} />
-        <div className="dive-links font-display">
-          <a href={import.meta.env.BASE_URL} onClick={backToIsland}>
-            back to the island
-          </a>
-        </div>
       </main>
       <Grain />
-      {open !== null && <Viewer items={shown} index={open} setIndex={setOpen} onClose={() => setOpen(null)} />}
+      {open !== null && <PhotoViewer items={viewerItems} index={open} setIndex={setOpen} onClose={() => setOpen(null)} />}
     </>
   )
 }

@@ -1188,6 +1188,28 @@ html[data-night='true'] .pitch-scene {
   line-height: 1.15;
   text-align: center;
 }
+/* A section's photos on the Apple pages: side by side, each column as wide
+   as its photo's shape, so the photos come out the same height. Stacked on
+   narrow screens, where a tall one would be too thin. */
+.apple-photos {
+  grid-template-columns: var(--columns);
+  row-gap: 1rem;
+  margin-top: 1.5rem;
+}
+@media (max-width: 480px) {
+  .apple-photos {
+    grid-template-columns: 1fr;
+  }
+}
+.apple-photos .polaroid {
+  margin-top: 0.7rem;
+}
+.apple-photo-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
 @keyframes polaroid-in {
   from {
     opacity: 0;
@@ -1303,4 +1325,45 @@ html[data-night='true'] .pitch-scene {
   .viewer-polaroid {
     animation: none;
   }
+}
+
+/* --- The Apple program pages (Program.tsx: /academy/ and /institute/) --
+   The SeaLens page's layout (.dive-*) over a 3D scene (scene3d/program.ts):
+   the Academy's reception in Bali, Jakarta for the Institute. Until it draws,
+   or without WebGL, their sky and ground colours. */
+.apple-scene,
+.apple-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.apple-scene-academy {
+  background: linear-gradient(to bottom, #e7e3dc, #f2efe9 15%, #f2efe9 70%, #d8ccba 71%, #cfc2ae);
+}
+.apple-scene-institute {
+  background: linear-gradient(to bottom, #7fb6d8, #f3dcc0 55%, #c8bfae 56%, #b8ae9c);
+}
+html[data-night='true'] .apple-scene-academy {
+  background: linear-gradient(to bottom, #8d877d, #b6afa4 15%, #b6afa4 70%, #8f8576 71%, #85796a);
+}
+html[data-night='true'] .apple-scene-institute {
+  background: linear-gradient(to bottom, #0f1433, #3a3f78 55%, #4a4c5c 56%, #3a3c4a);
+}
+.apple-logo {
+  height: 4.5rem;
+  width: auto;
+  margin-bottom: 1.25rem;
+}
+.apple-name {
+  margin: 0.25rem 0 1.25rem;
+  color: #f4efe0;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 1;
+  overflow-wrap: break-word;
+}
+/* The Academy's room is pale, so its way back is in ink. */
+.apple-back-academy {
+  color: #2a241e;
+  text-shadow: 0 1px 6px rgb(255 250 240 / 0.8);
 }

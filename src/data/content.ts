@@ -207,6 +207,8 @@ export type Experience = {
   logo?: string
   // Logo height as a Tailwind class; defaults to h-10.
   logoClass?: string
+  // Its own page, if it has a longer story there.
+  page?: string
   points: string[]
 }
 
@@ -216,6 +218,7 @@ export const experience: Experience[] = [
     org: 'Apple Developer Institute for Entrepreneurship',
     logo: `${import.meta.env.BASE_URL}apple-developer-institute-logo.png`,
     logoClass: 'h-14',
+    page: `${import.meta.env.BASE_URL}institute/`,
     location: 'Jakarta, Indonesia',
     period: '2026',
     points: [
@@ -228,6 +231,7 @@ export const experience: Experience[] = [
     org: 'Apple Developer Academy @ BINUS',
     logo: `${import.meta.env.BASE_URL}apple-developer-academy-logo.png`,
     logoClass: 'h-14',
+    page: `${import.meta.env.BASE_URL}academy/`,
     location: 'Bali, Indonesia',
     period: '2025',
     points: [

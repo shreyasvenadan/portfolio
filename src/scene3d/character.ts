@@ -3,6 +3,10 @@
 // Every few seconds he waves, looks around, shrugs or laughs; his eyes and
 // head follow the cursor, and clicking him makes him jump. He reacts to what
 // happens round him (react()), and can run about (stride, set by world.ts).
+//
+// Others can be built on him with a different `look` (the students at the
+// Academy, scene3d/program.ts): skin, hair colour and cut, glasses, a
+// T-shirt or button-up, colours of top, trousers and shoes.
 import * as THREE from 'three'
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { INK, inked, seeded, toon } from './toon'
@@ -10,11 +14,11 @@ import { INK, inked, seeded, toon } from './toon'
 export const SKIN = '#b97848'
 const HAIR = '#1b120d'
 const HAIR_LIGHT = '#33231a'
-const TOP = '#2f62a3'
-const TOP_DARK = '#234c80'
-const JEANS = '#24242a'
-const SHOE = '#1d1d22'
-const SHOE_TRIM = '#b7392f'
+const TOP_COLOUR = '#2f62a3'
+const TOP_DARK_COLOUR = '#234c80'
+const JEANS_COLOUR = '#24242a'
+const SHOE_COLOUR = '#1d1d22'
+const SHOE_TRIM_COLOUR = '#b7392f'
 const MOUTH = '#6e211d'
 // His club kit (the football page): red, white and blue stripes, white
 // shorts, red socks.
@@ -72,11 +76,25 @@ function blinkAt(t: number) {
 
 export type Gaze = { x: number; y: number; near: number }
 
+// Haircuts: his curly top, a short cut with a quiff, long hair to the
+// shoulders, a bun, or a buzz cut (the fade alone).
+export type Cut = 'curly' | 'short' | 'long' | 'bun' | 'buzz'
+export type HeadStyle = { hair?: string; hairLight?: string; cut?: Cut; glasses?: boolean }
+export type Look = HeadStyle & {
+  skin?: string
+  shirt?: 'button' | 'tee'
+  top?: string
+  topDark?: string
+  bottom?: string
+  shoe?: string
+  trim?: string
+}
+
 // His head, facing +z with its base (the neck) at y = 0: skull with a jaw,
 // ears, nose, eyes, brows and curly hair, but no mouth (the island character
 // smiles; the diver has a regulator in). `faceZ` is how far forward the face
 // comes at (x, y), for putting things on it.
-export function buildHead(skin = toon(SKIN)) {
+export function buildHead(skin = toon(SKIN), { hair: hairColor = HAIR, hairLight = HAIR_LIGHT, cut = 'curly', glasses = false }: HeadStyle = {}) {
   const head = new THREE.Group()
   const hair = new THREE.Group()
   const brows = new THREE.Group()
@@ -131,7 +149,7 @@ export function buildHead(skin = toon(SKIN)) {
   }
   head.add(brows)
   for (const side of [-1, 1]) {
-    const brow = inked(new THREE.CapsuleGeometry(0.035, 0.14, 2, 6), toon(HAIR), 1.2)
+    const brow = inked(new THREE.CapsuleGeometry(0.035, 0.14, 2, 6), toon(hairColor), 1.2)
     brow.rotation.z = Math.PI / 2 + side * 0.15
     brow.position.set(side * 0.21, 0.73, 0.485)
     brow.rotation.y = side * 0.32
@@ -141,11 +159,60 @@ export function buildHead(skin = toon(SKIN)) {
   // over the forehead, and the back and sides cut short in a fade (a shell
   // over the skull, tipped back so it comes down lower behind).
   head.add(hair)
-  const fade = inked(new THREE.SphereGeometry(0.6, 28, 14, 0, Math.PI * 2, 0, 1.4), toon(HAIR), 2)
+  const fade = inked(new THREE.SphereGeometry(0.6, 28, 14, 0, Math.PI * 2, 0, 1.4), toon(hairColor), 2)
   fade.scale.set(0.9 * 1.02, 1.02 * 1.02, 0.9 * 1.02)
   fade.position.y = 0.52
   fade.rotation.x = -0.5
   hair.add(fade)
+  const hairMat = toon(hairColor)
+  if (cut === 'short' || cut === 'long' || cut === 'bun') {
+    // A fuller crown over the fade, swept up into a little quiff at the front.
+    const crown = inked(new THREE.SphereGeometry(0.6, 24, 12, 0, Math.PI * 2, 0, 1.15), hairMat, 2)
+    crown.scale.set(0.96, 1.1, 0.97)
+    crown.position.y = 0.55
+    crown.rotation.x = -0.3
+    hair.add(crown)
+    const quiff = inked(new THREE.SphereGeometry(0.22, 12, 8), toon(hairLight), 1.8)
+    quiff.scale.set(1.7, 0.6, 1)
+    quiff.position.set(0.05, 1.1, 0.22)
+    quiff.rotation.z = -0.15
+    hair.add(quiff)
+  }
+  if (cut === 'long') {
+    // Down the back to the shoulders, and a lock either side of the face.
+    const back = inked(new THREE.CapsuleGeometry(0.42, 0.55, 3, 12), hairMat, 2)
+    back.scale.set(1.2, 1, 0.55)
+    back.position.set(0, 0.35, -0.3)
+    hair.add(back)
+    for (const side of [-1, 1]) {
+      const lock = inked(new THREE.CapsuleGeometry(0.13, 0.5, 3, 8), hairMat, 1.8)
+      lock.position.set(side * 0.5, 0.42, 0.02)
+      lock.rotation.z = side * 0.08
+      hair.add(lock)
+    }
+  }
+  if (cut === 'bun') {
+    const bun = inked(new THREE.SphereGeometry(0.24, 14, 10), hairMat, 2)
+    bun.position.set(0, 1.2, -0.22)
+    hair.add(bun)
+  }
+  if (glasses) {
+    // Round frames over the eyes, with a bridge between.
+    const frame = new THREE.MeshBasicMaterial({ color: INK })
+    for (const side of [-1, 1]) {
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.022, 6, 20), frame)
+      rim.position.set(side * 0.2, 0.55, 0.56)
+      rim.rotation.y = side * 0.32
+      head.add(rim)
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.4), frame)
+      arm.position.set(side * 0.43, 0.57, 0.32)
+      arm.rotation.y = side * 0.2
+      head.add(arm)
+    }
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.022, 0.022), frame)
+    bridge.position.set(0, 0.58, 0.6)
+    head.add(bridge)
+  }
   const rand = seeded(3)
   const curl = new THREE.IcosahedronGeometry(1, 1)
   const curls: [number, number, number][] = []
@@ -160,8 +227,8 @@ export function buildHead(skin = toon(SKIN)) {
     }
   }
   for (let i = 0; i < 7; i++) curls.push([50 + rand() * 6, 90 + (i - 3) * 17 + rand() * 4, 0.13 + rand() * 0.03])
-  for (const [lat, lon, r] of curls) {
-    const ball = inked(curl, toon(rand() < 0.3 ? HAIR_LIGHT : HAIR), 1.8)
+  for (const [lat, lon, r] of cut === 'curly' ? curls : []) {
+    const ball = inked(curl, toon(rand() < 0.3 ? hairLight : hairColor), 1.8)
     ball.scale.setScalar(r)
     const d = 0.6
     // Hugging the skull, which narrows into the jaw below its middle.
@@ -202,13 +269,25 @@ export class Character {
   private phase = 0
   // 0 to 1: concentrating (juggling a ball), so no idle waving or shrugging.
   focus = 0
+  // Strolling rather than running: the same stride, but arms looser and a
+  // smile rather than an open mouth.
+  walking = false
   // When each foot last flicked up to keep a ball in the air (tap()).
   private taps = [-10, -10]
 
-  // `kit`: in his football kit instead of the shirt and jeans.
-  constructor({ kit = false }: { kit?: boolean } = {}) {
+  // `kit`: in his football kit instead of the shirt and jeans. `look`:
+  // someone else, built the same way (see Look).
+  constructor({ kit = false, look = {} }: { kit?: boolean; look?: Look } = {}) {
     this.root.add(this.body)
-    const skin = toon(SKIN)
+    const skin = toon(look.skin ?? SKIN)
+    const TOP = look.top ?? TOP_COLOUR
+    const TOP_DARK = look.topDark ?? TOP_DARK_COLOUR
+    const JEANS = look.bottom ?? JEANS_COLOUR
+    const SHOE = look.shoe ?? SHOE_COLOUR
+    const SHOE_TRIM = look.trim ?? SHOE_TRIM_COLOUR
+    // Short sleeves: the kit, or a T-shirt.
+    const tee = !kit && look.shirt === 'tee'
+    const bare = kit || tee
 
     // --- legs and shoes, swinging from the hip
     const HIP = 1.25
@@ -258,7 +337,7 @@ export class Character {
       this.torso.add(collar)
     }
     const shirtDetails = new THREE.Group()
-    shirtDetails.visible = !kit
+    shirtDetails.visible = !bare
     this.torso.add(shirtDetails)
     const placket = inked(new THREE.BoxGeometry(0.06, 0.95, 0.03), toon(TOP_DARK), 1.2)
     // How far the shirt's front sits forward at a given height.
@@ -304,12 +383,12 @@ export class Character {
       const elbow = new THREE.Group()
       elbow.position.y = -0.58
       shoulder.add(elbow)
-      const fore = inked(new THREE.CapsuleGeometry(0.1, 0.42, 3, 10), kit ? skin : toon(TOP), 2.5)
+      const fore = inked(new THREE.CapsuleGeometry(0.1, 0.42, 3, 10), bare ? skin : toon(TOP), 2.5)
       fore.position.y = -0.26
       elbow.add(fore)
       const cuff = inked(new THREE.CylinderGeometry(0.115, 0.115, 0.08, 10), toon(TOP_DARK), 1.5)
       cuff.position.y = -0.5
-      cuff.visible = !kit
+      cuff.visible = !bare
       elbow.add(cuff)
       const hand = inked(new THREE.SphereGeometry(0.14, 12, 10), skin, 2.5)
       hand.scale.set(0.9, 1.1, 0.75)
@@ -324,7 +403,7 @@ export class Character {
     }
 
     // --- head
-    const h = buildHead(skin)
+    const h = buildHead(skin, look)
     ;({ head: this.head, hair: this.hair, brows: this.brows, eyes: this.eyes, pupils: this.pupils } = h)
     this.head.position.y = 2.72
     this.torso.add(this.head)
@@ -542,8 +621,9 @@ export class Character {
       [shelter, rad(120)],
     ])
     // Shrugging, the forearms turn out, palms up.
-    elL.rotation.x = -shrug * 0.6 - run * 0.9
-    elR.rotation.x = -shrug * 0.6 - run * 0.9
+    const bend = this.walking ? 0.25 : 0.9
+    elL.rotation.x = -shrug * 0.6 - run * bend
+    elR.rotation.x = -shrug * 0.6 - run * bend
     // The umbrella stays straight up, whatever his arm's doing, and pops open.
     this.umbrella.visible = shelter > 0.02
     this.umbrella.scale.set(shelter, 1, shelter)
@@ -561,7 +641,7 @@ export class Character {
     for (const eye of this.eyes) eye.scale.y = 1 - shut * 0.88
     for (const pupil of this.pupils) pupil.position.set(lx * 0.025, -ly * 0.025, 0)
 
-    const mouth = jumping ? (jx < 0.4 ? 'oh' : 'laugh') : cheer > 0.1 || laugh > 0.1 || run > 0.1 ? 'laugh' : point > 0.1 || duck > 0.1 ? 'oh' : 'grin'
+    const mouth = jumping ? (jx < 0.4 ? 'oh' : 'laugh') : cheer > 0.1 || laugh > 0.1 || (run > 0.1 && !this.walking) ? 'laugh' : point > 0.1 || duck > 0.1 ? 'oh' : 'grin'
     for (const [name, m] of Object.entries(this.mouths)) m.visible = name === mouth
   }
 
